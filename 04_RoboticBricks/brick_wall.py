@@ -1,6 +1,7 @@
 
 import math
 from compas.geometry import Frame
+from compas.geometry import Transformation
 from compas.geometry import Box
 
 # There's a data type called Brick
@@ -36,3 +37,7 @@ class Brick:
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
+    
+    #hi jerry!!!!!
+    def transform (self, Transformation):
+        self.frame.trasnform(Transformation)
