@@ -1,6 +1,7 @@
 
 import math
 from compas.geometry import Frame
+from compas.geometry import Transformation
 from compas.geometry import Box
 
 # There's a data type called Brick
@@ -33,6 +34,10 @@ class Brick:
         pick_frame = self.frame.copy()
         pick_frame.point.z += self.height / 2
 
+    def transform(self, Transformation):
+        self.frame.transform(Transformation)
+
+        #flip orientation of frame if pointing 'up'.
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
