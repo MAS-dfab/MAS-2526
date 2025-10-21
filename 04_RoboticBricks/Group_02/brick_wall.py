@@ -37,7 +37,26 @@ class Brick:
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
+<<<<<<< HEAD:04_RoboticBricks/Group_02/brick_wall.py
     
     #hi jerry!!!!!
     def transform (self, Transformation):
         self.frame.transform(Transformation)
+=======
+
+class BigBrick(Brick):
+    LENGTH = 240.0
+    WIDTH = 115.0
+    HEIGHT = 52.0
+    def __init__(self, frame=None):
+        super().__init__(frame)
+        self.length = BigBrick.LENGTH
+        self.width = BigBrick.WIDTH
+        self.height = BigBrick.HEIGHT
+    
+    def get_pick_frame(self):
+        pick_frame = self.frame.translated((0, 0, -self.height / 2))
+        if pick_frame.zaxis.z > 0:
+            pick_frame.xaxis = -pick_frame.xaxis
+        return pick_frame
+>>>>>>> 8fa9136aaa919f4135eb1c35cf8ebb906c09dd3d:04_RoboticBricks/brick_wall.py
