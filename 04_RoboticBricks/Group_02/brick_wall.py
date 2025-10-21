@@ -1,7 +1,6 @@
 
 import math
 from compas.geometry import Frame
-from compas.geometry import Transformation
 from compas.geometry import Box
 
 # There's a data type called Brick
