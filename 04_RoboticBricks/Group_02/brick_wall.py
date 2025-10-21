@@ -1,7 +1,6 @@
 
 import math
 from compas.geometry import Frame
-from compas.geometry import Transformation
 from compas.geometry import Box
 
 # There's a data type called Brick
@@ -37,12 +36,6 @@ class Brick:
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
-<<<<<<< HEAD:04_RoboticBricks/Group_02/brick_wall.py
-    
-    #hi jerry!!!!!
-    def transform (self, Transformation):
-        self.frame.transform(Transformation)
-=======
 
 class BigBrick(Brick):
     LENGTH = 240.0
@@ -59,4 +52,3 @@ class BigBrick(Brick):
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
->>>>>>> 8fa9136aaa919f4135eb1c35cf8ebb906c09dd3d:04_RoboticBricks/brick_wall.py
