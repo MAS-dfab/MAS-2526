@@ -1,4 +1,3 @@
-
 import math
 from compas.geometry import Frame
 from compas.geometry import Transformation
