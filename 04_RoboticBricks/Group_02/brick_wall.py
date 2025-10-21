@@ -41,3 +41,19 @@ class Brick:
     #hi jerry!!!!!
     def transform (self, Transformation):
         self.frame.transform(Transformation)
+
+class BigBrick(Brick):
+    LENGTH = 240.0
+    WIDTH = 115.0
+    HEIGHT = 52.0
+    def __init__(self, frame=None):
+        super().__init__(frame)
+        self.length = BigBrick.LENGTH
+        self.width = BigBrick.WIDTH
+        self.height = BigBrick.HEIGHT
+    
+    def get_pick_frame(self):
+        pick_frame = self.frame.translated((0, 0, -self.height / 2))
+        if pick_frame.zaxis.z > 0:
+            pick_frame.xaxis = -pick_frame.xaxis
+        return pick_frame
