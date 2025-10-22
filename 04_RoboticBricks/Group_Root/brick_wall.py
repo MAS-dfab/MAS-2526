@@ -6,6 +6,8 @@ from compas.geometry import Box
 # There's a data type called Brick
 # that has attributes: length, width, height and a point
 # and also has a rotate behavior that accepts degrees of rotation
+
+#Parent class
 class Brick:
     # Class attribute for default brick dimensions
     LENGTH = 32.02
@@ -42,8 +44,7 @@ class Brick:
         self.frame.transform(Transformation)
 
 
-    #changes!!
-
+# Child class
 class BigBrick(Brick):
     LENGTH = 240.0
     WIDTH = 115.0

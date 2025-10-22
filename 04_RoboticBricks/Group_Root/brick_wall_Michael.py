@@ -8,15 +8,9 @@ from compas.geometry import Box
 # and also has a rotate behavior that accepts degrees of rotation
 class Brick:
     # Class attribute for default brick dimensions
-<<<<<<< HEAD:04_RoboticBricks/Group Root/brick_wall.py
-    LENGTH = 32
-    WIDTH = 15
-    HEIGHT = 10
-=======
     LENGTH = 32.02
     WIDTH = 15.2
     HEIGHT = 9.94
->>>>>>> 8fa9136aaa919f4135eb1c35cf8ebb906c09dd3d:04_RoboticBricks/brick_wall.py
 
     def __init__(self, frame=None):
         self.length = Brick.LENGTH
@@ -43,14 +37,6 @@ class Brick:
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
-<<<<<<< HEAD:04_RoboticBricks/Group Root/brick_wall.py
-    
-    def transform(self, Transformation):
-        self.frame.transform(Transformation)
-
-
-    #changes!!
-=======
 
 class BigBrick(Brick):
     LENGTH = 240.0
@@ -67,4 +53,3 @@ class BigBrick(Brick):
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
->>>>>>> 8fa9136aaa919f4135eb1c35cf8ebb906c09dd3d:04_RoboticBricks/brick_wall.py
