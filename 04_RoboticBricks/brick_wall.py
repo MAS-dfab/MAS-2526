@@ -7,12 +7,12 @@ from compas.geometry import Box
 # that has attributes: length, width, height and a point
 # and also has a rotate behavior that accepts degrees of rotation
 class Brick:
-<<<<<<<<< Temporary merge branch 1
+
     # Class attribute for default brick dimensions (all in centimeters)
     LENGTH = 31.74  # Brick length in centimeters
     WIDTH = 15.24   # Brick width in centimeters
     HEIGHT = 9.98   # Brick height in centimeters
-=========
+
     # Class attribute for default brick dimensions
     LENGTH = 32.02
     WIDTH = 15.2
@@ -43,8 +43,7 @@ class Brick:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
 
-<<<<<<<<< Temporary merge branch 1
-=========
+
 class BigBrick(Brick):
     LENGTH = 240.0
     WIDTH = 115.0
@@ -60,4 +59,4 @@ class BigBrick(Brick):
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
->>>>>>>>> Temporary merge branch 2
+
