@@ -113,15 +113,8 @@ class BigBrick(Brick):
         self.width = BigBrick.WIDTH
         self.height = BigBrick.HEIGHT
     
-    # def get_pick_frame(self):
-    #     pick_frame = self.frame.translated((0, 0, -self.height / 2))
-    #     if pick_frame.zaxis.z > 0:
-    #         pick_frame.xaxis = -pick_frame.xaxis
-    #     return pick_frame
     def get_pick_frame(self):
-        pick_frame = self.frame.copy()
-        pick_frame.point.z += self.height / 2
-
+        pick_frame = self.frame.translated((0, 0, -self.height / 2))
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
