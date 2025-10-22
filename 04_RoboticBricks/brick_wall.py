@@ -43,7 +43,6 @@ class Brick:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
 
-
 class BigBrick(Brick):
     LENGTH = 240.0
     WIDTH = 115.0
@@ -59,4 +58,3 @@ class BigBrick(Brick):
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
-
