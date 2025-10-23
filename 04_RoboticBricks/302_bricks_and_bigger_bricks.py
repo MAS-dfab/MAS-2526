@@ -80,6 +80,11 @@ def pick_a_brick():
 def place_a_brick(frame, ext_axes, wobj="w_pallet0"):
     # Set work object
     abb.send_and_wait(rrc.SetWorkObject(wobj))
+    abb.send_and_wait(
+        rrc.MoveToJoints(
+            HOME_CONFIG, ext_axes=ext_axes, speed=500, zone=rrc.Zone.FINE
+        )
+    )
     print("Placing brick at frame:", frame)
     # Move to safe place frame
     safe_place_frame = get_safe_frame(frame, offset=300.0)
@@ -174,7 +179,8 @@ try:
     brick_frames = data["frames"]
     ext_axes = get_external_axes_for_wobj(wobj)
 
-    for frame in brick_frames:
+
+    for frame in brick_frames[34:]:
         frame = fine_adjust_z(frame, adjustment=3.0)
         pick_a_brick()
         place_a_brick(frame, ext_axes, wobj=wobj)
