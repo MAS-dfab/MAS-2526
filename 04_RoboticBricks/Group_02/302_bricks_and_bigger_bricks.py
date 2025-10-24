@@ -15,7 +15,7 @@ PICK_FRAME = Frame(
     yaxis=Vector(x=-0.016, y=1.000, z=-0.011),
 )
 
-HOME_CONFIG = [60.0, -15, 60, 0, 45, -120]
+HOME_CONFIG = [40.0, -13, 27, 0.5, 75, -135]
 SAFE_EXT_AXES = [-1590.0]
 
 io_open = "doUnitR32ValveB1"
@@ -32,47 +32,47 @@ def pick_a_brick():
     # Set work object
     abb.send_and_wait(rrc.SetWorkObject("wobj0"))
     # Ensure gripper is open
-    abb.send_and_wait(rrc.PrintText("Opening gripper to ensure it's open"))
+    abb.send(rrc.PrintText("Opening gripper to ensure it's open"))
     open_gripper(abb)
     safe_pick_frame = get_safe_frame(PICK_FRAME, offset=300.0)
     # Go to home position
-    abb.send_and_wait(rrc.PrintText("Moving to home configuration"))
+    abb.send(rrc.PrintText("Moving to home configuration"))
     abb.send_and_wait(
         rrc.MoveToJoints(
-            HOME_CONFIG, ext_axes=SAFE_EXT_AXES, speed=500, zone=rrc.Zone.FINE
+            HOME_CONFIG, ext_axes=SAFE_EXT_AXES, speed=750, zone=rrc.Zone.Z10
         )
     )
     # Move to safe pick frame
     # Write message
-    abb.send_and_wait(rrc.PrintText("Moving to safe pick frame"))
+    abb.send(rrc.PrintText("Moving to safe pick frame"))
     print(safe_pick_frame)
-    abb.send_and_wait(
+    abb.send(
         rrc.MoveToRobtarget(
-            safe_pick_frame, ext_axes=SAFE_EXT_AXES, speed=500, zone=rrc.Zone.FINE
+            safe_pick_frame, ext_axes=SAFE_EXT_AXES, speed=750, zone=rrc.Zone.Z1
         )
     )
     # Move to pick frame
-    abb.send_and_wait(rrc.PrintText("Moving to pick frame"))
+    abb.send(rrc.PrintText("Moving to pick frame"))
     abb.send_and_wait(
         rrc.MoveToRobtarget(
             PICK_FRAME, ext_axes=SAFE_EXT_AXES, speed=50, zone=rrc.Zone.FINE
         )
     )
     # Close gripper
-    abb.send_and_wait(rrc.PrintText("Closing gripper to pick brick"))
+    abb.send(rrc.PrintText("Closing gripper to pick brick"))
     close_gripper(abb)
     # Move back to safe pick frame
-    abb.send_and_wait(rrc.PrintText("Moving back to safe pick frame"))
-    abb.send_and_wait(
+    abb.send(rrc.PrintText("Moving back to safe pick frame"))
+    abb.send(
         rrc.MoveToRobtarget(
-            safe_pick_frame, ext_axes=SAFE_EXT_AXES, speed=500, zone=rrc.Zone.FINE
+            safe_pick_frame, ext_axes=SAFE_EXT_AXES, speed=750, zone=rrc.Zone.Z1
         )
     )
     # Move to home position
-    abb.send_and_wait(rrc.PrintText("Returning to home position"))
-    abb.send_and_wait(
+    abb.send(rrc.PrintText("Returning to home position"))
+    abb.send(
         rrc.MoveToJoints(
-            HOME_CONFIG, ext_axes=SAFE_EXT_AXES, speed=500, zone=rrc.Zone.FINE
+            HOME_CONFIG, ext_axes=SAFE_EXT_AXES, speed=750, zone=rrc.Zone.Z1
         )
     )
 
@@ -80,43 +80,43 @@ def pick_a_brick():
 def place_a_brick(frame, ext_axes, wobj="w_pallet0"):
     # Set work object
     # Move to home position
-    abb.send_and_wait(rrc.PrintText("Returning to home position"))
-    abb.send_and_wait(
+    abb.send(rrc.PrintText("Returning to home position"))
+    abb.send(
         rrc.MoveToJoints(
-            HOME_CONFIG, ext_axes=ext_axes, speed=500, zone=rrc.Zone.FINE
+            HOME_CONFIG, ext_axes=ext_axes, speed=750, zone=rrc.Zone.Z10
         )
     )
-    abb.send_and_wait(rrc.SetWorkObject(wobj))
+    abb.send(rrc.SetWorkObject(wobj))
     print("Placing brick at frame:", frame)
     # Move to safe place frame
     safe_place_frame = get_safe_frame(frame, offset=300.0)
     # Move to safe place frame
-    abb.send_and_wait(rrc.PrintText("Moving to safe place frame"))
-    abb.send_and_wait(
+    abb.send(rrc.PrintText("Moving to safe place frame"))
+    abb.send(
         rrc.MoveToRobtarget(
-            safe_place_frame, ext_axes=ext_axes, speed=500, zone=rrc.Zone.FINE
+            safe_place_frame, ext_axes=ext_axes, speed=750, zone=rrc.Zone.FINE
         )
     )
     # Move to place frame
-    abb.send_and_wait(rrc.PrintText("Moving to place frame"))
+    abb.send(rrc.PrintText("Moving to place frame"))
     abb.send_and_wait(
         rrc.MoveToRobtarget(frame, ext_axes=ext_axes, speed=50, zone=rrc.Zone.FINE)
     )
     # Open gripper
-    abb.send_and_wait(rrc.PrintText("Opening gripper to release brick"))
+    abb.send(rrc.PrintText("Opening gripper to release brick"))
     open_gripper(abb)
     # Move back to safe place frame
-    abb.send_and_wait(rrc.PrintText("Moving back to safe place frame"))
-    abb.send_and_wait(
+    abb.send(rrc.PrintText("Moving back to safe place frame"))
+    abb.send(
         rrc.MoveToRobtarget(
-            safe_place_frame, ext_axes=ext_axes, speed=500, zone=rrc.Zone.FINE
+            safe_place_frame, ext_axes=ext_axes, speed=750, zone=rrc.Zone.Z1
         )
     )
     # Move to home position
-    abb.send_and_wait(rrc.PrintText("Returning to home position"))
-    abb.send_and_wait(
+    abb.send(rrc.PrintText("Returning to home position"))
+    abb.send(
         rrc.MoveToJoints(
-            HOME_CONFIG, ext_axes=ext_axes, speed=500, zone=rrc.Zone.FINE
+            HOME_CONFIG, ext_axes=ext_axes, speed=750, zone=rrc.Zone.Z10
         )
     )
 
@@ -181,7 +181,9 @@ try:
     brick_frames = data["frames"]
     ext_axes = get_external_axes_for_wobj(wobj)
 
-    for frame in brick_frames:
+    b_frames = brick_frames[69:]
+
+    for frame in b_frames:
         frame = fine_adjust_z(frame, adjustment=3.0)
         pick_a_brick()
         place_a_brick(frame, ext_axes, wobj=wobj)
