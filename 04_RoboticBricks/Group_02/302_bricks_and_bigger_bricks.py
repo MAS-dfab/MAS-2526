@@ -181,7 +181,7 @@ try:
     brick_frames = data["frames"]
     ext_axes = get_external_axes_for_wobj(wobj)
 
-    b_frames = brick_frames[69:]
+    b_frames = brick_frames
 
     for frame in b_frames:
         frame = fine_adjust_z(frame, adjustment=3.0)
