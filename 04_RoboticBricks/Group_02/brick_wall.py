@@ -56,7 +56,7 @@ class BigBrick(Brick):
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
-<<<<<<< HEAD
+# <<<<<<< HEAD
 
 import math
 from compas.geometry import Frame
@@ -118,3 +118,10 @@ class BigBrick(Brick):
         if pick_frame.zaxis.z > 0:
             pick_frame.xaxis = -pick_frame.xaxis
         return pick_frame
+    # def get_pick_frame(self):
+    #     pick_frame = self.frame.copy()
+    #     pick_frame.point.z += self.height / 2
+
+    #     if pick_frame.zaxis.z > 0:
+    #         pick_frame.xaxis = -pick_frame.xaxis
+    #     return pick_frame
