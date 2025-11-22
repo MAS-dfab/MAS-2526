@@ -1,7 +1,15 @@
 from compas.geometry import Plane, Box, Line, Vector, Frame, Rotation
 from compas.geometry import intersection_line_plane, Scale
+from compas.geometry import angle_vectors
 import math
 
+def _calculate_z_vector_from_centerline(centerline_vector):
+    # type: (Vector) -> Vector
+    z = Vector(0, 0, 1)
+    angle = angle_vectors(z, centerline_vector)
+    if angle < 0.001 or angle > math.pi - 0.001:
+        z = Vector(1, 0, 0)
+    return z
 
 class Stick:
     # class attributes
@@ -15,8 +23,12 @@ class Stick:
         self.axis = axis
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
-        self.frame = None
+        self.frame = self._get_stick_frame()
 
+    def _get_stick_frame(self):
+        normal = _calculate_z_vector_from_centerline(self.axis.direction)
+        frame = Frame(self.axis.midpoint, self.axis.direction, normal)
+        return frame
     
     @property
     def geometry(self):
@@ -25,9 +37,7 @@ class Stick:
         Returns:
             Box: A compas box object representing the stick's geometry.
         """
-        plane = Plane(self.axis.midpoint, self.axis.direction)
-        frame = Frame.from_plane(plane)
-        box = Box(self.width, self.depth, self.axis.length, frame)
+        box = Box(self.axis.length, self.width, self.depth, self.frame)
         return box
 
 
