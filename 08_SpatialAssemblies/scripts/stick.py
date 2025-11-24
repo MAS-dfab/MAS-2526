@@ -4,10 +4,9 @@ from compas.geometry import angle_vectors
 import math
 
 def _calculate_z_vector_from_centerline(centerline_vector):
-    # type: (Vector) -> Vector
     z = Vector(0, 0, 1)
     angle = angle_vectors(z, centerline_vector)
-    if angle < 0.001 or angle > math.pi - 0.001:
+    if angle < 0.1 or angle > math.pi - 0.001:
         z = Vector(1, 0, 0)
     return z
 
@@ -19,11 +18,11 @@ class Stick:
     DEPTH = SIZE
 
     # constructor with axis and rectangular dimensions
-    def __init__(self, axis, width=None, depth=None):
+    def __init__(self, axis, width=None, depth=None, zvector=None):
         self.axis = axis
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
-        self.frame = self._get_stick_frame()
+        self.frame = self._get_stick_frame() if zvector is None else Frame(self.axis.midpoint, self.axis.direction, zvector)
 
     def _get_stick_frame(self):
         normal = _calculate_z_vector_from_centerline(self.axis.direction)
