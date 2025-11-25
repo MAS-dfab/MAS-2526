@@ -16,15 +16,19 @@ class Stick:
     WIDTH = SIZE
     DEPTH = SIZE
 
-    def __init__(self, axis, width = None, depth = None):
+    def __init__(self, axis, z_vector = None, width = None, depth = None):
 
         self.axis = axis
+        self.z_vector = z_vector
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
         self.frame = self._get_stick_frame()
     
     def _get_stick_frame(self):
-        normal = _calculate_z_vector_from_centerline(self.axis.direction)
+        if self.z_vector:
+            normal = self.z_vector
+        else:
+            normal = _calculate_z_vector_from_centerline(self.axis.direction)
         frame = Frame(self.axis.midpoint, self.axis.direction, normal)
         return frame
 
@@ -38,6 +42,7 @@ class Stick:
             rotation_axis = self.axis.direction
         R = Rotation.from_axis_and_angle(rotation_axis, math.radians(angle), pt or self.axis.midpoint)
         self.frame.transform(R)
+        self.axis.transform(R)
 
 
 def stick_bridge(stick0, stick1):
@@ -45,6 +50,5 @@ def stick_bridge(stick0, stick1):
     plane1 = Plane.from_frame(stick1.frame)
     p0 = intersection_line_plane(stick0.axis, plane1)
     p1 = intersection_line_plane(stick1.axis, plane0)
-    
 
     return Stick(Line(p0, p1))
