@@ -74,7 +74,7 @@ class OStickModule:
 class BranchingModule:
     def __init__(self, root_frame, stick_length=None, width=None, depth=None):
         """
-        Constructor for Tree.
+        Constructor for Branching module.
         
         Args:
             root_frame: Frame from which tree will grow
@@ -86,8 +86,7 @@ class BranchingModule:
         self.sticks = []
         self.stick_length = stick_length
         self.width = width or Stick.WIDTH
-        self.depth = depth or Stick.DEPTH
-        
+        self.depth = depth or Stick.DEPTH  
         self._init_first_stick(root_frame)
     
     def _init_first_stick(self, frame):
@@ -107,8 +106,6 @@ class BranchingModule:
     def get_face_frame(self, stick_index, face_index):
         """
         Gets a frame on one of the four faces of a stick.
-        Face 0: +X, Face 1: +Y, Face 2: -X, Face 3: -Y
-        
         Args:
             stick_index: Index of the stick
             face_index: Face index (0-3) around the stick
