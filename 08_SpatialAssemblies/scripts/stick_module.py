@@ -92,14 +92,13 @@ class BranchingModule:
 
         # Offset frame to be on surface on stick
          
-    def grow_stick(self, from_stick_index = -1, face_index = 0, offset = 10.0, angle = 0.0):
+    def grow_stick(self, from_stick_index = -1, face_index = 0, angle = 0.0):
                 """
         Grows a new stick from an existing stick.
         
         Args:
             from_stick_index: Index of stick to grow from 
             face_index: Index of the face to grow from (0-3)
-            offset: Offset along the face normal
             angle: Angle of rotation in radians
         """
                 
