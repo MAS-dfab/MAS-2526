@@ -1,6 +1,6 @@
 from compas.geometry import Line, Frame, Vector
 
-from Sticks import Stick
+from sticks import Stick
 
 
 class OStickModule:
@@ -43,3 +43,77 @@ class OStickModule:
         stick_z = Stick(Line(offsetpt_z,offsetpt_z + Vector(0,0,self.length)), width = self.width,depth =self.depth)
         if type["z"] != 2:
             self.sticks.append(stick_z)
+
+
+class BranchingModule:
+    def __init__(self, root_frame, stick_length=None, width=None, depth=None):
+        """
+        Constructor for Branching module.
+        
+        Args:
+            root_frame: Frame from which tree will grow
+            stick_length: Length of each stick
+            width: Width of sticks (defaults to Stick.WIDTH)
+            depth: Depth of sticks (defaults to Stick.DEPTH)
+        """
+        self.root_frame = root_frame
+        self.sticks = []
+        self.stick_length = stick_length
+        self.width = width or Stick.WIDTH
+        self.depth = depth or Stick.DEPTH  
+        self._init_first_stick(root_frame)
+
+    def _init_first_stick(self, frame):
+        """
+        Private method for creating the first stick.
+        
+        Args:
+            frame: Frame from which stick will grow
+        """
+        # Draw line based on start frame
+
+        # Create stick 
+
+        # Add stick to list of sticks
+        #
+
+    def get_face_frame(self, stick_index, face_index):
+        """
+        Gets a frame on one of the four faces of a stick.
+        Args:
+            stick_index: Index of the stick
+            face_index: Face index (0-3) around the stick
+            
+        Returns:
+            Frame on the specified face
+        """
+
+        # Rotate stick frame based on index 
+
+        # Offset frame to be on surface on stick
+         
+    def grow_stick(self, from_stick_index = -1, face_index = 0, offset = 10.0, angle = 0.0):
+                """
+        Grows a new stick from an existing stick.
+        
+        Args:
+            from_stick_index: Index of stick to grow from 
+            face_index: Index of the face to grow from (0-3)
+            offset: Offset along the face normal
+            angle: Angle of rotation in radians
+        """
+                
+        # Get position on original stick
+
+        # Rotate along face frame
+            
+        # Create new stick
+
+    def visualize(self):
+        """
+        Returns all stick geometries.
+        
+        Returns:
+            List of Box geometries
+        """
+        return [stick.geometry for stick in self.sticks]
