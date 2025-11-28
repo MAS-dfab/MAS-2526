@@ -145,56 +145,39 @@ class Planarize:
         self.column_points += face_points
         return face_points   
                        
-    # def column_faces(self, column_size, angles = [30, -30], translation_bottom = [2, 4], translation_top = [2, 4]):
-    #     """
-    #     Docstring for row_faces
+    def column_faces(self, translation_top = [2, 4]):
+        """
+        Docstring for row_faces
         
-    #     :param self: num of faces in the row, list of angles in x dir, list of Translation bottom point and top point
-    #     """
-    #     # STEP 1: create a list of points inside existing list of initial face
-    #     face_points = self.row_points
+        :param self: num of faces in the row, list of angles in x dir, list of Translation bottom point and top point
+        """
+        # STEP 1: create a list of points inside existing list of initial face
         
-    #     for i in range(column_size):
-    #         if i % 2 == 0:
-    #             # STEP 1: extract points from initial plain
-    #             p0 = face_points[i][3]
-    #             p1 = face_points[i][2]
+        column_list = self.column_points[1:] # columns [[pt]]
+        row_list = self.row_points[1:] # row [[pt]]
+        face_points = [column_list[0]] # marge [[pt]]
+        face_points.extend(row_list) # marge [[pt]]
+        
+        # marge list in columns and rows
+        columns_rows = [face_points] + [[quad] for quad in column_list]
+        
+        for i,row in enumerate(columns_rows):
+            face_points = []
+            for column in row:
+                p0 = column[1]
+                p3 = column[2]
                 
-    #             # STEP 2: move and rotate points in the face 
-    #             frame_p3 = Frame(p0)
-    #             frame_p3_rotation = frame_p3.rotated(math.radians(angles[0]), frame_p3.xaxis, frame_p3.point)
-    #             v_p3 = frame_p3_rotation.zaxis
-    #             v_p3.unitize()
-    #             v_p3_scale = v_p3.scaled(translation_bottom[1])
-    #             p3 = p0.translated(v_p3_scale)
+                p1 = row[i+1][2]
                 
-    #             v_p2_scale = v_p3.scaled(translation_top[0])
-    #             p2 = p1.translated(v_p2_scale)
-
-    #             # STEP 3: append to the main list
-    #             face_points.append([p0, p1, p2, p3])
-    #         if i % 2 != 0:
-    #             # STEP 1: extract points from initial plain
-    #             p0 = face_points[i][3]
-    #             p1 = face_points[i][2]
+                v_p2 = - (Vector(p0.x, p0.y, p0.z) - Vector(p1.x, p1.y, p1.z))
+                v_p2.unitize()
+                v_p0_scale = v_p2.scaled(translation_top[1])
+                p2 = p3.translated(v_p0_scale)
                 
-    #             # STEP 2: move and rotate points in the face 
-    #             frame_p3 = Frame(p0)
-    #             frame_p3_rotation = frame_p3.rotated(math.radians(angles[1]), frame_p3.xaxis, frame_p3.point)
-    #             v_p3 = frame_p3_rotation.zaxis
-    #             v_p3.unitize()
-    #             v_p3_scale = v_p3.scaled(translation_bottom[0])
-    #             p3 = p0.translated(v_p3_scale)
+                # STEP 3: append to the main list
+                face_points.append([p0, p1, p2, p3])
+            columns_rows.append(face_points)
                 
-    #             v_p2_scale = v_p3.scaled(translation_top[1])
-    #             p2 = p1.translated(v_p2_scale)
-
-    #             # STEP 3: append to the main list
-    #             face_points.append([p0, p1, p2, p3])
-        
-    #     return face_points
-        
-        
-        
-        
-        
+        return columns_rows
+    
+ 
