@@ -1,6 +1,8 @@
-from compas.geometry import Line, Frame, Vector
+from compas.geometry import Line, Frame, Vector, Rotation
 
-from sticks import Stick
+from Sticks import Stick
+
+import math
 
 
 class OStickModule:
@@ -46,7 +48,7 @@ class OStickModule:
 
 
 class BranchingModule:
-    def __init__(self, root_frame, stick_length=None, width=None, depth=None):
+    def __init__(self, root_frame, stick_length=None, width=None, depth=None, angle=65):
         """
         Constructor for Branching module.
         
@@ -71,10 +73,13 @@ class BranchingModule:
             frame: Frame from which stick will grow
         """
         # Draw line based on start frame
+        stick_axis = Line.from_point_and_vector(frame.point,frame.zaxis * self.stick_length)
 
         # Create stick 
+        my_stick = Stick(stick_axis, z_vector =frame.yaxis, width=self.width, depth=self.depth)
 
         # Add stick to list of sticks
+        self.sticks.append(my_stick)
         #
 
     def get_face_frame(self, stick_index, face_index):
@@ -89,11 +94,19 @@ class BranchingModule:
         """
 
         # Rotate stick frame based on index 
+        stick_frame = self.sticks[stick_index].frame
+        angle = face_index * math.pi / 2
+        R = Rotation.from_axis_and_angle(stick_frame.xaxis, angle, point = stick_frame.point)
+        new_frame = stick_frame.transformed(R)
+        new_frame.point = self.sticks[stick_index].axis.end 
+
 
         # Offset frame to be on surface on stick
+        new_frame.point += new_frame.yaxis * (self.depth/2 )
+        return new_frame
          
     def grow_stick(self, from_stick_index = -1, face_index = 0, angle = 0.0):
-                """
+        """
         Grows a new stick from an existing stick.
         
         Args:
@@ -103,10 +116,24 @@ class BranchingModule:
         """
                 
         # Get position on original stick
+        position = self.get_face_frame(from_stick_index, face_index).copy()
+        position.point += position.yaxis * (self.depth/2)
+        position.point += position.xaxis * -50  # Small offset to avoid geometry clash
+        
+
 
         # Rotate along face frame
-            
+        R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point = position.point)
+        
+        #offset
+
+
+        position.transform(R)
         # Create new stick
+        centerline = Line.from_point_and_vector(position.point, position.xaxis * self.stick_length)
+        z_vector = position.yaxis
+        new_stick = Stick(centerline, z_vector = position.yaxis, width=self.width, depth=self.depth)
+        self.sticks.append(new_stick)
 
     def visualize(self):
         """
