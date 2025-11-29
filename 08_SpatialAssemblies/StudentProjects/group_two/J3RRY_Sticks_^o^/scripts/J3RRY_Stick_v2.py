@@ -8,10 +8,11 @@ class JStickAggregation:
     def __init__(self, first_frame, length=50, aggregation_type=0, global_seed=None):
         self.sticks = []
         self.axes = []
+        self.frames = []
         self.from_frames = []
         self.to_frames = []
-        self.new_frames = []
         self.length = length
+
         # 0 = regular, 1 = random
         self.aggregation_type = aggregation_type
         self.global_seed = global_seed
@@ -23,6 +24,7 @@ class JStickAggregation:
     def _init_first_stick(self, first_frame):
         self.sticks.append(Stick(first_frame, self.length))
         self.axes.append(Stick(first_frame, self.length).axis)
+        self.frames.append(first_frame)
 
     def spawn_next_stick(self, angle=0, from_index=0, from_t=0.5, to_index=1, to_t=0.5):
         current_stick = self.sticks[-1]
@@ -45,7 +47,7 @@ class JStickAggregation:
         self.axes.append(new_stick.axis)
         self.from_frames.append(from_frame)
         self.to_frames.append(to_frame)
-        self.new_frames.append(new_frame)
+        self.frames.append(new_frame)
         # return [from_frame, to_frame, new_frame]
 
     def spawn_next_stick_random(self, angle=0, local_seed=None):
@@ -78,7 +80,7 @@ class JStickAggregation:
         self.axes.append(new_stick.axis)
         self.from_frames.append(from_frame)
         self.to_frames.append(to_frame)
-        self.new_frames.append(new_frame)
+        self.frames.append(new_frame)
         # return [from_frame, to_frame, new_frame]
 
     def visualize(self):
