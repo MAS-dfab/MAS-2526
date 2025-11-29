@@ -28,6 +28,7 @@ class GrowTowards:
         self.stick_length = stick_length
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
+        self.normal_deviation = self.compare_angles(self.root_frame, self.target_frame)
 
         self.frame_intersection = self.get_frame_intersection(self.root_frame, self.target_frame)
 
@@ -37,3 +38,7 @@ class GrowTowards:
         int_pts = intersection_plane_plane(plane_0, plane_1)
         int_line = Line(int_pts[0],int_pts[1])
         return int_line
+    
+    def compare_angles(frame_0, frame_1):
+        normal_deviation = Vector.angle_vectors(frame_0.normal, frame_1.normal)
+        return normal_deviation
