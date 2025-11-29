@@ -46,7 +46,7 @@ class JStickAggregation:
         self.from_frames.append(from_frame)
         self.to_frames.append(to_frame)
         self.new_frames.append(new_frame)
-        return [from_frame, to_frame, new_frame]
+        # return [from_frame, to_frame, new_frame]
 
     def spawn_next_stick_random(self, angle=0, local_seed=None):
         # 0 = regular, 1 = random
@@ -79,7 +79,7 @@ class JStickAggregation:
         self.from_frames.append(from_frame)
         self.to_frames.append(to_frame)
         self.new_frames.append(new_frame)
-        return [from_frame, to_frame, new_frame]
+        # return [from_frame, to_frame, new_frame]
 
     def visualize(self):
         """
