@@ -11,7 +11,7 @@ def _calculate_z_vector_from_centerline(centerline_vector):
 
 
 class Stick:
-    SIZE = 13.0
+    SIZE = .13
 
     WIDTH = SIZE
     DEPTH = SIZE
