@@ -145,39 +145,63 @@ class Planarize:
         self.column_points += face_points
         return face_points   
                        
-    def column_faces(self, translation_top = [2, 4]):
+    def column_faces(self, translation_top = [2, 3]):
         """
         Docstring for row_faces
         
         :param self: num of faces in the row, list of angles in x dir, list of Translation bottom point and top point
         """
         # STEP 1: create a list of points inside existing list of initial face
-        
         column_list = self.column_points[1:] # columns [[pt]]
         row_list = self.row_points[1:] # row [[pt]]
-        face_points = [column_list[0]] # marge [[pt]]
-        face_points.extend(row_list) # marge [[pt]]
         
-        # marge list in columns and rows
-        columns_rows = [face_points] + [[quad] for quad in column_list]
+        # STEP2: create a new structure ofthe lists in columns and rows
+        rows_bottom = [row_list] # [[[pt]][[pt]]]
+        rows_left = [] # [[pt]]
         
-        for i,row in enumerate(columns_rows):
-            face_points = []
-            for column in row:
-                p0 = column[1]
-                p3 = column[2]
-                
-                p1 = row[i+1][2]
-                
-                v_p2 = - (Vector(p0.x, p0.y, p0.z) - Vector(p1.x, p1.y, p1.z))
-                v_p2.unitize()
-                v_p0_scale = v_p2.scaled(translation_top[1])
-                p2 = p3.translated(v_p0_scale)
-                
-                # STEP 3: append to the main list
-                face_points.append([p0, p1, p2, p3])
-            columns_rows.append(face_points)
-                
-        return columns_rows
-    
+        for r in column_list:
+            rows_left.append([r])
+        
+        # return rows_left[1][0][1] # [1] - row and [0] face in the row
+        # return rows_bottom[0][0][2].x # [0] - row and [2] face in the row
+        # return len(rows_left)
+        
+        my_list = [self.row_points]
+        
+        for i in range(len(rows_left)):
+            for j in range(len(rows_bottom[i])):
+                if i % 2 == 0 and j % 2 == 0:
+                    p0 = rows_bottom[i][j][3]
+                    p3 = rows_left[i][j][2]
+                    p1 = rows_bottom[i][j][2]
+                    
+                    # move the point p3 in the direction of the vector of points p0-p1 or p0-p3
+                    v_p2 = Vector(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z)
+                    v_p2.unitize()
+                    v_p0_scale = v_p2.scaled(translation_top[0])
+                    p2 = p3.translated(v_p0_scale)
+                    
+                    # append
+                    rows_left[i].append([p0, p1, p2, p3])
+                else:
+                    p0 = rows_bottom[i][j][3]
+                    p3 = rows_left[i][j][2]
+                    p1 = rows_bottom[i][j][2]
+                    
+                    # move the point p3 in the direction of the vector of points p0-p1 or p0-p3
+                    v_p2 = Vector(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z)
+                    v_p2.unitize()
+                    v_p0_scale = v_p2.scaled(translation_top[1])
+                    p2 = p3.translated(v_p0_scale)
+                    
+                    # append
+                    rows_left[i].append([p0, p1, p2, p3])
+            rows_bottom.append(rows_left[i][1:])
+            my_list.append(rows_left[i])
+        
+        rows_bottom.append(column_list)
+        
+        return my_list
+
+
  
