@@ -28,9 +28,10 @@ def rotate_move(point, plane, angle, rotation_axis, move_axis, length):
 class StickModule:
     
     def __init__(self, plane):
-        self.frame = Frame.from_plane(plane)
+        self.frame = plane
         self.point = plane.point
         self.sticks = []
+
     
     def CreateModule(self, angle_a = 45, angle_b = 45, length = 2, sticks_distance = 5):
         """
@@ -41,11 +42,11 @@ class StickModule:
         """
         # line initial planes that are rotated
         point_a1 = self.point
-        point_a2 = rotate_move(self.point, self.frame, math.radians(-angle_a), "x", "z",length)
+        point_a2 = rotate_move(self.point, self.frame, math.radians(angle_a), "y", "z",length)
         
-        point_b = rotate_move(self.point, self.frame, math.radians(0), 0, "y",sticks_distance)
-        point_b_translate = rotate_move(point_b, self.frame, math.radians(0), 0, "x",Stick.WIDTH)
-        point_b2 = rotate_move(point_b_translate, self.frame, math.radians(angle_b), "x", "z",length)
+        point_b = rotate_move(self.point, self.frame, math.radians(0), 0, "x",sticks_distance)
+        point_b_translate = rotate_move(point_b, self.frame, math.radians(0), 0, "y",Stick.WIDTH)
+        point_b2 = rotate_move(point_b_translate, self.frame, math.radians(-angle_b), "y", "z",length)
 
         # create lines
         line_a = Line(point_a1, point_a2)
@@ -58,3 +59,6 @@ class StickModule:
         stick2 = s2.geometry
         
         return [stick1, stick2]
+
+    # def get_module_faces(self):
+        
