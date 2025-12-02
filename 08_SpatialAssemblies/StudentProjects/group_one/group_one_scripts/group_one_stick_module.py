@@ -1,5 +1,5 @@
 from compas.geometry import Line, Frame, Vector, Rotation
-from Sticks import Stick
+from group_one_sticks import Stick
 import math
 
 
