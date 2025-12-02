@@ -43,15 +43,15 @@ class StickModule:
         # line initial planes that are rotated
         point_a = self.point
         plane_a = Frame(point_a, self.frame.xaxis, self.frame.yaxis)
-        plane_a.rotate(math.radians(angle_a))
+        new_plane_a = plane_a.rotated(math.radians(angle_a), self.frame.yaxis, point_a)
         
         point_b = point_a.translated((self.frame.yaxis * Stick.WIDTH) + (self.frame.xaxis * sticks_distance))
         plane_b = Frame(point_a, self.frame.xaxis, self.frame.yaxis)
-        plane_b.rotate(math.radians(-angle_b))
+        new_plane = plane_b.rotated(math.radians(-angle_b), )
 
         # create lines
-        line_a = Line.from_point_and_vector(point_a, plane_a.zaxis * length)
-        line_b = Line.from_point_and_vector(point_b, plane_b.zaxis * length)
+        line_a = Line.from_point_and_vector(point_a, new_plane_a.zaxis * length)
+        line_b = Line.from_point_and_vector(point_b, new_plane.zaxis * length)
         
         # use stick class
         s1 = Stick(line_a)
