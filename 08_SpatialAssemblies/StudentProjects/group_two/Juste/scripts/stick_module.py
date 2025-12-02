@@ -1,230 +1,137 @@
-from compas.geometry import Line, Frame, Vector
-from compas.geometry import Rotation
 import math
+from compas.geometry import Line, Rotation
+from Sticks2 import Stick   # make sure this matches your actual module name
 
-from Sticks import Stick
-
-class OStickModule:
-    def __init__(self, pt, stick_length, stick_width, stick_depth):
-        self.pt = pt
-        self.length = stick_length
-        self.width = stick_width
-        self.depth = stick_depth
-
-        self.sticks = []
-
-    def create_orthogonal_module(self, type = {"x":0, "y":0, "z":0}):
-
-        #stick x
-        offsetpt_x = (self.pt 
-                      - Vector(self.depth/2,0,0)
-                      + Vector(0,2* self.depth * type["x"],0))
-        
-        stick_x = Stick(Line(offsetpt_x,offsetpt_x + Vector(self.length,0,0)), width=self.width, depth=self.depth)
-        if type["x"] != 2:
-            self.sticks.append(stick_x)
-
-        #stick y
-        offsetpt_y = (self.pt 
-                      - Vector(0, self.depth/2,0)
-                      + Vector(0,0,self.depth)
-                      + Vector(2* self.depth * type["y"],0,0))
-        
-        stick_y = Stick(Line(offsetpt_y, offsetpt_y + Vector(0,self.length,0)), Vector(1,0,0), self.width, self.depth)
-        if type["y"] != 2:
-            self.sticks.append(stick_y)
-
-        #stick z
-        offsetpt_z = (self.pt 
-                      + Vector(0,self.depth,0)
-                      + Vector(self.depth,0,0)
-                      - Vector(0,0,self.depth/2)
-                      - Vector(0, 2*self.depth * type["z"],0))
-        
-        stick_z = Stick(Line(offsetpt_z,offsetpt_z + Vector(0,0,self.length)), width = self.width,depth =self.depth)
-        if type["z"] != 2:
-            self.sticks.append(stick_z)
 
 class BranchingModule:
-    def __init__(self, root_frame, stick_length=None, width=None, depth=None):
+    """
+    Branching module that grows new sticks from the faces of an existing root stick.
+    Branching position along the parent stick is controlled by a 0–1 offset parameter.
+    """
+
+    def __init__(self, root_stick, stick_length=None, width=None, depth=None, offset=1.0):
         """
-        Constructor for Branching module.
-        
-        Args:
-            root_frame: Frame from which tree will grow
-            stick_length: Length of each stick
-            width: Width of sticks (defaults to Stick.WIDTH)
-            depth: Depth of sticks (defaults to Stick.DEPTH)
+        Parameters
+        ----------
+        root_stick : Stick
+            The first stick of the structure. Branching begins from its faces.
+        stick_length : float, optional
+            Length of each stick grown in branching.
+        width : float, optional
+            Width of each stick (defaults to Stick.WIDTH).
+        depth : float, optional
+            Depth of each stick (defaults to Stick.DEPTH).
+        offset : float, optional
+            Default normalized position [0–1] along the parent stick axis
+            where new branches will start. 0 = base, 1 = tip.
         """
-        self.root_frame = root_frame
-        self.sticks = []
-        self.stick_length = stick_length
+        self.sticks = [root_stick]
+        self.stick_length = stick_length or Stick.LENGTH
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
+        self.offset = offset  # default branch position along parent axis
 
-        self._init_first_stick(root_frame)
 
-    def _init_first_stick(self, frame):
+    # -------------------------------------------------------------------------
+    # Face Frame Extraction with normalized axis offset
+    # -------------------------------------------------------------------------
+    def get_face_frame(self, stick_index, face_index, offset=1.0):
         """
-        Private method for creating the first stick.
-        
-        Args:
-            frame: Frame from which stick will grow
-        """
-        # Draw line based on start frame
-        stick_axis = Line.from_point_and_vector(frame.point, frame.zaxis * self.stick_length)
+        Returns a Frame on one of the four faces of the given stick, at a
+        normalized position along its axis.
 
-        # Create stick 
-        st_stick = Stick(stick_axis, z_vector = frame.yaxis)
-
-        # Add stick to list of sticks
-        self.sticks.append(st_stick)
-
-    def get_face_frame(self, stick_index, face_index):
-        """
-        Gets a frame on one of the four faces of a stick.
-        Args:
-            stick_index: Index of the stick
-            face_index: Face index (0-3) around the stick
-
-        Returns:
-            Frame on the specified face
+        Parameters
+        ----------
+        stick_index : int
+            Index of the stick in self.sticks.
+        face_index : int {0,1,2,3}
+            Which face around the stick to use.
+        offset : float
+            Normalized parameter [0–1] along the parent stick axis:
+            0 = axis.start, 1 = axis.end.
         """
 
-        # Rotate stick frame based on index
-        stick_frame = self.sticks[stick_index].frame
-        angle = face_index * math.pi/2
-        R = Rotation.from_axis_and_angle(stick_frame.xaxis, angle, stick_frame.point)
-        new_frame = stick_frame.transformed(R)
-        new_frame.point = self.sticks[stick_index].axis.end
+        stick = self.sticks[stick_index]
+        base_frame = stick.frame
 
-        # Offset frame to be on surface on stick
-        new_frame.point += new_frame.yaxis * self.depth/2
+        # Rotate around stick's local x-axis to choose face
+        angle = face_index * (math.pi / 2.0)  # 0, 90, 180, 270 deg
+        R_face = Rotation.from_axis_and_angle(
+            base_frame.xaxis,
+            angle,
+            point=base_frame.point
+        )
+        face_frame = base_frame.transformed(R_face)
 
-        return new_frame
-         
-    def grow_stick(self, from_stick_index = -1, face_index = 0, angle = 0.0, offset = 0.0):
+        # Clamp offset to [0, 1] just to be safe
+        t = max(0.0, min(1.0, offset))
+
+        # Point along parent axis
+        point_on_axis = stick.axis.point_at(t)
+
+        # Move frame origin to that point
+        face_frame.point = point_on_axis
+
+        # Offset outward along local Y to sit on the face surface
+        face_frame.point += face_frame.yaxis * (self.depth * 0.5)
+
+        return face_frame
+
+
+    # -------------------------------------------------------------------------
+    # Grow New Stick
+    # -------------------------------------------------------------------------
+    def grow_stick(self, from_stick_index=-1, face_index=0, angle=0.0, offset=None):
         """
-        Grows a new stick from an existing stick.
-        
-        Args:
-            from_stick_index: Index of stick to grow from 
-            face_index: Index of the face to grow from (0-3)
-            angle: Angle of rotation in radians
+        Grows a new stick from a selected face of an existing stick.
+
+        Parameters
+        ----------
+        from_stick_index : int
+            Index of the existing stick to branch from.
+        face_index : int {0,1,2,3}
+            Face index around the stick.
+        angle : float
+            Additional rotation in degrees around the face's local Y-axis.
+        offset : float, optional
+            Normalized position [0–1] along the parent stick axis
+            (overrides the default self.offset if provided).
         """
-                
-        # Get position on original stick
-        position = self.get_face_frame(from_stick_index, face_index).copy()
-        position.point += position.yaxis * self.depth/2
-        position.point += -position.xaxis * offset
-        
-        # Rotate along face frame
-        R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point = position.point)
-        position.transform(R)
 
-        # Offset along axis
-        position.point += -position.xaxis * offset
-        
-        # Create new stick
-        axis = Line.from_point_and_vector(position.point, position.xaxis * self.stick_length)
-        z_vector = position.yaxis
+        # Use instance default if no offset passed
+        if offset is None:
+            offset = self.offset
 
-        new_stick = Stick(axis, z_vector)
+        # Get face frame at the chosen axis position
+        base_frame = self.get_face_frame(from_stick_index, face_index, offset=offset)
+        base_frame = base_frame.copy()
+
+        # Extra rotation around the face's Y-axis
+        if angle != 0.0:
+            R = Rotation.from_axis_and_angle(
+                base_frame.yaxis,
+                math.radians(angle),
+                point=base_frame.point
+            )
+            base_frame.transform(R)
+
+        # New stick axis aligned with face frame's X-axis
+        new_axis = Line.from_point_and_vector(
+            base_frame.point,
+            base_frame.xaxis * self.stick_length
+        )
+
+        new_stick = Stick(
+            new_axis,
+            width=self.width,
+            depth=self.depth
+        )
         self.sticks.append(new_stick)
 
+
+    # -------------------------------------------------------------------------
+    # Visualization Helper
+    # -------------------------------------------------------------------------
     def visualize(self):
-        """
-        Returns all stick geometries.
-        
-        Returns:
-            List of Box geometries
-        """
-        return [stick.geometry for stick in self.sticks]
-    
-class RootModule:
-    def __init__(self, branches, segment_index, stick_length=None, width=None, depth=None):
-        """
-        Constructor for Root module.
-        
-        Args:
-            branches: list of frames from existing tree
-            segment_index = index of frame for new root
-
-            stick_length: Length of each stick
-            width: Width of sticks (defaults to Stick.WIDTH)
-            depth: Depth of sticks (defaults to Stick.DEPTH)
-        """
-
-        self.branch_frames = [b.frame for b in branches]
-        self.segment_index = segment_index
-        self.sticks = []
-
-        self.stick_length = stick_length
-        self.width = width or Stick.WIDTH
-        self.depth = depth or Stick.DEPTH
-
-        self.segment_frame = self.get_segment_frame()
-
-    def get_segment_frame(self):
-        #get segment_frame based on segment_index
-        frame = self.branch_frames[self.segment_index].copy()
-
-        return frame
-
-    def get_root_frame(self, face_index, rotation_angle = 0.0, segment_offset = 0.0):
-        """
-        Create root frame
-        Translate root frame on one of the four faces of a Stick
-        Create stick from frame
-
-        Args:
-            frames: List of frames
-            Index: Index of frame for root frame
-            face_index: Face index (0-3) around the stick
-
-        Returns:
-        Frame on the specified face
-        """
-
-        """translate root axis to be adjacent to selected segment"""
-
-        #Rotate stick frame based on index
-        face_angle = face_index * math.pi/2
-        R_face = Rotation.from_axis_and_angle(self.segment_frame.xaxis, face_angle, self.segment_frame.point)
-        translated_frame = self.segment_frame.transformed(R_face)
-        #translate frame to end of self.segment_frame
-        translated_frame.point += translated_frame.xaxis * self.stick_length/2
-
-        #Offset frame to be on surface on stick
-        translated_frame.point += translated_frame.yaxis * self.depth
-
-        #Offset along segment axis
-        translated_frame.point += -translated_frame.xaxis * segment_offset
-
-        #Rotate along face frame
-        R_stick = Rotation.from_axis_and_angle(translated_frame.yaxis, math.radians(rotation_angle), point = translated_frame.point)
-        translated_frame.transform(R_stick)
-
-        return translated_frame
-
-    def get_root_stick(self, root_frame, root_offset = 0.0):
-
-        # Offset along root axis
-        root_frame.point += -root_frame.xaxis * root_offset
-
-        #Create translated axis
-        translated_axis = Line.from_point_and_vector(root_frame.point, root_frame.xaxis * self.stick_length)
-
-        #create root stick using root axis
-        root_stick = Stick(translated_axis, z_vector = root_frame.yaxis)
-
-        self.sticks.append(root_stick)
-
-    def visualize(self):
-        """
-        Returns all stick geometries.
-        
-        Returns:
-            List of Box geometries
-        """
-        return [stick.geometry for stick in self.sticks]
+        """Return geometry of all sticks as COMPAS Box objects."""
+        return [s.geometry for s in self.sticks]
