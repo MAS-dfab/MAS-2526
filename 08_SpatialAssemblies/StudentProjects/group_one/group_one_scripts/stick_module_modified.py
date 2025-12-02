@@ -141,6 +141,72 @@ class BranchingModule:
         """
         return [stick.geometry for stick in self.sticks]
     
+class BranchStickModules:
+    def __init__(self, root_frame, stick_length = None, width=None, depth=None):
+        self.root_frame = root_frame
+        self.modules = []
+        self.stick_length = stick_length
+        self.width = width or  Stick.WIDTH
+        self.depth = depth or Stick.DEPTH
+        self._init_first_module(root_frame)
+    
+    def _init_first_module(self, frame):
+        pt = frame.point
+        # my_module = StickModuleC(pt, stick_width, stick_depth, stick_length)
+        my_module = StickModuleC(pt, self.width, self.depth, self.stick_length)
+        my_module.create_module_b() 
+        self.modules.append(my_module)
+    
+    def get_face_frame(self, module_index, stick_index, face_index):
+        module = self.modules[module_index]
+
+        stick_frame = module.sticks[stick_index].frame
+        angle = face_index*math.pi/2 # research, 0, 1, 2,3 is 90 degree steps
+        R = Rotation.from_axis_and_angle(stick_frame.xaxis, angle = angle, point = stick_frame.point)
+        new_frame = stick_frame.transformed(R)
+
+        new_frame.point = module.sticks[stick_index].axis.end
+
+        new_frame.point += new_frame.xaxis * self.depth/2
+        
+        return new_frame #where does it return to/ where is it used next
+    def grow_module(self,  offset_axis, from_module_index=-1, from_stick_index=-1, face_index=0, angle=0.0):
+        """
+        Grows a new module from an existing module's stick.
+
+        Args:
+        from_module_index: Index of module to grow from
+        from_stick_index: Index of stick within that module to grow from 
+        face_index: Index of the face to grow from (0-3)
+        angle: Angle of rotation in radians
+        """
+
+        # Get position on original stick from specific module
+        position = self.get_face_frame(from_module_index, from_stick_index, face_index).copy()
+        position.point += position.yaxis * self.depth/2
+        position.point += position.xaxis * offset_axis
+
+        # Rotate along face frame
+        R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point=position.point)
+        position.transform(R)
+
+        # Offset along stick axis (x, length)
+        position.point += position.xaxis * offset_axis
+
+        # Create new module at this position
+        new_module = StickModuleC(position.point, self.width, self.depth, self.stick_length)
+        new_module.create_module_b()
+        self.modules.append(new_module)
+    
+    def visualize(self):
+        """
+        Returns all stick geometries from all modules.
+        
+        Returns:
+            List of Box geometries
+        """
+        return [stick.geometry for module in self.modules for stick in module.sticks]
+
 class StickModuleB:
     def __init__(self, pt, stick_width, stick_depth, stick_length):
         self.pt = pt
