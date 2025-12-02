@@ -1,6 +1,6 @@
 from compas.geometry import Line, Frame, Vector
 
-from Sticks import Stick
+from group_one_sticks import Stick
 import math
 
 from compas.geometry import Rotation
@@ -180,7 +180,7 @@ class BranchStickModules:
         face_index: Index of the face to grow from (0-3)
         angle: Angle of rotation in radians
         """
-
+        
         # Get position on original stick from specific module
         position = self.get_face_frame(from_module_index, from_stick_index, face_index).copy()
         position.point += position.yaxis * self.depth/2
