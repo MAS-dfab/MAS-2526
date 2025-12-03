@@ -67,9 +67,16 @@ class Bridge:
         # position.point += position.yaxis * (self.depth / 2)  # Offset to be outside stick
         # position.point += position.xaxis * -10
         
+        # Rotate z axis so it is parallel with the face
+        R_1 = Rotation.from_axis_and_angle(position.yaxis, math.radians(90), position.point)
+        R_3 = Rotation.from_axis_and_angle(position.xaxis, math.radians(-90), position.point)
+        position.transform(R_1)
+        position.transform(R_3)
+        
         # Rotate along face frame
-        R = Rotation.from_axis_and_angle(position.zaxis, math.radians(angle), position.point)
-        position.transform(R)
+        R_2 = Rotation.from_axis_and_angle(position.zaxis, math.radians(angle), position.point)
+        position.transform(R_2)
+        position.point += position.yaxis * (-self.depth / 2)  # Offset to be outside stick
         # Offset along stick length
         # position.point += position.xaxis * -.10
         
@@ -81,7 +88,7 @@ class Bridge:
         
         # Add new module
         stick_module = module.CreateModule(position)
-        # self.sticks.append(stick_module)
+        self.sticks.append(stick_module)
         return stick_module
         
         
