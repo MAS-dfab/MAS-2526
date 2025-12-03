@@ -4,13 +4,17 @@ import math
 
 class StickModule:
     
-    def __init__(self, plane):
-        self.frame = plane
-        self.point = plane.point
+    LENGTH = 2
+    
+    def __init__(self, angle_a = 45, angle_b = 45, sticks_distance = 5 ):
+        self.angle_a = angle_a
+        self.angle_b = angle_b
+        self.length = StickModule.LENGTH
+        self.stick_distance = sticks_distance
         self.sticks = []
 
         
-    def CreateModule(self, angle_a = 45, angle_b = 45, length = 2, sticks_distance = 5):
+    def CreateModule(self, plane):
         """
         Docstring for CreateModule
         
@@ -18,17 +22,17 @@ class StickModule:
         :return: two lines
         """
         # line initial planes that are rotated
-        point_a = self.point
-        plane_a = Frame(point_a, self.frame.xaxis, self.frame.yaxis)
-        new_plane_a = plane_a.rotated(math.radians(angle_a), plane_a.yaxis, point_a)
+        point_a = plane.point
+        plane_a = Frame(point_a, plane.xaxis, plane.yaxis)
+        new_plane_a = plane_a.rotated(math.radians(self.angle_a), plane_a.yaxis, point_a)
         
-        point_b = point_a.translated((self.frame.yaxis * Stick.WIDTH) + (self.frame.xaxis * sticks_distance))
-        plane_b = Frame(point_a, self.frame.xaxis, self.frame.yaxis)
-        new_plane = plane_b.rotated(math.radians(-angle_b), plane_b.yaxis, point_b)
+        point_b = point_a.translated((plane.yaxis * Stick.WIDTH) + (plane.xaxis * self.stick_distance))
+        plane_b = Frame(point_a, plane.xaxis, plane.yaxis)
+        new_plane = plane_b.rotated(math.radians(-self.angle_b), plane_b.yaxis, point_b)
 
         # create lines
-        line_a = Line.from_point_and_vector(point_a, new_plane_a.zaxis * length)
-        line_b = Line.from_point_and_vector(point_b, new_plane.zaxis * length)
+        line_a = Line.from_point_and_vector(point_a, new_plane_a.zaxis * self.length)
+        line_b = Line.from_point_and_vector(point_b, new_plane.zaxis * self.length)
         
         # use stick class
         s1 = Stick(line_a)
