@@ -40,4 +40,4 @@ class StickModule:
         stick1 = s1.geometry
         stick2 = s2.geometry
         
-        return [stick1, stick2]
+        return [s1, s2]
