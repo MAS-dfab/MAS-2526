@@ -131,7 +131,6 @@ class BranchingModule:
         new_stick = Stick(centerline, zvector)
         self.sticks.append(new_stick)
 
-
     def visualize(self):
         """
         Returns all stick geometries.
