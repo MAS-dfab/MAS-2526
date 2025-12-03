@@ -212,14 +212,19 @@ class RootFrames:
         """Unified UV sampling for surfaces and twisted extrusion for curves."""
         import Rhino.Geometry as rg
 
+        # CURVE MODE --------------------------------------------------------
         if self.curve_input and not self.surface_input:
-            # CURVE → EXTRUSION → TWISTED LAYERS
             surf = rg.Surface.CreateExtrusion(self.curve_input, rg.Vector3d(0, 0, 1) * 10)
-            face = surf.ToBrep().Faces[0]
+            if surf is None:
+                raise Exception("Failed to extrude curve_input.")
+            brep = surf.ToBrep()
+            if brep is None or brep.Faces.Count == 0:
+                raise Exception("Extruded brep has no faces.")
+            face = brep.Faces[0]
 
             pts = []
             for k in range(self.height_subdiv):
-                z = 10 * k / self.height_subdiv
+                z = 10.0 * k / max(1, self.height_subdiv)
                 twist = math.radians(self.twist_angle * k)
                 layer = []
                 for _ in range(self.point_density):
@@ -227,29 +232,35 @@ class RootFrames:
                     v = random.random()
                     p = face.PointAt(u, v)
                     layer.append(rg.Point3d(p.X, p.Y, z))
-                # twist
+
+                # twist around centroid
                 cx = sum(p.X for p in layer) / len(layer)
                 cy = sum(p.Y for p in layer) / len(layer)
-                pts += [
-                    rg.Point3d(
-                        cx + (p.X - cx) * math.cos(twist) - (p.Y - cy) * math.sin(twist),
-                        cy + (p.X - cx) * math.sin(twist) + (p.Y - cy) * math.cos(twist),
-                        p.Z
-                    )
-                    for p in layer
-                ]
+                for p in layer:
+                    dx = p.X - cx
+                    dy = p.Y - cy
+                    x = cx + dx * math.cos(twist) - dy * math.sin(twist)
+                    y = cy + dx * math.sin(twist) + dy * math.cos(twist)
+                    pts.append(rg.Point3d(x, y, p.Z))
+
+        # SURFACE / BREP MODE -----------------------------------------------
         else:
-            # BREPS / SURFACES
-            srf = self.surface_input.ToBrep().Faces[0]
-            udom = srf.Domain(0)
-            vdom = srf.Domain(1)
+            if self.surface_input is None:
+                raise Exception("No surface_input for surface_to_points.")
+            brep = self.surface_input.ToBrep()
+            if brep is None or brep.Faces.Count == 0:
+                raise Exception("surface_input.ToBrep() has no faces.")
+
+            face = brep.Faces[0]
+            udom = face.Domain(0)
+            vdom = face.Domain(1)
 
             pts = []
-            N = self.point_density * self.height_subdiv
+            N = max(1, self.point_density * self.height_subdiv)
             for _ in range(N):
                 u = random.uniform(udom.T0, udom.T1)
                 v = random.uniform(vdom.T0, vdom.T1)
-                p = srf.PointAt(u, v)
+                p = face.PointAt(u, v)
                 pts.append(p)
 
             pts.sort(key=lambda p: p.Z)
@@ -263,17 +274,30 @@ class RootFrames:
     def points_to_frames(self, rot_tan=0, rot_norm=0):
         pts = self.points
         N = len(pts)
-        Z = Vector(0, 0, 1)
         frames = []
+
+        if N == 0:
+            self.frames = []
+            return self.frames
+
+        Z = Vector(0, 0, 1)
 
         for i, p in enumerate(pts):
             p_prev = pts[max(i - 1, 0)]
             p_next = pts[min(i + 1, N - 1)]
 
             t = Vector(p_next.x - p_prev.x, p_next.y - p_prev.y, 0)
-            t = t.unitized() if t.length else Vector(1, 0, 0)
+            if t.length:
+                t = t.unitized()
+            else:
+                t = Vector(1, 0, 0)
 
-            nrm = Z.cross(t).unitized()
+            nrm = Z.cross(t)
+            if nrm.length:
+                nrm.unitize()
+            else:
+                nrm = Vector(0, 1, 0)
+
             f = Frame(p, t, nrm)
 
             # tangent rotation
@@ -295,21 +319,32 @@ class RootFrames:
     # BLOCK 3 — Edge Frames & Vectors
     # ----------------------------------------------------------------------
     def frames_to_edgevectors(self):
+        # always reset edges to avoid stale indices between GH solutions
+        self.edges = []
+
         pts = [f.point for f in self.frames]
         N = len(pts)
+
+        if N < 2:
+            self.edge_frames = []
+            self.edge_vectors = []
+            return self.edge_frames, self.edge_vectors
 
         edges = set()
         for i in range(N):
             pi = pts[i]
-            j_best, best = None, 1e9
+            j_best = None
+            best = 1e9
             for j in range(N):
                 if i == j:
                     continue
                 d = pi.distance_to_point(pts[j])
                 if d < best:
                     j_best, best = j, d
-            edges.add(tuple(sorted((i, j_best))))
+            if j_best is not None:
+                edges.add(tuple(sorted((i, j_best))))
 
+        # store edges as indices INTO self.frames (important for bridge mode)
         self.edges = list(edges)
 
         edge_frames = []
@@ -317,11 +352,21 @@ class RootFrames:
 
         for i, j in self.edges:
             f = self.frames[i]
-            v = Vector.from_start_end(f.point, self.frames[j].point)
-            v = (v - f.zaxis * v.dot(f.zaxis)).unitized()
+            p0 = f.point
+            p1 = self.frames[j].point
 
-            edge_vectors.append(v)
-            edge_frames.append(Frame(f.point, v, _stable_perp(v)))
+            v = Vector.from_start_end(p0, p1)
+            if v.length < 1e-6:
+                continue
+
+            # project to plane orthogonal to frame z-axis
+            v_proj = v - f.zaxis * v.dot(f.zaxis)
+            if v_proj.length < 1e-6:
+                v_proj = f.xaxis.copy()
+            v_proj.unitize()
+
+            edge_vectors.append(v_proj)
+            edge_frames.append(Frame(p0, v_proj, _stable_perp(v_proj)))
 
         self.edge_vectors = edge_vectors
         self.edge_frames = edge_frames
@@ -332,12 +377,16 @@ class RootFrames:
     # ----------------------------------------------------------------------
     def grow_sticks(self, mode="branch", face_index=0, angle=0, offset01=1.0):
         """
-        mode = "branch"    → BranchingModule
-        mode = "bridge"    → StickBridge
+        mode = "branch"    → BranchingModule (local branching off root sticks)
+        mode = "bridge"    → StickBridge    (connect frames along edges)
         """
         sticks_out = []
 
-        # Root sticks
+        if not self.edge_frames:
+            # nothing to grow from
+            return sticks_out
+
+        # Root sticks (same in both modes)
         roots = []
         for f, v in zip(self.edge_frames, self.edge_vectors):
             axis = Line(f.point, f.point + v * self.stick_length)
@@ -345,22 +394,32 @@ class RootFrames:
             roots.append(root)
             sticks_out.append(root)
 
-        # Branching (A)
+        # Branching (A) – local growth per root
         if mode == "branch":
             for r in roots:
                 mod = BranchingModule(r, stick_length=self.stick_length)
                 mod.grow_stick(face_index=face_index, angle=angle, offset=offset01)
                 sticks_out.extend(mod.sticks)
 
-        # Bridging (C)
+        # Bridging (C) – use indices into FRAMES, not edge_frames
         elif mode == "bridge":
+            if not self.frames or not self.edges:
+                return sticks_out
+
+            offset_abs = offset01 * self.stick_length
+
             for (i, j) in self.edges:
-                f0 = self.edge_frames[i]
-                f1 = self.edge_frames[j]
+                if i >= len(self.frames) or j >= len(self.frames):
+                    # safety guard against any mismatch
+                    continue
+
+                f0 = self.frames[i]
+                f1 = self.frames[j]
+
                 bridge = StickBridge(
                     f0, f1,
-                    offset_root=offset01 * self.stick_length,
-                    offset_target=offset01 * self.stick_length,
+                    offset_root=offset_abs,
+                    offset_target=offset_abs,
                     stick_length=self.stick_length,
                     width=self.stick_width,
                     depth=self.stick_depth
