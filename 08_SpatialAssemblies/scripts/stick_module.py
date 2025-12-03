@@ -1,5 +1,5 @@
-from compas.geometry import Line, Frame, Vector, Rotation
-
+import math
+from compas.geometry import Line, Rotation
 from Sticks import Stick
 
 from sticks import Stick
@@ -51,19 +51,27 @@ class OStickModule:
 
 
 class BranchingModule:
-    def __init__(self, root_frame, stick_length=None, width=None, depth=None, angle=65):
+    """
+    Branching module that grows new sticks from the faces of an existing root stick.
+    """
+
+    def __init__(self, root_stick, stick_length=None, width=None, depth=None):
         """
-        Constructor for Branching module.
-        
-        Args:
-            root_frame: Frame from which tree will grow
-            stick_length: Length of each stick
-            width: Width of sticks (defaults to Stick.WIDTH)
-            depth: Depth of sticks (defaults to Stick.DEPTH)
+        Initialize a branching module starting from an existing Stick object.
+
+        Parameters
+        ----------
+        root_stick : Stick
+            The first stick of the structure. Branching begins from its faces.
+        stick_length : float, optional
+            Length of each stick grown in branching.
+        width : float, optional
+            Width of each stick (defaults to Stick.WIDTH).
+        depth : float, optional
+            Depth of each stick (defaults to Stick.DEPTH).
         """
-        self.root_frame = root_frame
-        self.sticks = []
-        self.stick_length = stick_length
+        self.sticks = [root_stick]
+        self.stick_length = stick_length or Stick.LENGTH
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH  
         self._init_first_stick(root_frame)
@@ -136,9 +144,6 @@ class BranchingModule:
 
     def visualize(self):
         """
-        Returns all stick geometries.
-        
-        Returns:
-            List of Box geometries
+        Returns geometry of all sticks as COMPAS Box objects.
         """
-        return [stick.geometry for stick in self.sticks]
+        return [s.geometry for s in self.sticks]
