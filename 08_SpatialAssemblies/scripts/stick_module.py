@@ -93,12 +93,12 @@ class BranchingModule:
         new_frame = stick_frame.transformed(R)
         new_frame.point = self.sticks[stick_index].axis.end # (get line of stick).end
         # Offset frame to be on surface on stick
-        new_frame.point += new_frame.yaxis * (self.depth / 2) # (move along y axis)
+
+        new_frame.point += new_frame.yaxis * self.depth/2
 
         return new_frame
-
-
-    def grow_stick(self, from_stick_index = -1, face_index = 0, angle = 0.0):
+         
+    def grow_stick(self, from_stick_index = -1, face_index = 0, angle = 0.0, offset = 10):
         """
         Grows a new stick from an existing stick.
         Args:
@@ -108,18 +108,26 @@ class BranchingModule:
         """
         # Get position on original stick
         position = self.get_face_frame(from_stick_index, face_index).copy()
-        position.point += position.yaxis * (self.depth / 2)  # Offset to be outside stick
-        position.point += position.xaxis * -10
+        position.point += position.yaxis * self.depth/2
+        position.point += position.xaxis * -offset
+
+
         # Rotate along face frame
-        R = Rotation.from_axis_and_angle(position.yaxis, angle, position.point)
+
+        R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point= position.point)
+
         position.transform(R)
-        # Offset along stick length
-        position.point += position.xaxis * -10
+
+        # offset along stick lenght
+
+        position.point += position.xaxis * -offset
+            
         # Create new stick
         centerline = Line.from_point_and_vector(position.point, position.xaxis * self.stick_length)
         zvector = position.yaxis
         new_stick = Stick(centerline, zvector)
         self.sticks.append(new_stick)
+
 
     def visualize(self):
         """
