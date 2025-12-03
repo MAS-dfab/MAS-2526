@@ -828,10 +828,11 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
     # Bridge B: Created if X-rotation is NOT zero OR Z-difference is NOT zero
     if abs(x_angle) > angle_tolerance or z_diff > 1.0:
         # Project stick_1's axis onto bridge A's axis
-        from compas.geometry import closest_point_on_line, distance_line_line
+        from compas.geometry import closest_point_on_line
         
         # Get bridge A's axis
         bridge_A_axis = current_stick.axis
+
         
         # Find closest point on bridge A's axis to stick_1's center
         closest_pt = closest_point_on_line(frame_1.point, bridge_A_axis)
