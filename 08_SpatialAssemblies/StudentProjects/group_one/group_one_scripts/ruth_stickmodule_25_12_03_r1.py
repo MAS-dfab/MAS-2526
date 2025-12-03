@@ -6,8 +6,9 @@ import math
 
 ##    BIKIN CLASS BUAT BIKIN UP TO 3 STICKS DARI 1 POINT    ##
 class OStickModule:
-    def __init__(self, pt, stick_length, stick_width, stick_depth):
-        self.pt = pt
+    def __init__(self, frame, stick_length, stick_width, stick_depth):
+        self.frame = frame
+        self.pt = frame.point
         self.length = stick_length
         self.width = stick_width
         self.depth = stick_depth
@@ -99,12 +100,17 @@ class OStickModule:
     def create_module_1(self, type={"a": 0, "b": 0, "c": 0}):
         index_a = None
 
+        x_direction = self.frame.xaxis 
+        y_direction = self.frame.yaxis 
+        z_direction = self.frame.zaxis 
+
         # Stick A
         offsetpt_a = (self.pt
-                      - Vector(self.depth/2,0,0)
-                      + Vector(0, 1* self.depth * type["a"], 0))
-        
-        stick_a = Stick(Line(offsetpt_a, offsetpt_a + Vector(self.length, 0, 0)), width=self.width, depth=self.depth)
+                      - x_direction * (self.depth/2)
+                      + y_direction * (1 * self.depth * type["a"]))
+         
+        stick_a_axis = Line(offsetpt_a, offsetpt_a + x_direction * self.length)
+        stick_a = Stick(stick_a_axis, width=self.width, depth=self.depth)
         
         if type["a"] != 2:
             self.sticks.append(stick_a)
@@ -112,38 +118,42 @@ class OStickModule:
 
         # Stick A2
         offsetpt_a2 = (self.pt
-                      - Vector(self.depth/2,0,0)
-                      + Vector(0, self.depth*2 ,0)
-                      + Vector(0, 1* self.depth * type["a"], 0))
-                      
-        
-        stick_a2 = Stick(Line(offsetpt_a2, offsetpt_a2 + Vector(self.length, 0, 0)), width=self.width, depth=self.depth)
+                       - x_direction * (self.depth/2)
+                       + y_direction * (self.depth * 2)
+                       + y_direction * (1 * self.depth * type["a"]))
+
+        stick_a2_axis = Line(offsetpt_a2, offsetpt_a2 + x_direction * self.length)
+        stick_a2 = Stick(stick_a2_axis, width=self.width, depth=self.depth)
         
         if type["a"] != 2:
             self.sticks.append(stick_a2)
 
+
         # Stick B
         offsetpt_b = (self.pt 
-                      - Vector(0, self.depth/2,0) 
-                      + Vector(0,0,self.depth)
-                      + Vector(self.depth, 0,0)
-                      - Vector(0, self.depth, 0)
-                      + Vector(2* self.depth * type["b"],0,0))
-        
-        stick_b = Stick(Line(offsetpt_b, offsetpt_b + Vector(0, self.length, 0)), width=self.width, depth=self.depth) 
+                      - y_direction * (self.depth/2) 
+                      + z_direction * (self.depth)
+                      + x_direction * (self.depth)
+                      - y_direction * (self.depth)
+                      + x_direction * (2 * self.depth * type["b"]))
+
+        stick_b_axis = Line(offsetpt_b, offsetpt_b + y_direction * self.length)
+        stick_b = Stick(stick_b_axis, width=self.width, depth=self.depth) 
 
         if type["b"] != 2:
             self.sticks.append(stick_b)
 
+
         # Stick B2
         offsetpt_b2 = (self.pt 
-                      - Vector(0, self.depth/2,0) 
-                      + Vector(0,0,self.depth)
-                      + Vector(self.depth*3, 0,0)
-                      - Vector(0, self.depth, 0)
-                      + Vector(2* self.depth * type["b"],0,0))
+                       - y_direction * (self.depth/2) 
+                       + z_direction * (self.depth)
+                       + x_direction * (self.depth * 3)
+                       - y_direction * (self.depth)
+                       + x_direction * (2 * self.depth * type["b"]))
         
-        stick_b2 = Stick(Line(offsetpt_b2, offsetpt_b2 + Vector(0, self.length, 0)), width=self.width, depth=self.depth) 
+        stick_b2_axis = Line(offsetpt_b2, offsetpt_b2 + y_direction * self.length)
+        stick_b2 = Stick(stick_b2_axis, width=self.width, depth=self.depth) 
 
         if type["b"] != 2:
             self.sticks.append(stick_b2)
@@ -151,12 +161,13 @@ class OStickModule:
 
         # Stick C 
         offsetpt_c = (self.pt 
-                      + Vector(0,self.depth,0)
-                      + Vector(self.depth*2,0,0)
-                      - Vector(0,0,self.length/2)
-                      - Vector(0, 2*self.depth * type["c"],0))
+                      + y_direction * (self.depth)
+                      + x_direction * (self.depth * 2)
+                      - z_direction * (self.length/2)
+                      - y_direction * (2 * self.depth * type["c"]))
         
-        stick_c = Stick(Line(offsetpt_c, offsetpt_c + Vector(0,0,self.length)), width = self.width,depth =self.depth)
+        stick_c_axis = Line(offsetpt_c, offsetpt_c + z_direction * self.length)
+        stick_c = Stick(stick_c_axis, width=self.width, depth=self.depth)
 
         if type["c"] != 2:
             self.sticks.append(stick_c)
@@ -170,16 +181,19 @@ class OStickModule:
             # midpoint of Stick A
             midA = stickA.axis.midpoint
 
-            # connection_point 1
-            offset1 = Vector(self.depth*3, self.depth, 0)
+            # connection_point 1 (pakai arah lokal)
+            offset1 = (x_direction * (self.depth * 3) +
+                       y_direction * (self.depth))
             self.connection_point = midA + offset1
 
             # connection_point 2
-            offset2 = Vector(-self.depth*5.2, self.length - self.depth*5, 0)
+            offset2 = (x_direction * (-self.depth * 5.2) +
+                       y_direction * (self.length - self.depth * 5))
             self.connection_point2 = midA + offset2
 
         else:
             self.connection_point = None
+            self.connection_point2 = None
 
     def create_module_2(self, type={"a": 0, "b": 0, "c": 0}):
         index_b = None
