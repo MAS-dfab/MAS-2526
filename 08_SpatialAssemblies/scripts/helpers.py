@@ -17,25 +17,27 @@ def sort_sticks_by_z(sticks):
 
 def scale_and_move_to_point(assembly, center):
 
+
     scaled_assembly = assembly.copy()
     factor = 0.001 # 1mm to M
 
     #scale to 1mm
     for part in scaled_assembly.parts():
         S = Scale.from_factors([factor, factor, factor], frame=Frame.worldXY())
-        part.transform(S)
         part.frame.transform(S)
+        part.attributes["shape"].scale(factor)
+        part.attributes["shape"].frame.scale(factor)
 
-    points = [p for part in scaled_assembly.parts() for p in part.shape.vertices]
+
+    points = [p for part in scaled_assembly.parts() for p in part.attributes["shape"].vertices]
     bbox = bounding_box(points)
     cur_center = Point(0,0,bbox[0][2])
 
     T = Translation.from_vector(center-cur_center)
 
     for part in scaled_assembly.parts():
-        part.transform(T)
         part.frame.transform(T)
-        part.attributes["midpoint"].transform(T)
+        part.attributes["shape"].transform(T)
 
     return scaled_assembly
 
@@ -52,16 +54,11 @@ APPROACH_DISTANCE = 0.1  # 10 cm
 def calculate_pick_trajectory(pick_frame, robot, start_config, group = "manipulator"):
     """
     Calculate the pick trajectory for a given pick frame.
-    Args:
-        pick_frame (compas.geometry.Frame): The pick frame.
-        robot (compas_fab.robots.Robot): The robot instance.
-    Returns:
-        tuple: The pick trajectory, the pick configuration and the approach pick configuration.
     """
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
     approach_pick_frame.translate(
-        -APPROACH_DISTANCE * approach_pick_frame.zaxis
+        APPROACH_DISTANCE * -approach_pick_frame.zaxis
     )
 
     # Generate cartesian trajectory from pick to approach pick frame
@@ -87,69 +84,83 @@ def calculate_pick_trajectory(pick_frame, robot, start_config, group = "manipula
     return trajectory, trajectory.points[-1], trajectory.points[0]
 
 
-def calculate_place_trajectories(robot, current_config, safe_frame, place_frame, group=None):
+def calculate_place_trajectories(robot, current_config,  place_frame, group=None):
     """
-    Calculates the safe trajectory (to safe_frame), place trajectory (to place_frame), 
-    and return trajectory (back to safe_frame) for a part.
-    
-    Args:
-        robot: compas_fab.robots.Robot instance.
-        current_config: Starting Configuration.
-        safe_frame: Frame to move to before/after placing.
-        place_frame: Frame where the part should be placed.
-        group: (optional) robot group name.
-    
-    Returns:
-        dict with keys: 'safe_trajectory', 'place_trajectory', 'return_trajectory'
+    Calculates the  place trajectory (to place_frame), 
+    and return trajectory (back to safe_config) for a part.
     """
-    # Move to safe_frame
-    goal_constraints_safe = robot.constraints_from_frame(
-        safe_frame,
-        tolerance_position=0.001,
-        tolerances_axes=[0.001, 0.001, 0.001],
+
+    start_config_for_place = current_config
+    goal_constraints_place = robot.constraints_from_frame(
+        place_frame,
+        tolerance_position=0.0001,
+        tolerances_axes=[0.0001, 0.0001, 0.0001],
         use_attached_tool_frame=True,
         group=group or robot.main_group_name,
     )
-    safe_trajectory = robot.plan_motion(
-        goal_constraints_safe,
-        start_configuration=current_config,
+    place_trajectory = robot.plan_motion(
+        goal_constraints_place,
+        start_configuration=start_config_for_place,
         group=group or robot.main_group_name,
         options=dict(
             planner_id="RRTConnect",
             avoid_collisions=True,
         ),
     )
+    print("Planned place trajectory.")
 
-    # Move from safe_frame to place_frame
-    goal_constraints_place = robot.constraints_from_frame(
-        place_frame,
-        tolerance_position=0.001,
-        tolerances_axes=[0.001, 0.001, 0.001],
-        use_attached_tool_frame=True,
-        group=group or robot.main_group_name,
-    )
-    place_trajectory = robot.plan_cartesian_motion(
-        [safe_frame, place_frame], 
-        start_configuration=safe_trajectory.points[-1],
-        group=group or robot.main_group_name,
-        options=dict(
-            max_step=0.01,
-        ),
-    )   
+    # Go to exit frame (safe distance above place frame)
 
-    # Return from place_frame to safe_frame
-    return_trajectory = robot.plan_motion(
-        goal_constraints_safe,
+    exit_frame = place_frame.copy()
+    exit_frame.translate(APPROACH_DISTANCE * -exit_frame.zaxis)
+    
+    exit_trajectory = robot.plan_cartesian_motion(
+        [place_frame, exit_frame],
         start_configuration=place_trajectory.points[-1],
         group=group or robot.main_group_name,
         options=dict(
+            max_step=0.01,
+        ),  
+    )
+    print("Planned safe trajectory.")
+
+    # Go to safe configuration (home)
+    safe_config = start_config_for_place
+    safe_constraints = robot.constraints_from_configuration(
+        safe_config,
+        tolerances_above = [0.0001]*6,
+        tolerances_below = [0.0001]*6,
+    )
+    return_trajectory = robot.plan_motion(
+        safe_constraints,
+        start_configuration=exit_trajectory.points[-1],
+        group=group or robot.main_group_name,
+        options=dict(
             planner_id="RRTConnect",
             avoid_collisions=True,
         ),
     )
-
-    return {
-        "safe_trajectory": safe_trajectory,
-        "place_trajectory": place_trajectory,
-        "return_trajectory": return_trajectory
-    }
+    print("Planned return trajectory.")
+    if place_trajectory.fraction < 1:
+        raise Exception(
+            "Incomplete place trajectory found. Only {:.1f}% of the trajectory could be planned".format(
+                place_trajectory.fraction * 100
+            )
+        )
+    if exit_trajectory.fraction < 1:
+        raise Exception(
+            "Incomplete exit trajectory found. Only {:.1f}% of the trajectory could be planned".format(
+                exit_trajectory.fraction * 100
+            )
+        )
+    if return_trajectory.fraction < 1:
+        raise Exception(
+            "Incomplete return trajectory found. Only {:.1f}% of the trajectory could be planned".format(
+                return_trajectory.fraction * 100
+            )
+        )
+    
+    joined_trajectory = place_trajectory.copy()
+    joined_trajectory.points.extend(exit_trajectory.points)
+    joined_trajectory.points.extend(return_trajectory.points)
+    return joined_trajectory
