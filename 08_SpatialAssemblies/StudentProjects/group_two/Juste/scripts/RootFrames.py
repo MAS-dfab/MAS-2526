@@ -408,25 +408,38 @@ class RootFrames:
 
             offset_abs = offset01 * self.stick_length
 
-            for (i, j) in self.edges:
-                if i >= len(self.frames) or j >= len(self.frames):
-                    # safety guard against any mismatch
-                    continue
+            clean_edges = []
+        for (i, j) in self.edges:
+            if i >= len(self.frames) or j >= len(self.frames):
+                # skip indices that refer to stale frames
+                continue
+            clean_edges.append((i, j))
+        self.edges = clean_edges
 
-                f0 = self.frames[i]
-                f1 = self.frames[j]
+        edge_frames = []
+        edge_vectors = []
 
-                bridge = StickBridge(
-                    f0, f1,
-                    offset_root=offset_abs,
-                    offset_target=offset_abs,
-                    stick_length=self.stick_length,
-                    width=self.stick_width,
-                    depth=self.stick_depth
-                )
-                sticks_out.extend(bridge.sticks)
+        for i, j in self.edges:
+            f = self.frames[i]
+            p0 = f.point
+            p1 = self.frames[j].point
 
-        return sticks_out
+            v = Vector.from_start_end(p0, p1)
+            if v.length < 1e-6:
+                continue
+
+            v_proj = v - f.zaxis * v.dot(f.zaxis)
+            if v_proj.length < 1e-6:
+                v_proj = f.xaxis.copy()
+            v_proj.unitize()
+
+            edge_vectors.append(v_proj)
+            edge_frames.append(Frame(p0, v_proj, _stable_perp(v_proj)))
+
+        self.edge_vectors = edge_vectors
+        self.edge_frames = edge_frames
+        return edge_frames, edge_vectors
+
 
     # ----------------------------------------------------------------------
     # FULL PIPELINE
