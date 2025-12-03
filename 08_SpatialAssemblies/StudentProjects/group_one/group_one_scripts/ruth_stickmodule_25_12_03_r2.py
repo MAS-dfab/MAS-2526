@@ -6,8 +6,9 @@ import math
 
 ##    BIKIN CLASS BUAT BIKIN UP TO 3 STICKS DARI 1 POINT    ##
 class OStickModule:
-    def __init__(self, pt, stick_length, stick_width, stick_depth):
-        self.pt = pt
+    def __init__(self, plane, stick_length, stick_width, stick_depth): 
+        self.plane = plane
+        self.pt = plane.point
         self.length = stick_length
         self.width = stick_width
         self.depth = stick_depth
@@ -21,8 +22,8 @@ class OStickModule:
 
         #stick x
         offsetpt_x = (self.pt
-                      - Vector(self.depth/2,0,0)
-                      + Vector(0, 2* self.depth * type["x"], 0))
+                      - Vector(self.depth/2,0,0) # (self.plane.xaxis # self.depth/2) # plane.point += plane.yaxis * (-self.depth / 2)
+                      + Vector(0, 2* self.depth * type["x"], 0)) # 
         stick_x = Stick(Line(offsetpt_x,offsetpt_x + Vector(self.length,0,0)), width=self.width, depth=self.depth)
         if type["x"] !=2:
             self.sticks.append(stick_x)

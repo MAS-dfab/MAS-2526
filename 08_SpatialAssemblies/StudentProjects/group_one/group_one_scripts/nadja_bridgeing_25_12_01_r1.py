@@ -34,7 +34,8 @@ class Bridge:
         
         # frames of the faces 
         face_frames = []
-        faces = self.sticks[module_index][0].to_brep().faces
+        geometry = self.sticks[module_index][0].geometry
+        faces = geometry.to_brep().faces
         for face in faces:
             center_point = face.centroid
             face_frame = face.frame_at(0, 0)
@@ -74,7 +75,7 @@ class Bridge:
         position.transform(R_3)
         
         # Rotate along face frame
-        R_2 = Rotation.from_axis_and_angle(position.zaxis, math.radians(angle), position.point)
+        R_2 = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), position.point)
         position.transform(R_2)
         position.point += position.yaxis * (-self.depth / 2)  # Offset to be outside stick
         # Offset along stick length
