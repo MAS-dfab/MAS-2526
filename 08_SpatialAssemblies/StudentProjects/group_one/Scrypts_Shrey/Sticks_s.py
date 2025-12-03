@@ -679,3 +679,227 @@ def bridge_sticks(stick_0, stick_1, bridge_length, width=None, depth=None):
     }
     
     return [bridge_C1, bridge_C2], info
+
+
+def extract_zyx_euler_angles(frame_1, frame_2):
+    """
+    Extract ZYX Euler angles between two frames.
+    
+    Parameters:
+        frame_1: Reference frame (treated as identity)
+        frame_2: Target frame
+    
+    Returns:
+        tuple: (z_angle, y_angle, x_angle) in radians
+    """
+    # Build rotation matrix from frame_2 relative to frame_1
+    r11 = frame_2.xaxis.dot(frame_1.xaxis)
+    r12 = frame_2.xaxis.dot(frame_1.yaxis)
+    r13 = frame_2.xaxis.dot(frame_1.zaxis)
+    
+    r21 = frame_2.yaxis.dot(frame_1.xaxis)
+    r22 = frame_2.yaxis.dot(frame_1.yaxis)
+    r23 = frame_2.yaxis.dot(frame_1.zaxis)
+    
+    r31 = frame_2.zaxis.dot(frame_1.xaxis)
+    r32 = frame_2.zaxis.dot(frame_1.yaxis)
+    r33 = frame_2.zaxis.dot(frame_1.zaxis)
+    
+    # Extract ZYX Euler angles
+    y_angle = math.asin(max(-1.0, min(1.0, -r13)))  # Clamp for numerical stability
+    
+    if abs(math.cos(y_angle)) > 0.001:  # Not at singularity
+        z_angle = math.atan2(r12, r11)
+        x_angle = math.atan2(r23, r33)
+    else:  # Gimbal lock
+        z_angle = math.atan2(-r21, r22)
+        x_angle = 0
+    
+    return z_angle, y_angle, x_angle
+
+
+def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, depth=None, angle_tolerance=0.01):
+    """Create bridges using ZYX decomposition for robotic assembly"""
+    
+    if width is None:
+        width = 13.0
+    if depth is None:
+        depth = 13.0
+    
+    frame_0 = stick_0.center_frame
+    frame_1 = stick_1.center_frame
+    
+    # Extract ZYX Euler angles
+    z_angle, y_angle, x_angle = extract_zyx_euler_angles(frame_0, frame_1)
+    
+    # Calculate Z-height difference
+    z_diff = abs(frame_1.point.z - frame_0.point.z)
+    
+    bridges = []
+    sequence = []
+    current_stick = stick_0
+    
+    # Find face most parallel to XY (world) plane on stick_0
+    world_z = Vector(0, 0, 1)
+    best_face_idx = 0
+    best_alignment = 0
+    
+    for face_idx in range(4):
+        face_frame = stick_0.get_face_frame(face_idx)
+        alignment = abs(face_frame.zaxis.dot(world_z))
+        if alignment > best_alignment:
+            best_alignment = alignment
+            best_face_idx = face_idx
+    
+    # Bridge A: Z-rotation (horizontal rotation) with sliding
+    if abs(z_angle) > angle_tolerance:
+        face_frame = stick_0.get_face_frame(best_face_idx)
+        
+        # Rotate the bridge direction by Z-angle
+        R = Rotation.from_axis_and_angle(face_frame.zaxis, z_angle, face_frame.point)
+        rotated_face = face_frame.copy()
+        rotated_face.transform(R)
+        
+        # Create temp bridge A to get its axis
+        bridge_A_temp = stick_from_face_frame(rotated_face, "side", bridge_length, width, depth, anchor_position=0.5)
+        
+        # Project stick_1 onto reference plane
+        stick_1_xy_projection = Point(frame_1.point.x, frame_1.point.y, frame_0.point.z)
+        
+        # Distance from stick_0 to projected stick_1
+        distance_in_xy = distance_point_point(
+            Point(frame_0.point.x, frame_0.point.y, frame_0.point.z),
+            stick_1_xy_projection
+        )
+        
+        # Slide amount
+        x_slide = distance_in_xy / 2.0
+        
+        # Calculate anchor position
+        if x_slide > bridge_length:
+            anchor_A = 0.1
+        else:
+            bridge_A_direction = bridge_A_temp.center_frame.xaxis
+            direction_to_stick1 = Vector.from_start_end(face_frame.point, stick_1_xy_projection).unitized()
+            
+            if direction_to_stick1.dot(bridge_A_direction) > 0:
+                anchor_A = 0.5 - (x_slide / bridge_length)
+            else:
+                anchor_A = 0.5 + (x_slide / bridge_length)
+            
+            anchor_A = max(0.0, min(1.0, anchor_A))
+        
+        # Create bridge A
+        bridge_A = stick_from_face_frame(rotated_face, "side", bridge_length, width, depth, anchor_position=anchor_A)
+        bridges.append(bridge_A)
+        sequence.append(('Z', z_angle, anchor_A))
+        current_stick = bridge_A
+    
+    # Bridge B: Created if X-rotation is NOT zero OR Z-difference is NOT zero
+    if abs(x_angle) > angle_tolerance or z_diff > 1.0:
+        # Get bridge A's axis
+        bridge_A_axis = current_stick.axis
+        
+        # Find closest point on bridge A's axis to stick_1's center
+        closest_pt = closest_point_on_line(frame_1.point, bridge_A_axis)
+        
+        # Check if intersection exists (closest point is within bridge A's length)
+        bridge_A_start = bridge_A_axis.start
+        bridge_A_end = bridge_A_axis.end
+        bridge_A_vector = Vector.from_start_end(bridge_A_start, bridge_A_end)
+        to_closest = Vector.from_start_end(bridge_A_start, closest_pt)
+        
+        # Parameter t: 0 = start, 1 = end
+        if bridge_A_vector.length > 0.001:
+            t = to_closest.dot(bridge_A_vector) / (bridge_A_vector.length ** 2)
+        else:
+            t = 0.5
+        
+        # Determine position on bridge A
+        if 0.0 <= t <= 1.0:
+            attachment_position = t
+        else:
+            attachment_position = 0.9
+        
+        # Project stick_1's axis
+        stick_1_axis = stick_1.axis
+        stick_1_midpoint = stick_1_axis.midpoint
+        
+        # Find which adjacent face is closer to stick_1's projected axis midpoint
+        adjacent_face_1 = (best_face_idx + 1) % 4
+        adjacent_face_2 = (best_face_idx) % 4
+        
+        # Get both face frames at the attachment position
+        face_frame_B1 = current_stick.get_face_frame_at(adjacent_face_1, attachment_position)
+        face_frame_B2 = current_stick.get_face_frame_at(adjacent_face_2, attachment_position)
+        
+        # Calculate distance from each face to stick_1's projected midpoint
+        dist_1 = distance_point_point(face_frame_B1.point, stick_1_midpoint)
+        dist_2 = distance_point_point(face_frame_B2.point, stick_1_midpoint)
+        
+        # Choose the closer face
+        if dist_1 < dist_2:
+            next_face_idx = adjacent_face_1
+            face_frame_B = face_frame_B1
+        else:
+            next_face_idx = adjacent_face_2
+            face_frame_B = face_frame_B2
+        
+        # Check if bridge B's projected axis would intersect with stick_1's axis
+        # Create a temporary bridge B to check intersection
+        temp_bridge_B = stick_from_face_frame(face_frame_B, "side", bridge_length, width, depth)
+        bridge_B_axis = temp_bridge_B.axis
+        
+        # Check if axes intersect (distance between lines)
+        # Get closest points between the two lines
+        cp_B = closest_point_on_line(stick_1_midpoint, bridge_B_axis)
+        cp_1 = closest_point_on_line(cp_B, stick_1_axis)
+        
+        intersection_distance = distance_point_point(cp_B, cp_1)
+        
+        # If axes would intersect (distance < threshold), slide bridge B
+        if intersection_distance < depth:  # They intersect or are too close
+            # Slide bridge B along bridge A's axis by (depth - distance)
+            slide_distance = depth - intersection_distance
+            
+            # Determine slide direction: away from stick_1
+            bridge_A_direction = current_stick.center_frame.xaxis
+            direction_to_stick1 = Vector.from_start_end(face_frame_B.point, stick_1_midpoint).unitized()
+            
+            # Convert slide distance to parameter space
+            slide_amount = slide_distance / current_stick.length
+            
+            # If bridge A points toward stick_1, slide backward (decrease t)
+            # Otherwise slide forward (increase t)
+            if direction_to_stick1.dot(bridge_A_direction) > 0:
+                # Stick 1 is in positive direction, slide backward
+                attachment_position_adjusted = attachment_position - slide_amount
+            else:
+                # Stick 1 is in negative direction, slide forward
+                attachment_position_adjusted = attachment_position + slide_amount
+            
+            # Clamp to valid range
+            attachment_position_adjusted = max(0.1, min(0.9, attachment_position_adjusted))
+            
+            # Get adjusted face frame
+            face_frame_B = current_stick.get_face_frame_at(next_face_idx, attachment_position_adjusted)
+            attachment_position = attachment_position_adjusted
+        
+        # Create bridge B (no rotation needed)
+        bridge_B = stick_from_face_frame(face_frame_B, "side", bridge_length, width, depth)
+        bridges.append(bridge_B)
+        sequence.append(('B', attachment_position, next_face_idx))
+    
+    info = {
+        'method': 'ZYX_decomposed',
+        'z_angle_deg': math.degrees(z_angle),
+        'y_angle_deg': math.degrees(y_angle),
+        'x_angle_deg': math.degrees(x_angle),
+        'z_height_diff': z_diff,
+        'num_bridges': len(bridges),
+        'sequence': sequence,
+        'bridge_length': bridge_length,
+        'best_face': best_face_idx
+    }
+    
+    return bridges, info
