@@ -1,0 +1,114 @@
+from compas.geometry import Line, Frame, Vector
+from compas.geometry import Rotation
+from group_one_sticks import Stick
+import math
+
+
+class BranchStickModules:
+    def __init__(self, root_frame, stick_length = None, width=None, depth=None, rot_angle=0):
+        self.root_frame = root_frame
+        self.modules = []
+        self.stick_length = stick_length
+        self.width = width or  Stick.WIDTH
+        self.depth = depth or Stick.DEPTH
+        self.rot_angle = rot_angle
+        self._init_first_module(root_frame)
+    
+    def _init_first_module(self, frame):
+        my_module = StickModule(frame, self.width, self.depth, self.stick_length, rot_angle=self.rot_angle)
+
+        my_module.create_module_c() 
+        self.modules.append(my_module)
+    
+    def get_face_frame(self, module_index, stick_index, face_index):
+        module = self.modules[module_index]
+
+        stick_frame = module.sticks[stick_index].frame
+
+        angle = face_index*math.pi/2 # research, 0, 1, 2,3 is 90 degree steps
+        R = Rotation.from_axis_and_angle(stick_frame.xaxis, angle = angle, point = stick_frame.point)
+        new_frame = stick_frame.transformed(R)
+
+        new_frame.point = module.sticks[stick_index].axis.end
+
+        new_frame.point += new_frame.yaxis * self.depth/2
+        
+        return new_frame #where does it return to/ where is it used next
+    
+    def grow_module(self, offset_axis, offset_axis_b, from_module_index=-1, from_stick_index=-1, face_index=0, angle=0.0, rot_angle=None):
+        if rot_angle is None:
+            rot_angle = self.rot_angle
+
+
+        # Get position on original stick from specific module
+        position = self.get_face_frame(from_module_index, from_stick_index, face_index).copy()
+                
+        position.point += position.yaxis * self.depth/2 * offset_axis_b - position.xaxis*self.width/2
+        position.point += position.xaxis * offset_axis
+
+        # Rotate along face frame
+        R = Rotation.from_axis_and_angle(position.zaxis, math.radians(angle), point=position.point)  #point=rotation_center
+        position.transform(R)
+
+        # Offset along stick axis (x, length)
+        position.point += position.xaxis * offset_axis
+
+        # Create new module at this position
+        new_module = StickModule(position, self.width, self.depth, self.stick_length, rot_angle=rot_angle)
+        new_module.create_module_c()
+        self.modules.append(new_module)
+    
+    def visualize(self):
+        """
+        Returns all stick geometries from all modules.
+        
+        Returns:
+            List of Box geometries
+        """
+        return [stick.geometry for module in self.modules for stick in module.sticks]
+
+
+class StickModule:
+    def __init__(self, frame, stick_width, stick_depth, stick_length, rot_angle=0):
+        self.frame = frame
+        self.width = stick_width
+        self.depth = stick_depth
+        self.length = stick_length
+        self.rot_angle = rot_angle
+        self.sticks = []
+    
+    def create_module_c(self, rot_angle=None):
+        ## STICK XA ##
+        offsetpt_xa = (self.frame.point - self.frame.xaxis*self.width*3.5 - self.frame.yaxis*self.width)
+        stick_xa = Stick(Line(offsetpt_xa, offsetpt_xa+self.frame.xaxis*self.length), width = self.width, depth = self.depth)
+        self.sticks.append(stick_xa)
+        
+        ## STICK XB ##
+        offsetpt_xb = (self.frame.point - self.frame.xaxis*self.width*3.5 + self.frame.yaxis*self.width)
+        stick_xb = Stick(Line(offsetpt_xb, offsetpt_xb+self.frame.xaxis*self.length), width = self.width, depth = self.depth)
+        self.sticks.append(stick_xb)
+        
+        ## STICK YA ##
+        offsetpt_ya = (self.frame.point - self.frame.yaxis*self.width*4.5-self.frame.zaxis*self.depth)
+        stick_ya = Stick(Line(offsetpt_ya, offsetpt_ya + self.frame.yaxis*self.length), width = self.width, depth = self.depth)
+        self.sticks.append(stick_ya)
+
+        ## STICK YB ##
+        offsetpt_yb = (self.frame.point - self.frame.yaxis*self.width*4.5+self.frame.zaxis*self.depth)
+        stick_yb = Stick(Line(offsetpt_yb, offsetpt_yb+self.frame.yaxis*self.length), width = self.width, depth = self.depth)
+        self.sticks.append(stick_yb)
+
+        ## STICK Z ##
+        offsetpt_z = (self.frame.point + self.frame.xaxis*self.length-self.frame.xaxis*self.width*7 - self.frame.zaxis*self.width*3.5)
+        stick_z = Stick(Line(offsetpt_z, offsetpt_z+self.frame.zaxis*self.length), width = self.width, depth = self.depth)
+        
+        # if rot_angle is None:
+        #     rot_angle = self.rot_angle
+
+        # # Rx = Rotation.from_axis_and_angle(self.frame.xaxis, self.rot_angle, point=self.frame.point)         
+        # Ry = Rotation.from_axis_and_angle(self.frame.yaxis, rot_angle, point=self.frame.point)
+        # # stick_z.geometry.transform(Rx)
+        # stick_z.geometry.transform(Ry)
+        
+        
+        self.sticks.append(stick_z)
