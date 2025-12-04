@@ -154,36 +154,6 @@ class BranchingModule:
         return [s.geometry for s in self.sticks]
 
 
-    def grow_once(self, face_index=0, angle=0.0, offset01=None):
-        """Grow one child from the last stick in the chain."""
-        parent = self.sticks[-1]
-        off = self.offset if offset01 is None else float(offset01)
-
-        f = self._face_frame(parent, face_index, off)
-
-        # optional yaw about local Y (after face selection)
-        if angle:
-            R = Rotation.from_axis_and_angle(f.yaxis, math.radians(angle), point=f.point)
-            f.transform(R)
-
-        # child axis: starts at face center, extends along local X
-        axis = Line.from_point_and_vector(f.point, f.xaxis * self.stick_length)
-
-        child = Stick(axis,
-                      length=self.stick_length,
-                      width=self.width,
-                      depth=self.depth)
-
-        self.sticks.append(child)
-
-    def grow_chain(self, steps=1, face_index=0, angle=0.0, offset01=None):
-        """Grow a chain of N children from the root."""
-        for _ in range(max(0, int(steps))):
-            self.grow_once(face_index=face_index, angle=angle, offset01=offset01)
-
-    def visualize(self):
-        return [s.geometry for s in self.sticks]
-
 
 # =============================================================================
 # GROW-TOWARDS (BRIDGE) – CLEAN FACE CONTACT
