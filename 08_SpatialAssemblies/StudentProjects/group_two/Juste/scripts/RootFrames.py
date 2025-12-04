@@ -416,24 +416,35 @@ class RootFrames:
         
         frames = []
 
-        # ---- Curve FrameAt ----------------------------------------------
+        # --- Curve mode: use curve.FrameAt(t) ---------------------------
         if self._rg_curve is not None and self._curve_t:
             crv = self._rg_curve
 
             for pt, t in zip(self.points, self._curve_t):
-                ok, plane = crv.FrameAt(t)
-                if not ok:
-                    tan = crv.TangentAt(t)
-                    tvec = Vector(tan.X, tan.Y, tan.Z)
+
+                try:
+                    plane = crv.FrameAt(t)  # RhinoCommon returns ONLY the plane
+                except:
+                    plane = None
+
+                if plane is None:
+                    # fallback: tangent frame
+                    tangent = crv.TangentAt(t)
+                    tvec = Vector(tangent.X, tangent.Y, tangent.Z)
                     tvec.unitize()
                     y = _stable_perp(tvec)
                     f = Frame(pt, tvec, y)
+
                 else:
                     xaxis = Vector(plane.XAxis.X, plane.XAxis.Y, plane.XAxis.Z).unitized()
                     yaxis = Vector(plane.YAxis.X, plane.YAxis.Y, plane.YAxis.Z).unitized()
+
+                    if yaxis.length < 1e-6:
+                        yaxis = _stable_perp(xaxis)
+
                     f = Frame(pt, xaxis, yaxis)
 
-                # optional rotations
+                # designer rotations
                 if rot_tan:
                     R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=pt)
                     f.transform(R)
@@ -442,6 +453,7 @@ class RootFrames:
                     f.transform(R)
 
                 frames.append(f)
+
 
         # ---- Surface FrameAt ---------------------------------------------
        
