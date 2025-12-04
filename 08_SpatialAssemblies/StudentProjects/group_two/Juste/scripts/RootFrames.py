@@ -25,34 +25,48 @@ def _stable_perp(xaxis):
     worldY = Vector(0, 1, 0)
     up = worldZ if abs(xaxis.dot(worldZ)) < 0.9 else worldY
     y = up.cross(xaxis)
-    if y.length < 1e-6:
-        y = worldY
     y.unitize()
     return y
 
 
-def _aabb_from_box(box):
-    """Axis-aligned bounding box from a compas Box (already transformed)."""
-    verts = list(box.vertices)
-    xs = [v.x for v in verts]
-    ys = [v.y for v in verts]
-    zs = [v.z for v in verts]
-    pmin = Point(min(xs), min(ys), min(zs))
-    pmax = Point(max(xs), max(ys), max(zs))
-    return pmin, pmax
+def _distance_point_segment(pt, line):
+    """Approximate distance from a point to a line segment."""
+    p0 = line.start
+    p1 = line.end
+    u = p1 - p0
+    uu = u.dot(u)
+    if uu < 1e-12:
+        return pt.distance_to_point(p0)
+
+    t = (pt - p0).dot(u) / uu
+    if t <= 0.0:
+        cp = p0
+    elif t >= 1.0:
+        cp = p1
+    else:
+        cp = p0 + u * t
+    return pt.distance_to_point(cp)
 
 
-def _aabb_overlap(a_min, a_max, b_min, b_max, clearance=0.0):
-    """Return True if AABBs overlap (with optional clearance)."""
-    c = float(clearance)
+def _segment_distance(line1, line2):
+    """Sampled segment–segment distance (collision hint)."""
+    p0 = line1.start
+    p1 = line1.end
+    m1 = (p0 + p1) * 0.5
 
-    if a_max.x + c < b_min.x or b_max.x + c < a_min.x:
-        return False
-    if a_max.y + c < b_min.y or b_max.y + c < a_min.y:
-        return False
-    if a_max.z + c < b_min.z or b_max.z + c < a_min.z:
-        return False
-    return True
+    q0 = line2.start
+    q1 = line2.end
+    m2 = (q0 + q1) * 0.5
+
+    pts1 = [p0, m1, p1]
+    pts2 = [q0, m2, q1]
+
+    dmin = 1e9
+    for p in pts1:
+        dmin = min(dmin, _distance_point_segment(p, line2))
+    for q in pts2:
+        dmin = min(dmin, _distance_point_segment(q, line1))
+    return dmin
 
 
 # =============================================================================
@@ -100,7 +114,7 @@ class Stick:
 
 
 # =============================================================================
-# BRANCHING MODULE  (3D, face-contact)
+# BRANCHING MODULE  (L-system style, true face-contact)
 # =============================================================================
 
 
@@ -109,7 +123,8 @@ class BranchingModule:
     Branch chain:
       - Each generation grows from the last stick.
       - Child near face lies on a parent face (full-width/depth offset).
-      - Child axis is a blend of parent tangent and face normal (3D, no flattening).
+      - Child axis is a blend of parent tangent and face normal.
+      - offset01 is measured along the parent stick's *local x-axis*.
     """
 
     def __init__(self, root_stick, stick_length=None, width=None, depth=None, offset01=0.5):
@@ -119,59 +134,70 @@ class BranchingModule:
         self.depth = depth or Stick.DEPTH
         self.offset01 = float(offset01)
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------  
+    # Core: compute child from a parent face with correct offset
+    # ------------------------------------------------------------------  
 
     def _build_child_from_face(self, parent, face_index, stick_angle):
-        """
-        Build a child whose near face has TRUE contact with a chosen parent face,
-        while allowing full 3D branching (no projection back to the generator plane).
-        """
-        fi = int(face_index) % 4
         pf = parent.frame
+        fi = int(face_index) % 4
 
-        # position along parent axis (0–1)
-        t = max(0.0, min(1.0, self.offset01))
-        axis_pt = parent.axis.point_at(t)
+        # --- 1. position along parent axis (local x) --------------------
+        # parent.frame.point is *midpoint* of the stick.
+        # offset01 in [0, 1] maps to [-L/2, +L/2] along local x-axis.
+        L = parent.length
+        s = (self.offset01 - 0.5) * L
+        parent_centerline_point = pf.point + pf.xaxis * s
 
-        # face normal + half-thickness (parent & child share dims)
-        if fi == 0:  # +Y
+        # --- 2. face normal & thickness (parent & child share dims) -----
+        if fi == 0:           # +Y
             n = pf.yaxis.unitized()
-            parent_half = self.width * 0.5
-            child_half = self.width * 0.5
-        elif fi == 2:  # –Y
+            half = self.width * 0.5
+        elif fi == 2:         # -Y
             n = (-pf.yaxis).unitized()
-            parent_half = self.width * 0.5
-            child_half = self.width * 0.5
-        elif fi == 1:  # +Z
+            half = self.width * 0.5
+        elif fi == 1:         # +Z
             n = pf.zaxis.unitized()
-            parent_half = self.depth * 0.5
-            child_half = self.depth * 0.5
-        else:  # –Z
+            half = self.depth * 0.5
+        else:                 # -Z
             n = (-pf.zaxis).unitized()
-            parent_half = self.depth * 0.5
-            child_half = self.depth * 0.5
+            half = self.depth * 0.5
 
-        # parent outer surface
-        parent_face_center = axis_pt + n * parent_half
+        # parent face center (on outer skin)
+        parent_face_center = parent_centerline_point + n * half
 
-        # full 3D direction: blend normal + tangent (no projection to plane)
+        # child center so that its *near* face lies exactly on parent face
+        # parent and child thickness are equal, so we offset by another `half`
+        child_center = parent_face_center + n * half
+
+        # --- 3. directional logic --------------------------------------
+        # tangent direction: parent's local x-axis
         tangent = pf.xaxis
+
+        # tangent projected onto plane orthogonal to n
+        tangent_proj = tangent - n * tangent.dot(n)
+        if tangent_proj.length < 1e-6:
+            tangent_proj = _stable_perp(n)
+        tangent_proj.unitize()
+
+        # blend normal & projected tangent with designer angle
         theta = math.radians(stick_angle)
-        d_raw = n * math.cos(theta) + tangent * math.sin(theta)
-        if d_raw.length < 1e-6:
-            d_raw = tangent
-        d = d_raw.unitized()
+        d_raw = n * math.cos(theta) + tangent_proj * math.sin(theta)
 
-        # child center: move off parent face by child_half, then along axis by half-length
-        half_len = self.stick_length * 0.5
-        child_center = parent_face_center + n * child_half + d * half_len
+        # make sure direction is not leaning into the parent (safety)
+        # keep only component in tangent plane
+        d = d_raw - n * d_raw.dot(n)
+        if d.length < 1e-6:
+            d = tangent_proj
+        d.unitize()
 
-        # construct child frame & axis
         x = d
         y = n
         z = x.cross(y).unitized()
         child_frame = Frame(child_center, x, y)
 
+        # --- 4. define child axis centered on child_center -------------
+        half_len = self.stick_length * 0.5
         start = child_center - x * half_len
         end = child_center + x * half_len
         axis = Line(start, end)
@@ -180,7 +206,7 @@ class BranchingModule:
         child.frame = child_frame
         return child
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------  
 
     def grow_once(self, face_index=0, stick_angle=0.0):
         parent = self.sticks[-1]
@@ -193,7 +219,7 @@ class BranchingModule:
 
 
 # =============================================================================
-# ROOTFRAMES ENGINE (3D, double-curved aware, branching + AABB collisions)
+# ROOTFRAMES ENGINE (3D, curve/surface aware)
 # =============================================================================
 
 
@@ -204,7 +230,7 @@ class RootFrames:
       2) Points → frames using true surface/curve frames (3D normals)
       3) Frames → edge frames + edge directions (no flattening)
       4) Growth: branching with BranchingModule
-      5) Collision detection: AABB from actual Box geometry
+      5) Optional: collision detection (approximate centerline check)
     """
 
     def __init__(
@@ -232,7 +258,7 @@ class RootFrames:
         self.edge_vectors = []   # edge directions (3D)
         self.edges = []          # list of (i, j) index pairs
         self.sticks = []         # resulting Stick objects
-        self.collision_flags = []
+        self.collision_flags = []  # parallel to self.sticks
 
         # sampling parameters (for 3D frames)
         self._rg_face = None
@@ -240,12 +266,12 @@ class RootFrames:
         self._rg_curve = None
         self._curve_t = []
 
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # 1. SAMPLING
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
 
     def _sample_points(self):
-        """Sample points on a 3D curve or (possibly double-curved) surface."""
+        """Sample points on a 3D curve or surface."""
         self.points = []
         self._uv_params = []
         self._curve_t = []
@@ -293,22 +319,24 @@ class RootFrames:
                 pts.append(p)
                 self._uv_params.append((u, v))
 
-            # keep sort by Z for consistency (not strictly required)
+            # optional sort by Z (does not affect 3D orientation)
             pts.sort(key=lambda p: p.Z)
 
         self.points = [Point(p.X, p.Y, p.Z) for p in pts]
         return self.points
 
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # 2. FRAMES FROM GEOMETRY (FULL 3D)
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
 
     def _frames_from_geometry(self, rot_tan=0.0, rot_norm=0.0):
-        """Build 3D frames using Rhino's curve/surface frame evaluation."""
+        """Build 3D frames using Rhino's frame evaluation."""
         N = len(self.points)
         if N == 0:
             self.frames = []
             return []
+
+        import Rhino.Geometry as rg
 
         frames = []
 
@@ -339,7 +367,6 @@ class RootFrames:
                         yaxis.unitize()
                     f = Frame(pt, xaxis, yaxis)
 
-                # optional rotations about tangent / normal
                 if rot_tan:
                     R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=pt)
                     f.transform(R)
@@ -387,9 +414,9 @@ class RootFrames:
         self.frames = frames
         return frames
 
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # 3. EDGE FRAMES & VECTORS (NO FLATTENING)
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
 
     def _frames_to_edgevectors(self):
         """Nearest-neighbour edges with full 3D directions (no projection)."""
@@ -440,9 +467,9 @@ class RootFrames:
         self.edge_vectors = evectors
         return eframes, evectors
 
-    # ----------------------------------------------------------------------
-    # 4. GROWTH (BRANCHING)
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 4. GROWTH (BRANCHING ONLY)
+    # ------------------------------------------------------------------
 
     def _grow_sticks_branching(self, steps=1, face_index=0, stick_angle=0.0, offset01=0.5):
         """Create root sticks on edges, then branch from each root."""
@@ -477,38 +504,35 @@ class RootFrames:
         self.sticks = sticks_out
         return sticks_out
 
-    # ----------------------------------------------------------------------
-    # 5. COLLISION DETECTION (AABB on Box geometry)
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 5. COLLISION DETECTION (APPROX)
+    # ------------------------------------------------------------------
 
     def detect_collisions(self, clearance=0.0):
-        """
-        Flag sticks whose bounding boxes intersect (AABB on transformed Boxes).
-        """
+        """Flag sticks whose centerlines come closer than their thickness."""
         n = len(self.sticks)
         flags = [False] * n
         if n < 2:
             self.collision_flags = flags
             return flags
 
-        # precompute all boxes and AABBs
-        boxes = [s.geometry for s in self.sticks]
-        aabbs = [_aabb_from_box(b) for b in boxes]
+        base_thick = max(self.stick_width, self.stick_depth) + float(clearance)
 
         for i in range(n):
-            a_min, a_max = aabbs[i]
+            li = self.sticks[i].axis
             for j in range(i + 1, n):
-                b_min, b_max = aabbs[j]
-                if _aabb_overlap(a_min, a_max, b_min, b_max, clearance=clearance):
+                lj = self.sticks[j].axis
+                d = _segment_distance(li, lj)
+                if d < base_thick:
                     flags[i] = True
                     flags[j] = True
 
         self.collision_flags = flags
         return flags
 
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # 6. RUN
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
 
     def run(
         self,
@@ -519,17 +543,16 @@ class RootFrames:
         clearance=0.0,
         rot_tan=0.0,
         rot_norm=0.0,
+        face_index=0,
     ):
-        """
-        Execute the full RootFrames pipeline (3D branching + optional collisions).
-        """
+        """Execute the full RootFrames pipeline (branching only)."""
         self._sample_points()
         self._frames_from_geometry(rot_tan=rot_tan, rot_norm=rot_norm)
         self._frames_to_edgevectors()
 
         sticks = self._grow_sticks_branching(
             steps=steps,
-            face_index=0,          # can be exposed later
+            face_index=face_index,
             stick_angle=stick_angle,
             offset01=offset01,
         )
@@ -537,6 +560,7 @@ class RootFrames:
         if detect_collisions:
             self.detect_collisions(clearance=clearance)
         else:
+            # keep API predictable for GH: always present and same length
             self.collision_flags = [False] * len(self.sticks)
 
         return sticks
