@@ -69,35 +69,38 @@ class Stick:
 
 
 # =============================================================================
-# BRANCHING MODULE – PURE L-SYSTEM CHAIN
+# BRANCHING MODULE – PURE L-SYSTEM CHAIN (FACE CONTACT, NO COLLISION)
 # =============================================================================
 
 class BranchingModule:
     """
     Branching system:
-    - Each generation grows from the last stick
-    - Child grows away from the parent, starting at a chosen face
-    - Designer controls:
-        * face_index (0–3 around x-axis)
-        * stick_angle (tilt between face normal and parent x-axis)
-        * offset01 (0–1 along parent axis)
+    - Each generation grows from the last stick.
+    - Child grows away from the parent, starting at a chosen face.
+    - Full-thickness offset from parent axis → true face contact without overlap.
+
+    Designer controls:
+        face_index   : 0..3 around parent x-axis
+        stick_angle  : tilt in the plane spanned by (face normal, parent x-axis)
+        offset01     : 0..1 param along parent axis
     """
 
-    def __init__(self, root_stick, stick_length=None, width=None, depth=None, offset=0.5):
+    def __init__(self, root_stick, stick_length=None, width=None, depth=None, offset01=0.5):
         self.sticks = [root_stick]
         self.stick_length = stick_length or Stick.LENGTH
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
-        self.offset01 = float(offset)  # 0–1 along parent axis
+        self.offset01 = float(offset01)  # 0–1 along parent axis
 
     # ----------------------------------------------------------------------
-    # Compute parent face geometry + face normal
+    # Compute parent face geometry + face normal with FULL thickness offset
     # ----------------------------------------------------------------------
     def _compute_face_frame(self, parent, face_index):
         """
         Returns:
-            base_frame : Frame located at face center
-            normal     : Vector, outward face normal
+            base_frame : Frame whose origin is placed at the *outside* of parent,
+                         on the chosen face.
+            normal     : outward face normal (unit vector).
         """
         f = parent.frame.copy()
         fi = int(face_index) % 4
@@ -106,19 +109,23 @@ class BranchingModule:
         t = max(0.0, min(1.0, self.offset01))
         f.point = parent.axis.point_at(t)
 
-        # 2) rotate frame around X to select face
+        # 2) rotate frame around X to select which face
+        #    face 0 → +Y, 1 → +Z, 2 → -Y, 3 → -Z
         R = Rotation.from_axis_and_angle(f.xaxis, fi * math.pi / 2.0, point=f.point)
         f.transform(R)
 
-        # 3) determine face normal and move to face center
-        if fi in (0, 2):  # ±Y faces
+        # 3) determine face normal and move to full-thickness offset
+        if fi in (0, 2):  # ±Y faces → offset by FULL width
             normal = f.yaxis
-            f.point += normal * (self.width * 0.5)
-        else:             # ±Z faces
+            offset = self.width
+        else:             # ±Z faces → offset by FULL depth
             normal = f.zaxis
-            f.point += normal * (self.depth * 0.5)
+            offset = self.depth
 
         normal.unitize()
+        # Move origin fully outside parent bounding box
+        f.point += normal * offset
+
         return f, normal
 
     # ----------------------------------------------------------------------
@@ -127,18 +134,19 @@ class BranchingModule:
     def grow_once(self, face_index=0, stick_angle=0.0):
         """
         Grow one child from the last stick in the chain.
-        - Child starts at parent face center
-        - Direction is a blend between face normal and parent.xaxis
-          controlled by stick_angle (deg).
+
+        - Child origin lies on the parent face plane, but shifted by FULL thickness.
+        - Direction is a blend between face normal and parent.xaxis, controlled
+          by stick_angle (in degrees).
         """
         parent = self.sticks[-1]
 
-        # Get face frame + outward normal
+        # Get face frame + outward normal with full-thickness offset
         base_frame, normal = self._compute_face_frame(parent, face_index)
 
-        # Base direction along normal
+        # Base normal direction
         n = normal
-        # Side direction for angular variation (parent.xaxis in the face frame)
+        # Tangential direction taken from the rotated frame's x-axis
         side = base_frame.xaxis
 
         theta = math.radians(stick_angle)
@@ -169,13 +177,15 @@ class BranchingModule:
 
 
 # =============================================================================
-# GROW-TOWARDS (BRIDGE) – CLEAN FACE CONTACT
+# GROW-TOWARDS (BRIDGE) – FACE-BASED CHILDREN
 # =============================================================================
 
 class GrowTowards:
     """
     Build two child sticks that start on chosen faces of root/target frames
     and grow approximately toward a joint point defined by their face planes.
+
+    Uses the same full-thickness face offset logic as BranchingModule.
     """
 
     def __init__(
@@ -201,6 +211,7 @@ class GrowTowards:
         self.offset_target_child = float(offset_target_child or 0.0)
 
         self.face_index_root = int(face_index_root) % 4
+        # By default, use opposite face on the target
         self.face_index_target = (
             (self.face_index_root + 2) % 4
             if face_index_target is None
@@ -209,7 +220,7 @@ class GrowTowards:
 
         self.sticks = []
 
-        # child frames on faces
+        # child frames on faces (full-thickness offset)
         self.root_child_frame = self._face_child_frame(
             self.root_frame, self.face_index_root, self.offset_root_child
         )
@@ -247,9 +258,10 @@ class GrowTowards:
     def _face_child_frame(self, frame, face_index, offset_dist):
         """
         Create a child frame on a face of the given frame:
-        - move along local X by offset_dist
-        - rotate around X to select face
-        - offset by half-width / half-depth to land on face center
+
+        - Move along local X by offset_dist.
+        - Rotate around X to select face.
+        - Offset by FULL width / depth so axis is outside the parent.
         """
         f = frame.copy()
 
@@ -262,18 +274,16 @@ class GrowTowards:
         R = Rotation.from_axis_and_angle(f.xaxis, angle, point=f.point)
         f.transform(R)
 
-        if fi % 2 == 0:
-            f.point += f.yaxis * (self.width * 0.5)
-        else:
-            f.point += f.zaxis * (self.depth * 0.5)
+        if fi in (0, 2):  # ±Y faces → full width
+            f.point += f.yaxis * self.width
+        else:             # ±Z faces → full depth
+            f.point += f.zaxis * self.depth
 
         return f
 
     def _build_stick_to_joint(self, child_frame, joint):
         """
-        Build a stick that starts at the child face center and aims at the joint.
-        The near face stays coincident with the parent face; we don't try to
-        force the far face exactly to the joint, but direction is toward it.
+        Build a stick that starts at the child face origin and aims at the joint.
         """
         origin = child_frame.point
         direction = Vector.from_start_end(origin, joint)
@@ -535,7 +545,7 @@ class RootFrames:
                     stick_length=self.stick_length,
                     width=self.stick_width,
                     depth=self.stick_depth,
-                    offset=offset01
+                    offset01=offset01
                 )
                 mod.grow_chain(
                     steps=steps,
