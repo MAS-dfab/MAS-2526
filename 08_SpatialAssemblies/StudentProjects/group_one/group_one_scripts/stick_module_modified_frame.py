@@ -162,7 +162,7 @@ class BranchStickModules:
         stick_frame = module.sticks[stick_index].frame
 
         angle = face_index*math.pi/2 # research, 0, 1, 2,3 is 90 degree steps
-        R = Rotation.from_axis_and_angle(stick_frame.xaxis, angle = angle, point = stick_frame.point)
+        R = Rotation.from_axis_and_angle(stick_frame.yaxis, angle = angle, point = stick_frame.point)
         new_frame = stick_frame.transformed(R)
 
         new_frame.point = module.sticks[stick_index].axis.end
