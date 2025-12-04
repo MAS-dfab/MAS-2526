@@ -402,45 +402,61 @@ class RootFrames:
     # ------------------------------------------------------------------  
 
     def points_to_frames(self, rot_tan=0, rot_norm=0):
-        pts = self.points
-        N = len(pts)
-        if N == 0:
-            self.frames = []
-            return []
+        import Rhino.Geometry as rg
+
+        if not self.surface_input:
+            raise Exception("points_to_frames requires a surface input")
+
+        brep = self.surface_input.ToBrep()
+        face = brep.Faces[0]
 
         frames = []
-        Z = Vector(0, 0, 1)
 
-        for i, p in enumerate(pts):
-            p_prev = pts[max(0, i - 1)]
-            p_next = pts[min(N - 1, i + 1)]
+        for p in self.points:
 
-            t = Vector(p_next.x - p_prev.x, p_next.y - p_prev.y, 0.0)
-            if t.length:
-                t.unitize()
-            else:
-                t = Vector(1, 0, 0)
+            # Convert COMPAS point → Rhino point
+            rp = rg.Point3d(p.x, p.y, p.z)
 
-            nrm = Z.cross(t)
-            if nrm.length:
-                nrm.unitize()
-            else:
-                nrm = Vector(0, 1, 0)
+            # Get UV closest point on surface
+            ok, u, v = face.ClosestPoint(rp)
+            if not ok:
+                continue
 
-            f = Frame(p, t, nrm)
+            # Evaluate true 3D surface frame:
+            # - tangent_u
+            # - tangent_v
+            # - normal
+            _, du, dv = face.Evaluate(u, v, 1)
 
+            du = Vector(du.X, du.Y, du.Z)
+            dv = Vector(dv.X, dv.Y, dv.Z)
+            nrm = du.cross(dv)
+
+            if not nrm.length:
+                nrm = Vector(0,0,1)
+            nrm.unitize()
+
+            # Build orthonormal frame:
+            xaxis = du.unitized()
+            yaxis = nrm.cross(xaxis).unitized()
+            zaxis = nrm.unitized()
+
+            f = Frame(p, xaxis, yaxis)
+
+            # designer-controlled rotations
             if rot_tan:
-                R = Rotation.from_axis_and_angle(t, math.radians(rot_tan), point=p)
+                R = Rotation.from_axis_and_angle(xaxis, math.radians(rot_tan), point=p)
                 f.transform(R)
 
             if rot_norm:
-                R = Rotation.from_axis_and_angle(f.yaxis, math.radians(rot_norm), point=p)
+                R = Rotation.from_axis_and_angle(zaxis, math.radians(rot_norm), point=p)
                 f.transform(R)
 
             frames.append(f)
 
         self.frames = frames
         return frames
+
 
     # ------------------------------------------------------------------  
     # BLOCK 3 – EDGE FRAMES / VECTORS
