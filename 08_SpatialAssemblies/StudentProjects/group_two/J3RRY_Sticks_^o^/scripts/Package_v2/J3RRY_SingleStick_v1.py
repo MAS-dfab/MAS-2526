@@ -26,7 +26,6 @@ class Stick:
         self.corners = self._get_corners()
         self.aabb = self._get_aabb()
 
-
     def _axis_from_frame(self):
         """
         Private method to compute the stick's axis as a Line.

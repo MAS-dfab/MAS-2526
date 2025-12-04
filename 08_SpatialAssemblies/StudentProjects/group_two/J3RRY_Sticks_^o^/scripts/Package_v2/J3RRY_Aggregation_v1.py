@@ -21,6 +21,7 @@ class Aggregation:
         self.from_frames = []
         self.to_frames = []
         self.length = length
+        
         self.failed_sticks = []
         self.collision_log = []
 
@@ -31,7 +32,6 @@ class Aggregation:
             random.seed(global_seed)
 
         self._init_first_stick(first_frame)
-
 
 
     def _init_first_stick(self, first_frame):
@@ -124,7 +124,6 @@ class Aggregation:
         params_from_t = []
         params_to_index = []
         params_to_t = []
-        attempts = []
 
 
         current_stick = self.sticks[-1]
@@ -186,6 +185,7 @@ class Aggregation:
             self.to_frames.append(to_frame)
             self.frames.append(new_frame)
             return new_stick
+        
         # If all attempts fail
         self.failed_sticks.append(failed_candidates)
         self.collision_log.append({

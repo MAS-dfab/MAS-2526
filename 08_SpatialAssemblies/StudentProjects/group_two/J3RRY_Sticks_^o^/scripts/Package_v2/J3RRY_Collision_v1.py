@@ -1,4 +1,4 @@
-from compas.geometry import distance_line_line
+from compas.geometry import distance_line_line, dot_vectors
 import math
 # from J3RRY_SingleStick_v1 import Stick
 
@@ -14,6 +14,7 @@ class Collision:
         """
         self.stick1 = stick1
         self.stick2 = stick2
+
 
     def aabb_overlap(self):
         """
@@ -31,6 +32,7 @@ class Collision:
             a_max[2] < b_min[2] or a_min[2] > b_max[2]
         )
     
+
     @property
     def axis_distance(self):
         """
@@ -41,6 +43,7 @@ class Collision:
         """
         return distance_line_line(self.stick1.axis, self.stick2.axis, tol=None)
     
+
     @property
     def segment_distance(self):
         """
@@ -127,12 +130,72 @@ class Collision:
         return math.sqrt(dot(dP, dP))
 
 
+    def project_corners_onto_axis(self, stick, axis):
+        """
+        Private method to calculate dot products between stick corners and the other stick axis.
+
+        Args:
+            stick: type Stick, the stick whose corners to project.
+            axis: type Vector, the axis to project onto.
+        
+        Returns:
+            tuple: (min dot product, max dot product)
+        """
+        unit_axis = axis.unitized()
+        dots = [dot_vectors(c, unit_axis) for c in stick.corners]
+        return min(dots), max(dots)
+
+
+    def interval_overlap(self, minA, maxA, minB, maxB):
+        """
+        Private method to check if two 1D intervals overlap.
+        
+        Args:
+            minA: Minimum of interval A.
+            maxA: Maximum of interval A.
+            minB: Minimum of interval B.
+            maxB: Maximum of interval B.
+            
+        Returns:
+            bool: True if intervals overlap.
+        """
+        EPS = 1e-6  # tolerance for floating point comparison
+        return not (maxA <= minB + EPS or maxB <= minA + EPS)
+
+
+    def sat_6_axis(self):
+        """
+        Compute collision using the Separating Axis Theorem (SAT) on six axes:
+        the local x, y, z axes of both sticks.
+        
+        Returns:
+            bool: True if sticks collide.
+        """
+        A = self.stick1
+        B = self.stick2
+        axes = [
+                A.frame.xaxis,
+                A.frame.yaxis,
+                A.frame.zaxis,
+                B.frame.xaxis,
+                B.frame.yaxis,
+                B.frame.zaxis
+        ]
+
+        for axis in axes:
+            minA, maxA = self.project_corners_onto_axis(A, axis)
+            minB, maxB = self.project_corners_onto_axis(B, axis)
+            if not self.interval_overlap(minA, maxA, minB, maxB):
+                return False
+        return True
+    
+
     def check_collision(self, radius=None):
         """
         Check collision between two sticks using:
         1. AABB --broad-phase
-        2. Infinite-line distance --mid-phase
-            (temporary, will later replace with segment-segment distance)
+        2. Segment-segment distance --mid-phase (deleted)
+        3. Reduced SAT, only check longest axis (X axis) --narrow-phase
 
         Args:
             radius: collision thickness, default = stick width
@@ -148,14 +211,15 @@ class Collision:
         if not self.aabb_overlap():
             return False
 
+        """
         # 2. Segment distance
         dist = self.segment_distance
         threshold = radius or max(s1.width, s2.width)
         if dist >= threshold - EPS:
             return False
-        
-        # 3. Parallel sticks check
+        """
 
+        # 3. Six axes SAT
+        if not self.sat_6_axis():
+            return False
         return True
-    
-
