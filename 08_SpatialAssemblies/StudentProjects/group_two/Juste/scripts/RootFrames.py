@@ -1,7 +1,5 @@
-# ======================================================================
-# RootFrames.py   (compas >= 2.14.1)
-# Fully corrected: 3D edge frames, true face offsets, clean branching.
-# ======================================================================
+# RootFrames.py
+# r: compas>=2.14.1
 
 import math
 import random
@@ -11,9 +9,9 @@ from compas.geometry import (
     Rotation, Transformation, closest_point_on_line
 )
 
-# ======================================================================
+# =============================================================================
 # HELPERS
-# ======================================================================
+# =============================================================================
 
 def _stable_perp(xaxis):
     """Return a stable perpendicular vector for a given x-axis."""
@@ -25,9 +23,9 @@ def _stable_perp(xaxis):
     return y
 
 
-# ======================================================================
-# STICK CLASS
-# ======================================================================
+# =============================================================================
+# STICK
+# =============================================================================
 
 class Stick:
     DEFAULT_LEN = 100.0
@@ -39,7 +37,7 @@ class Stick:
 
     def __init__(self, axis, length=None, width=None, depth=None, z_vector=None):
         """
-        axis   : compas.geometry.Line (centerline)
+        axis   : Line (centerline)
         length : box length (local X)
         width  : box width  (local Y)
         depth  : box depth  (local Z)
@@ -52,14 +50,12 @@ class Stick:
 
     def compute_frame(self, z_vector=None):
         x = self.axis.direction.unitized()
-
         if z_vector:
             z = z_vector.unitized()
             y = z.cross(x).unitized()
         else:
             y = _stable_perp(x)
             z = x.cross(y).unitized()
-
         return Frame(self.axis.midpoint, x, y)
 
     @property
@@ -70,84 +66,104 @@ class Stick:
         return box
 
 
-# ======================================================================
-# BRANCHING MODULE (corrected 3D + no collisions)
-# ======================================================================
+# =============================================================================
+# BRANCHING MODULE (L-system chain, collision-safe)
+# =============================================================================
 
 class BranchingModule:
     """
-    Correct L-system growth:
-    - child grows from a parent face
-    - offset = true thickness (full width/depth)
-    - normal is 3D-correct
+    Branching system:
+      - Each generation grows from the last stick
+      - Child origin is offset by full width/depth → true face contact, no overlap
+      - Child axis is a blend of face normal & parent tangent (controlled angle)
     """
 
-    def __init__(self, root_stick, stick_length=None, width=None, depth=None):
+    def __init__(self, root_stick, stick_length=None, width=None, depth=None, offset01=0.5):
         self.sticks = [root_stick]
         self.stick_length = stick_length or Stick.LENGTH
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
+        self.offset01 = float(offset01)  # parameter 0–1 along parent axis
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------  
+    # Compute child origin & normal on a given parent face
+    # ------------------------------------------------------------------  
 
-    def _face_frame(self, parent, face_index):
-        """
-        Compute the correct face frame on the parent stick.
-        Full face offset is applied (true non-collision).
-        """
-        f = parent.frame.copy()
+    def _child_origin_and_normal(self, parent, face_index):
         fi = int(face_index) % 4
 
-        # Rotate frame around parent’s local X-axis
+        # 1. pick point on parent axis (centerline)
+        t = max(0.0, min(1.0, self.offset01))
+        axis_pt = parent.axis.point_at(t)
+
+        # 2. local frame at that point (same orientation as parent)
+        f = Frame(axis_pt, parent.frame.xaxis, parent.frame.yaxis)
+
+        # 3. rotate around local X to select face (0,1,2,3)
         R = Rotation.from_axis_and_angle(f.xaxis, fi * math.pi / 2.0, point=f.point)
         f.transform(R)
 
-        # Apply TRUE face displacement
-        if fi in (0, 2):   # ±Y faces → full width
-            f.point += f.yaxis * (self.width)
+        # 4. choose face normal + thicknesses
+        if fi in (0, 2):  # ±Y faces
             normal = f.yaxis.unitized()
-        else:              # ±Z faces → full depth
-            f.point += f.zaxis * (self.depth)
+            parent_half = self.width * 0.5
+            child_half = self.width * 0.5
+        else:            # ±Z faces
             normal = f.zaxis.unitized()
+            parent_half = self.depth * 0.5
+            child_half = self.depth * 0.5
 
-        return f, normal
+        # 5. parent face center (volume boundary)
+        parent_face = axis_pt + normal * parent_half
 
-    # ------------------------------------------------------------------
+        # 6. child origin = parent face + half child thickness
+        #    → child's near face plane coincides with parent face (no overlap)
+        child_origin = parent_face + normal * child_half
+
+        # keep original parent tangent for direction-blend
+        parent_tangent = parent.frame.xaxis
+
+        return child_origin, normal, parent_tangent
+
+    # ------------------------------------------------------------------  
+    # Grow one generation from the last stick
+    # ------------------------------------------------------------------  
 
     def grow_once(self, face_index=0, stick_angle=0.0):
         parent = self.sticks[-1]
-        base_frame, normal = self._face_frame(parent, face_index)
 
-        # Designer rotation around face normal
-        if stick_angle:
-            R = Rotation.from_axis_and_angle(normal, math.radians(stick_angle), point=base_frame.point)
-            base_frame.transform(R)
+        origin, normal, tangent = self._child_origin_and_normal(parent, face_index)
 
-        # Grow along the true 3D face normal
-        axis = Line(base_frame.point, base_frame.point + normal * self.stick_length)
+        # designer angle = blend between normal & tangent
+        theta = math.radians(stick_angle)
+        d = normal * math.cos(theta) + tangent * math.sin(theta)
+        if d.length < 1e-6:
+            d = normal
+        d.unitize()
 
-        child = Stick(axis,
-                      length=self.stick_length,
-                      width=self.width,
-                      depth=self.depth)
-
+        axis = Line(origin, origin + d * self.stick_length)
+        child = Stick(axis, length=self.stick_length, width=self.width, depth=self.depth)
         self.sticks.append(child)
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------  
+    # N-step chain (L-system style)
+    # ------------------------------------------------------------------  
 
     def grow_chain(self, steps=1, face_index=0, stick_angle=0.0):
         for _ in range(max(0, int(steps))):
             self.grow_once(face_index=face_index, stick_angle=stick_angle)
 
-    def visualize(self):
-        return [s.geometry for s in self.sticks]
 
-
-# ======================================================================
-# GROW TOWARDS (BRIDGING) — corrected 3D face normals + true offsets
-# ======================================================================
+# =============================================================================
+# GROW-TOWARDS (BRIDGE)
+# =============================================================================
 
 class GrowTowards:
+    """
+    Build two child sticks that start on chosen faces of root/target frames.
+    Each child origin is offset by full width/depth from the centerline,
+    then grown towards a joint point between their face planes.
+    """
 
     def __init__(
         self,
@@ -168,83 +184,94 @@ class GrowTowards:
         self.root_frame = root_frame.copy()
         self.target_frame = target_frame.copy()
 
-        self.offset_root_child = offset_root_child
-        self.offset_target_child = offset_target_child
+        self.offset_root_child = float(offset_root_child or 0.0)
+        self.offset_target_child = float(offset_target_child or 0.0)
 
         self.face_index_root = int(face_index_root) % 4
         self.face_index_target = (
-            (self.face_index_root + 2) % 4 if face_index_target is None
+            (self.face_index_root + 2) % 4
+            if face_index_target is None
             else int(face_index_target) % 4
         )
 
         self.sticks = []
 
-        # Build child frames
-        self.f_root = self._face_child_frame(self.root_frame, self.face_index_root, self.offset_root_child)
-        self.f_tgt  = self._face_child_frame(self.target_frame, self.face_index_target, self.offset_target_child)
+        # child origins + normals at faces
+        o0, n0 = self._child_origin_and_normal(
+            self.root_frame, self.face_index_root, self.offset_root_child
+        )
+        o1, n1 = self._child_origin_and_normal(
+            self.target_frame, self.face_index_target, self.offset_target_child
+        )
 
-        # Intersection logic
-        plane0 = Plane.from_frame(self.f_root)
-        plane1 = Plane.from_frame(self.f_tgt)
-        joint = plane0.intersection_with_plane(plane1)
+        # intersection of face planes → joint point
+        plane0 = Plane(o0, n0)
+        plane1 = Plane(o1, n1)
+        line = plane0.intersection_with_plane(plane1)
 
-        if joint:
-            jp = Point(*closest_point_on_line(self.f_root.point, joint))
+        if line:
+            joint = Point(*closest_point_on_line(o0, line))
         else:
-            jp = Point(
-                0.5 * (self.f_root.point.x + self.f_tgt.point.x),
-                0.5 * (self.f_root.point.y + self.f_tgt.point.y),
-                0.5 * (self.f_root.point.z + self.f_tgt.point.z),
+            # fallback midpoint
+            joint = Point(
+                0.5 * (o0.x + o1.x),
+                0.5 * (o0.y + o1.y),
+                0.5 * (o0.z + o1.z),
             )
 
-        self.root_stick  = self._build(self.f_root, jp)
-        self.target_stick = self._build(self.f_tgt, jp)
+        self.sticks.append(self._build_child(o0, joint))
+        self.sticks.append(self._build_child(o1, joint))
 
-        self.sticks.extend([self.root_stick, self.target_stick])
+    # ------------------------------------------------------------------  
 
-    # ------------------------------------------------------------------
+    def _child_origin_and_normal(self, frame, face_index, offset_dist):
+        fi = int(face_index) % 4
 
-    def _face_child_frame(self, f, fi, offset):
-        f = f.copy()
+        # axis point along frame.xaxis
+        axis_pt = frame.point + frame.xaxis * float(offset_dist)
 
-        # Slide along X-axis
-        f.point = f.point + f.xaxis * float(offset)
-
-        # Rotate to face
+        f = Frame(axis_pt, frame.xaxis, frame.yaxis)
         R = Rotation.from_axis_and_angle(f.xaxis, fi * math.pi / 2.0, point=f.point)
         f.transform(R)
 
-        # Apply true face offset
         if fi in (0, 2):
-            f.point += f.yaxis * (self.width)
+            normal = f.yaxis.unitized()
+            parent_half = self.width * 0.5
+            child_half = self.width * 0.5
         else:
-            f.point += f.zaxis * (self.depth)
+            normal = f.zaxis.unitized()
+            parent_half = self.depth * 0.5
+            child_half = self.depth * 0.5
 
-        return f
+        parent_face = axis_pt + normal * parent_half
+        child_origin = parent_face + normal * child_half
 
-    # ------------------------------------------------------------------
+        return child_origin, normal
 
-    def _build(self, frame, joint):
-        origin = frame.point
-        direction = Vector.from_start_end(origin, joint)
-        if direction.length < 1e-6:
-            direction = frame.xaxis.copy()
-        direction.unitize()
-
-        axis = Line(origin, origin + direction * self.len)
+    def _build_child(self, origin, joint):
+        d = Vector.from_start_end(origin, joint)
+        if d.length < 1e-6:
+            d = Vector(1, 0, 0)
+        d.unitize()
+        axis = Line(origin, origin + d * self.len)
         return Stick(axis, length=self.len, width=self.width, depth=self.depth)
-
-    # ------------------------------------------------------------------
 
     def visualize(self):
         return [s.geometry for s in self.sticks]
 
 
-# ======================================================================
-# ROOTFRAMES ENGINE — 3D-correct sampling & vector logic
-# ======================================================================
+# =============================================================================
+# ROOTFRAMES ENGINE
+# =============================================================================
 
 class RootFrames:
+    """
+    Pipeline:
+      1) Surface/Curve → points
+      2) Points → frames
+      3) Frames → edge frames + edge vectors
+      4) Growth: branch (L-system) or bridge (GrowTowards)
+    """
 
     def __init__(
         self,
@@ -260,8 +287,8 @@ class RootFrames:
         self.twist_angle = float(twist_angle)
 
         self.stick_length = stick_length or Stick.LENGTH
-        self.stick_width  = stick_width  or Stick.WIDTH
-        self.stick_depth  = stick_depth  or Stick.DEPTH
+        self.stick_width = stick_width or Stick.WIDTH
+        self.stick_depth = stick_depth or Stick.DEPTH
 
         self.points = []
         self.frames = []
@@ -270,47 +297,58 @@ class RootFrames:
         self.edges = []
         self.sticks = []
 
-    # ==================================================================
-    # BLOCK 1 — Point sampling
-    # ==================================================================
+    # ------------------------------------------------------------------  
+    # BLOCK 1 – SAMPLING
+    # ------------------------------------------------------------------  
 
     def surface_to_points(self):
         import Rhino.Geometry as rg
-
         pts = []
 
-        # --- Curve mode extrude + twist --------------------------------
+        # Curve mode: extrude and sample
         if self.curve_input is not None and self.surface_input is None:
-            surf = rg.Surface.CreateExtrusion(self.curve_input, rg.Vector3d(0,0,1)*10)
+            surf = rg.Surface.CreateExtrusion(self.curve_input, rg.Vector3d(0, 0, 1) * 10.0)
+            if not surf:
+                raise Exception("Failed to extrude curve_input.")
             brep = surf.ToBrep()
+            if not brep or brep.Faces.Count == 0:
+                raise Exception("Extruded brep has no faces.")
             face = brep.Faces[0]
 
-            for k in range(self.height_subdiv):
+            for k in range(max(1, self.height_subdiv)):
+                z = 10.0 * k / max(1, self.height_subdiv)
+                twist = math.radians(self.twist_angle * k)
+
                 layer = []
-                for _ in range(self.point_density):
+                for _ in range(max(1, self.point_density)):
                     u, v = random.random(), random.random()
                     p = face.PointAt(u, v)
-                    layer.append(rg.Point3d(p.X, p.Y, k))
+                    layer.append(rg.Point3d(p.X, p.Y, z))
 
-                # apply twist around centroid
                 cx = sum(p.X for p in layer) / len(layer)
                 cy = sum(p.Y for p in layer) / len(layer)
-                ang = math.radians(self.twist_angle*k)
 
                 for p in layer:
-                    dx = p.X - cx
-                    dy = p.Y - cy
-                    X = cx + dx*math.cos(ang) - dy*math.sin(ang)
-                    Y = cy + dx*math.sin(ang) + dy*math.cos(ang)
-                    pts.append(rg.Point3d(X,Y,p.Z))
+                    dx, dy = p.X - cx, p.Y - cy
+                    X = cx + dx * math.cos(twist) - dy * math.sin(twist)
+                    Y = cy + dx * math.sin(twist) + dy * math.cos(twist)
+                    pts.append(rg.Point3d(X, Y, p.Z))
 
-        # --- Surface mode ------------------------------------------------
+        # Surface / Brep mode
         else:
-            brep = self.surface_input.ToBrep()
-            face = brep.Faces[0]
-            udom, vdom = face.Domain(0), face.Domain(1)
+            if self.surface_input is None:
+                raise Exception("No surface_input for sampling.")
 
-            for _ in range(self.point_density * self.height_subdiv):
+            brep = self.surface_input.ToBrep()
+            if not brep or brep.Faces.Count == 0:
+                raise Exception("surface_input.ToBrep() has no faces.")
+            face = brep.Faces[0]
+
+            udom = face.Domain(0)
+            vdom = face.Domain(1)
+
+            count = max(1, self.point_density * max(1, self.height_subdiv))
+            for _ in range(count):
                 u = random.uniform(udom.T0, udom.T1)
                 v = random.uniform(vdom.T0, vdom.T1)
                 p = face.PointAt(u, v)
@@ -321,34 +359,36 @@ class RootFrames:
         self.points = [Point(p.X, p.Y, p.Z) for p in pts]
         return self.points
 
-    # ==================================================================
-    # BLOCK 2 — Frame generation
-    # ==================================================================
+    # ------------------------------------------------------------------  
+    # BLOCK 2 – FRAMES
+    # ------------------------------------------------------------------  
 
     def points_to_frames(self, rot_tan=0, rot_norm=0):
         pts = self.points
         N = len(pts)
         frames = []
 
-        if N < 2:
+        if N == 0:
             self.frames = []
             return []
 
-        Z = Vector(0,0,1)
+        Z = Vector(0, 0, 1)
 
         for i, p in enumerate(pts):
-            prev = pts[max(i-1,0)]
-            next = pts[min(i+1,N-1)]
+            p_prev = pts[max(i - 1, 0)]
+            p_next = pts[min(i + 1, N - 1)]
 
-            t = Vector(next.x-prev.x, next.y-prev.y, 0.0)
-            if t.length < 1e-6:
-                t = Vector(1,0,0)
-            t.unitize()
+            t = Vector(p_next.x - p_prev.x, p_next.y - p_prev.y, 0.0)
+            if t.length:
+                t.unitize()
+            else:
+                t = Vector(1, 0, 0)
 
             y = Z.cross(t)
-            if y.length < 1e-6:
-                y = Vector(0,1,0)
-            y.unitize()
+            if y.length:
+                y.unitize()
+            else:
+                y = Vector(0, 1, 0)
 
             f = Frame(p, t, y)
 
@@ -365,106 +405,135 @@ class RootFrames:
         self.frames = frames
         return frames
 
-    # ==================================================================
-    # BLOCK 3 — Correct 3D edge frames (fix for your planar collapse)
-    # ==================================================================
+    # ------------------------------------------------------------------  
+    # BLOCK 3 – EDGE FRAMES / VECTORS
+    # ------------------------------------------------------------------  
 
     def frames_to_edgevectors(self):
         pts = [f.point for f in self.frames]
         N = len(pts)
 
         if N < 2:
-            self.edge_frames, self.edge_vectors, self.edges = [], [], []
+            self.edge_frames = []
+            self.edge_vectors = []
+            self.edges = []
             return [], []
 
         edges = set()
         for i in range(N):
+            pi = pts[i]
             best = 1e9
             j_best = None
             for j in range(N):
                 if i == j:
                     continue
-                d = pts[i].distance_to_point(pts[j])
+                d = pi.distance_to_point(pts[j])
                 if d < best:
                     best = d
                     j_best = j
-            edges.add(tuple(sorted((i,j_best))))
+            edges.add(tuple(sorted((i, j_best))))
 
-        edges = [(i,j) for (i,j) in edges if i<N and j<N]
+        edges = [(i, j) for (i, j) in edges if i < N and j < N]
         self.edges = edges
 
         eframes = []
         evectors = []
 
-        for i,j in edges:
+        for i, j in edges:
             f = self.frames[i]
             p0 = f.point
             p1 = self.frames[j].point
 
-            # true 3D tangent
             v = Vector.from_start_end(p0, p1)
             if v.length < 1e-6:
                 continue
 
-            # preserve surface normal!
             z = f.zaxis.unitized()
-
             x = v - z * v.dot(z)
             if x.length < 1e-6:
                 x = f.xaxis.copy()
             x.unitize()
-
             y = z.cross(x).unitized()
 
             eframes.append(Frame(p0, x, y))
             evectors.append(x)
 
-        self.edge_frames, self.edge_vectors = eframes, evectors
+        self.edge_frames = eframes
+        self.edge_vectors = evectors
         return eframes, evectors
 
-    # ==================================================================
-    # BLOCK 4 — Growth core
-    # ==================================================================
+    # ------------------------------------------------------------------  
+    # BLOCK 4 – GROWTH
+    # ------------------------------------------------------------------  
 
-    def grow_sticks(self, mode="branch", face_index=0, angle=0.0, offset01=1.0, steps=1, bridge_index=None):
-        mode = mode.strip().lower()
+    def grow_sticks(
+        self,
+        mode="branch",
+        face_index=0,
+        angle=0.0,
+        offset01=1.0,
+        steps=1,
+        bridge_index=None
+    ):
+        """
+        mode: 'branch' or 'bridge'
+        face_index: which face to grow from (0–3)
+        angle: blend angle (deg) between face normal and tangent (branch)
+        offset01: [0,1] param along axis (branch) or fraction of stick length (bridge)
+        steps: N-step chain in branch mode
+        bridge_index: if set, only edges touching this frame index are bridged
+        """
+        mode = str(mode).strip().lower()
         sticks_out = []
 
         if not self.edge_frames:
             return sticks_out
 
-        # Root sticks from edge frames
+        # Root sticks
         roots = []
         for f, v in zip(self.edge_frames, self.edge_vectors):
-            axis = Line(f.point, f.point + v*self.stick_length)
-            root = Stick(axis,
-                         length=self.stick_length,
-                         width=self.stick_width,
-                         depth=self.stick_depth)
+            axis = Line(f.point, f.point + v * self.stick_length)
+            root = Stick(
+                axis,
+                length=self.stick_length,
+                width=self.stick_width,
+                depth=self.stick_depth,
+            )
             roots.append(root)
             sticks_out.append(root)
 
-        # ------------------ BRANCHING ------------------
+        # ---------------- BRANCH MODE ----------------
         if mode == "branch":
             for r in roots:
-                mod = BranchingModule(r,
-                                      stick_length=self.stick_length,
-                                      width=self.stick_width,
-                                      depth=self.stick_depth)
-                mod.grow_chain(steps=steps, face_index=face_index, stick_angle=angle)
-                sticks_out.extend(mod.sticks[1:])  # remove duplicate root
+                mod = BranchingModule(
+                    r,
+                    stick_length=self.stick_length,
+                    width=self.stick_width,
+                    depth=self.stick_depth,
+                    offset01=offset01,
+                )
+                mod.grow_chain(
+                    steps=steps,
+                    face_index=face_index,
+                    stick_angle=angle,
+                )
+                sticks_out.extend(mod.sticks[1:])  # skip duplicate root
+
             self.sticks = sticks_out
             return sticks_out
 
-        # ------------------ BRIDGING -------------------
+        # ---------------- BRIDGE MODE ----------------
         if mode == "bridge":
             offset_abs = offset01 * self.stick_length
 
-            for (i,j) in self.edges:
+            for (i, j) in self.edges:
                 if bridge_index is not None:
                     bi = int(bridge_index)
                     if i != bi and j != bi:
                         continue
+
+                if i >= len(self.frames) or j >= len(self.frames):
+                    continue
 
                 f0 = self.frames[i]
                 f1 = self.frames[j]
@@ -478,30 +547,42 @@ class RootFrames:
                         stick_length=self.stick_length,
                         width=self.stick_width,
                         depth=self.stick_depth,
-                        face_index_root=face_index
+                        face_index_root=face_index,
                     )
                     sticks_out.extend(grow.sticks)
-
                 except Exception as e:
-                    print("GrowTowards error:", e)
+                    print("GrowTowards failed on edge ({}, {}): {}".format(i, j, e))
                     continue
 
             self.sticks = sticks_out
             return sticks_out
 
-        raise Exception("Unknown mode '{}'".format(mode))
+        raise Exception("Unknown mode: {}".format(mode))
 
-    # ==================================================================
+    # ------------------------------------------------------------------  
     # RUN
-    # ==================================================================
+    # ------------------------------------------------------------------  
 
-    def run(self, rot_tan=0, rot_norm=0, mode="branch", face_index=0, angle=0.0, offset01=1.0, steps=1, bridge_index=None):
+    def run(
+        self,
+        rot_tan=0,
+        rot_norm=0,
+        mode="branch",
+        face_index=0,
+        angle=0.0,
+        offset01=1.0,
+        steps=1,
+        bridge_index=None
+    ):
         self.surface_to_points()
         self.points_to_frames(rot_tan, rot_norm)
         self.frames_to_edgevectors()
 
         return self.grow_sticks(
-            mode=mode, face_index=face_index, angle=angle,
-            offset01=offset01, steps=steps, bridge_index=bridge_index
+            mode=mode,
+            face_index=face_index,
+            angle=angle,
+            offset01=offset01,
+            steps=steps,
+            bridge_index=bridge_index,
         )
-
