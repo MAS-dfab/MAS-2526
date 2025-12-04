@@ -5,13 +5,13 @@ import math, random
 
 
 class Aggregation:
-    def __init__(self, first_frame, length=50, aggregation_type=0, global_seed=None):
+    def __init__(self, first_frame, length_pattern=[100], aggregation_type=0, global_seed=None):
         """
         Constructor for Stick Aggregation.
         
         Args:
             first_frame: Frame for the first stick.
-            length: Length of each stick (defaults to 50.0)
+            length: Length of each stick (defaults to 100.0)
             aggregation_type: 0 = regular, 1 = random
             global_seed: Seed for random generator (defaults to None)
         """
@@ -20,8 +20,8 @@ class Aggregation:
         self.frames = []
         self.from_frames = []
         self.to_frames = []
-        self.length = length
-        
+        self.length_pattern = length_pattern  # can be a single value or list
+
         self.failed_sticks = []
         self.collision_log = []
 
@@ -41,10 +41,22 @@ class Aggregation:
         Args:
             first_frame: Frame for the first stick.
         """
-        self.sticks.append(Stick(first_frame, self.length))
-        self.axes.append(Stick(first_frame, self.length).axis)
+        first_stick = Stick(first_frame, self._next_length())
+        self.sticks.append(first_stick)
+        self.axes.append(first_stick.axis)
         self.frames.append(first_frame)
 
+    
+    def _next_length(self):
+        """
+        Private method to get the next length from the length pattern.
+        
+        Returns:
+            float: next length value.
+        """
+        length = random.choice(self.length_pattern)
+
+        return length
 
     def spawn_next_stick(self, angle=0, from_index=0, from_t=0.5, to_index=1, to_t=0.5):
         """
@@ -70,7 +82,7 @@ class Aggregation:
         # Orient stick frame using frame to frame
         T = Transformation.from_frame_to_frame(from_frame, to_frame)
         new_frame = current_stick.frame.transformed(T)
-        new_stick = Stick(new_frame, length=self.length)
+        new_stick = Stick(new_frame, length=self._next_length())
 
         # Collect Data
         self.sticks.append(new_stick)
@@ -104,15 +116,15 @@ class Aggregation:
     def spawn_next_stick_random_with_rejection(self, angle=0, max_attempts=10, local_seed=None):
         """
         Spawns next stick based on random face index and t value with collision rejection sampling.
-        
-        Records:
-            - collision_log: pure metadata
-            - failed_sticks: list of Stick objects colliding in each spawn
 
         Args:
             angle: Angle to rotate the to_frame around its z-axis (in degrees).
             max_attempts: Maximum number of attempts to find a non-colliding position.
             local_seed: Seed for random generator (overrides global seed if provided).
+
+        Records:
+            - collision_log: pure metadata
+            - failed_sticks: list of Stick objects colliding in each spawn attempt
         """
         # 0 = regular, 1 = random
         if self.aggregation_type == 0 and local_seed is not None:
@@ -151,7 +163,7 @@ class Aggregation:
             # Orient stick frame using frame to frame
             T = Transformation.from_frame_to_frame(from_frame, to_frame)
             new_frame = current_stick.frame.transformed(T)
-            new_stick = Stick(new_frame, length=self.length)
+            new_stick = Stick(new_frame, length=self._next_length())
 
             # --- collision checking
             collision_found = False
@@ -174,6 +186,7 @@ class Aggregation:
                     "from_t": params_from_t,
                     "to_index": params_to_index,
                     "to_t": params_to_t,
+                    "length": new_stick.length,  
                     "angle": angle
                 }
             })
@@ -198,15 +211,22 @@ class Aggregation:
                 "from_t": params_from_t,
                 "to_index": params_to_index,
                 "to_t": params_to_t,
+                "length": new_stick.length,
                 "angle": angle
             }
         })
+        return None
+    
+
+    def spawn_next_stick_random_in_boundary_with_rejection(self, boundary, angle=0, max_attempts=10):
+        
+
         return None
 
 
     def visualize(self):
         """
-        Returns all stick geometries.
+        Compute all stick geometries.
         
         Returns:
             List of Box geometries
