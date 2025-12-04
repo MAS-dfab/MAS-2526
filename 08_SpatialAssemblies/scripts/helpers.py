@@ -51,10 +51,13 @@ def generate_default_tolerances(joints):
 
 APPROACH_DISTANCE = 0.1  # 10 cm
     
-def calculate_pick_trajectory(pick_frame, robot, start_config, group = "manipulator"):
+def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipulator"):
     """
     Calculate the pick trajectory for a given pick frame.
     """
+    pick_frame = pickup_frame.copy()
+    pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
+    pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
     approach_pick_frame.translate(
@@ -62,7 +65,7 @@ def calculate_pick_trajectory(pick_frame, robot, start_config, group = "manipula
     )
 
     # Generate cartesian trajectory from pick to approach pick frame
-    max_step = 0.01
+    max_step = 0.1
     trajectory = robot.plan_cartesian_motion(
         [approach_pick_frame, pick_frame],
         start_configuration=start_config,
@@ -84,11 +87,12 @@ def calculate_pick_trajectory(pick_frame, robot, start_config, group = "manipula
     return trajectory, trajectory.points[-1], trajectory.points[0]
 
 
-def calculate_place_trajectories(robot, current_config,  place_frame, group=None):
+def calculate_place_trajectories(robot, current_config,  placement_frame, group="manipulator"):
     """
     Calculates the  place trajectory (to place_frame), 
     and return trajectory (back to safe_config) for a part.
     """
+    place_frame = placement_frame.copy()
 
     start_config_for_place = current_config
     goal_constraints_place = robot.constraints_from_frame(
@@ -160,7 +164,6 @@ def calculate_place_trajectories(robot, current_config,  place_frame, group=None
             )
         )
     
-    joined_trajectory = place_trajectory.copy()
-    joined_trajectory.points.extend(exit_trajectory.points)
-    joined_trajectory.points.extend(return_trajectory.points)
-    return joined_trajectory
+    joined_exit_trajectory = exit_trajectory.copy()
+    joined_exit_trajectory.points.extend(return_trajectory.points)
+    return place_trajectory, joined_exit_trajectory
