@@ -138,60 +138,60 @@ class BranchingModule:
     # Core: compute child from a parent face with correct offset
     # ------------------------------------------------------------------  
 
-        def _build_child_from_face(self, parent, face_index, stick_angle):
-            pf = parent.frame
-            fi = int(face_index) % 4
+    def _build_child_from_face(self, parent, face_index, stick_angle):
+        pf = parent.frame
+        fi = int(face_index) % 4
 
-            # --- 1. position along parent axis (local x) --------------------
-            L = parent.length
-            s = (self.offset01 - 0.5) * L
-            parent_centerline_point = pf.point + pf.xaxis * s
+        # --- 1. position along parent axis (local x) --------------------
+        L = parent.length
+        s = (self.offset01 - 0.5) * L
+        parent_centerline_point = pf.point + pf.xaxis * s
 
-            # --- 2. face normal & thickness (parent & child share dims) -----
-            if fi == 0:           # +Y
-                n = pf.yaxis.unitized()
-                half = self.width * 0.5
-            elif fi == 2:         # -Y
-                n = (-pf.yaxis).unitized()
-                half = self.width * 0.5
-            elif fi == 1:         # +Z
-                n = pf.zaxis.unitized()
-                half = self.depth * 0.5
-            else:                 # -Z
-                n = (-pf.zaxis).unitized()
-                half = self.depth * 0.5
+        # --- 2. face normal & thickness (parent & child share dims) -----
+        if fi == 0:           # +Y
+            n = pf.yaxis.unitized()
+            half = self.width * 0.5
+        elif fi == 2:         # -Y
+            n = (-pf.yaxis).unitized()
+            half = self.width * 0.5
+        elif fi == 1:         # +Z
+            n = pf.zaxis.unitized()
+            half = self.depth * 0.5
+        else:                 # -Z
+            n = (-pf.zaxis).unitized()
+            half = self.depth * 0.5
 
-            parent_face_center = parent_centerline_point + n * half
-            child_center       = parent_face_center + n * half
+        parent_face_center = parent_centerline_point + n * half
+        child_center       = parent_face_center + n * half
 
-            # tangent direction projected into plane orthogonal to n
-            tangent = pf.xaxis
-            tangent_proj = tangent - n * tangent.dot(n)
-            if tangent_proj.length < 1e-6:
-                tangent_proj = _stable_perp(n)
-            tangent_proj.unitize()
+        # tangent direction projected into plane orthogonal to n
+        tangent = pf.xaxis
+        tangent_proj = tangent - n * tangent.dot(n)
+        if tangent_proj.length < 1e-6:
+            tangent_proj = _stable_perp(n)
+        tangent_proj.unitize()
 
-            # --- 3. 3D direction (no re-projection, keep normal component) ---
-            theta = math.radians(stick_angle)
-            d = n * math.cos(theta) + tangent_proj * math.sin(theta)
-            if d.length < 1e-6:
-                d = n.copy()
-            d.unitize()
+        # --- 3. 3D direction (no re-projection, keep normal component) ---
+        theta = math.radians(stick_angle)
+        d = n * math.cos(theta) + tangent_proj * math.sin(theta)
+        if d.length < 1e-6:
+            d = n.copy()
+        d.unitize()
 
-            x = d
-            y = n
-            z = x.cross(y).unitized()
-            child_frame = Frame(child_center, x, y)
+        x = d
+        y = n
+        z = x.cross(y).unitized()
+        child_frame = Frame(child_center, x, y)
 
-            # --- 4. axis -----------------------------------------------
-            half_len = self.stick_length * 0.5
-            start = child_center - x * half_len
-            end   = child_center + x * half_len
-            axis  = Line(start, end)
+        # --- 4. axis -----------------------------------------------
+        half_len = self.stick_length * 0.5
+        start = child_center - x * half_len
+        end   = child_center + x * half_len
+        axis  = Line(start, end)
 
-            child = Stick(axis, length=self.stick_length, width=self.width, depth=self.depth)
-            child.frame = child_frame
-            return child
+        child = Stick(axis, length=self.stick_length, width=self.width, depth=self.depth)
+        child.frame = child_frame
+        return child
 
 
     # ------------------------------------------------------------------  
