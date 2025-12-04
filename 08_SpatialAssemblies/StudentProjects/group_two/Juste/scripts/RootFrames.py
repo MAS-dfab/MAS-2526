@@ -444,30 +444,31 @@ class RootFrames:
                 frames.append(f)
 
         # ---- Surface FrameAt ---------------------------------------------
-# --- Surface mode: use TRUE 3D frames -----------------------------------
-# --- Surface mode: build TRUE 3D frames from derivatives ------------
+       
         elif self._rg_face is not None and self._uv_params:
             face = self._rg_face
-            surf = face.UnderlyingSurface()  # << this fixes the TangentAt error
+            surf = face.UnderlyingSurface()
 
             for pt, (u, v) in zip(self.points, self._uv_params):
 
-                # Evaluate up to 1st derivative: position, du, dv
-                ok, pos, du, dv = surf.Evaluate(u, v, 1)
-                if not ok:
-                    # fallback if something weird happens
-                    normal = surf.NormalAt(u, v)
+                # Evaluate with 1st derivatives
+                eval_result = surf.Evaluate(u, v, 1)
+                if eval_result is None:
+                    # fallback: use face normal
+                    normal = face.NormalAt(u, v)
                     n = Vector(normal.X, normal.Y, normal.Z).unitized()
                     xaxis = _stable_perp(n)
                     yaxis = n.cross(xaxis).unitized()
                     frames.append(Frame(pt, xaxis, yaxis))
                     continue
 
-                # convert derivatives to COMPAS vectors
-                du_vec = Vector(du.X, du.Y, du.Z)
-                dv_vec = Vector(dv.X, dv.Y, dv.Z)
+                pos, derivs, _ = eval_result
+                du_rhino, dv_rhino = derivs  # Rhino vectors
 
-                # true normal
+                du_vec = Vector(du_rhino.X, du_rhino.Y, du_rhino.Z)
+                dv_vec = Vector(dv_rhino.X, dv_rhino.Y, dv_rhino.Z)
+
+                # True normal
                 n = du_vec.cross(dv_vec)
                 if n.length < 1e-6:
                     n = Vector(0, 0, 1)
@@ -484,15 +485,17 @@ class RootFrames:
 
                 f = Frame(pt, tx, ty)
 
-                # apply designer rotations
+                # designer rotations
                 if rot_tan:
-                    R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=pt)
-                    f.transform(R)
+                    f.transform(Rotation.from_axis_and_angle(
+                        f.xaxis, math.radians(rot_tan), point=pt))
+
                 if rot_norm:
-                    R = Rotation.from_axis_and_angle(f.yaxis, math.radians(rot_norm), point=pt)
-                    f.transform(R)
+                    f.transform(Rotation.from_axis_and_angle(
+                        f.yaxis, math.radians(rot_norm), point=pt))
 
                 frames.append(f)
+
 
 
 
