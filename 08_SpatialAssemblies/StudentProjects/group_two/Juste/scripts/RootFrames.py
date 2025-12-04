@@ -444,26 +444,34 @@ class RootFrames:
                 frames.append(f)
 
         # ---- Surface FrameAt ---------------------------------------------
+# --- Surface mode: use TRUE 3D frames -----------------------------------
         elif self._rg_face is not None and self._uv_params:
             face = self._rg_face
 
             for pt, (u, v) in zip(self.points, self._uv_params):
-                ok, plane = face.FrameAt(u, v)
-                if not ok:
-                    f = Frame(pt, Vector(1, 0, 0), Vector(0, 1, 0))
+                # 1. True geometric surface normal
+                normal = face.NormalAt(u, v)
+                n = Vector(normal.X, normal.Y, normal.Z)
+                if n.length < 1e-6:
+                    n = Vector(0, 0, 1)
                 else:
-                    xaxis = Vector(plane.XAxis.X, plane.XAxis.Y, plane.XAxis.Z)
-                    yaxis = Vector(plane.YAxis.X, plane.YAxis.Y, plane.YAxis.Z)
-                    if xaxis.length < 1e-6:
-                        xaxis = Vector(1, 0, 0)
-                    else:
-                        xaxis.unitize()
-                    if yaxis.length < 1e-6:
-                        yaxis = _stable_perp(xaxis)
-                    else:
-                        yaxis.unitize()
-                    f = Frame(pt, xaxis, yaxis)
+                    n.unitize()
 
+                # 2. Choose X-axis from the curve of iso-u or iso-v direction
+                # Compute tangent in u direction
+                du = face.TangentAt(u, v)[0]    # returns (du, dv)
+                tx = Vector(du.X, du.Y, du.Z)
+                if tx.length < 1e-6:
+                    # if tangent is degenerate, fallback
+                    tx = _stable_perp(n)
+                tx.unitize()
+
+                # 3. Ensure orthogonal frame
+                ty = n.cross(tx).unitized()
+
+                f = Frame(pt, tx, ty)
+
+                # apply user rotations
                 if rot_tan:
                     R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=pt)
                     f.transform(R)
@@ -473,12 +481,6 @@ class RootFrames:
 
                 frames.append(f)
 
-        else:
-            for pt in self.points:
-                frames.append(Frame(pt, Vector(1, 0, 0), Vector(0, 1, 0)))
-
-        self.frames = frames
-        return frames
 
     # ------------------------------------------------------------
     # Build edge frames
