@@ -93,7 +93,9 @@ def _segment_distance(line1, line2):
 
 def _aabb_from_box(box):
     """Axis-aligned bounding box (world-space) from a compas Box."""
-    verts = list(box.vertices())
+    # vertices is already a list-like property in compas 2.x
+    verts = list(box.vertices)      #  <-- FIX: no parentheses
+
     xs = [v.x for v in verts]
     ys = [v.y for v in verts]
     zs = [v.z for v in verts]
@@ -102,6 +104,7 @@ def _aabb_from_box(box):
         min(ys), max(ys),
         min(zs), max(zs),
     )
+
 
 
 def _aabb_overlap(a, b, clearance=0.0):
