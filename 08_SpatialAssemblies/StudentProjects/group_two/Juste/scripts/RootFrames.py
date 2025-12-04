@@ -352,7 +352,6 @@ class RootFrames:
     # ------------------------------------------------------------------  
 
     def surface_to_points(self):
-        import Rhino.Geometry as rg
         pts = []
 
         self._uv_params = []
@@ -368,7 +367,7 @@ class RootFrames:
             t0, t1 = dom.T0, dom.T1
 
             count = max(1, self.point_density * max(1, self.height_subdiv))
-            for k in range(count):
+            for _ in range(count):
                 t = random.uniform(t0, t1)
                 p = crv.PointAt(t)
                 pts.append(p)
@@ -405,72 +404,78 @@ class RootFrames:
     # BLOCK 2 – 3D FRAMES
     # ------------------------------------------------------------------  
 
-# --------------------------------------------------------------
-# BLOCK 2 — POINTS → FRAMES (correct 3D frames)
-# --------------------------------------------------------------
     def points_to_frames(self, rot_tan=0, rot_norm=0):
-        pts = self.points
-        if not pts:
+        N = len(self.points)
+        if N == 0:
             self.frames = []
             return []
 
         frames = []
 
-        # If we sampled from a BrepFace, grab its surface
-        surface = None
-        if self.surface_input:
-            brep = self.surface_input.ToBrep()
-            surface = brep.Faces[0].UnderlyingSurface()
-
-        for p in pts:
-            if surface:
-                # Convert to UV space first
-                success, uv = surface.ClosestPoint(rg.Point3d(p.x, p.y, p.z))
-                if not success:
-                    # fallback frame
-                    frames.append(Frame(p, Vector(1,0,0), Vector(0,1,0)))
-                    continue
-
-                # Evaluate first derivatives
-                ok, point3d, du, dv = surface.Evaluate(uv[0], uv[1], 1)
+        # --- Curve mode: use curve.FrameAt(t) ---------------------------
+        if self._rg_curve is not None and self._curve_t:
+            crv = self._rg_curve
+            for pt, t in zip(self.points, self._curve_t):
+                ok, plane = crv.FrameAt(t)
                 if not ok:
-                    frames.append(Frame(p, Vector(1,0,0), Vector(0,1,0)))
-                    continue
-
-                tangent_u = Vector(du.X, du.Y, du.Z)
-                tangent_v = Vector(dv.X, dv.Y, dv.Z)
-
-                if tangent_u.length < 1e-6:
-                    tangent_u = Vector(1,0,0)
+                    # fallback: simple tangent frame
+                    tangent = crv.TangentAt(t)
+                    tvec = Vector(tangent.X, tangent.Y, tangent.Z)
+                    tvec.unitize()
+                    y = _stable_perp(tvec)
+                    f = Frame(pt, tvec, y)
                 else:
-                    tangent_u.unitize()
+                    xaxis = Vector(plane.XAxis.X, plane.XAxis.Y, plane.XAxis.Z).unitized()
+                    yaxis = Vector(plane.YAxis.X, plane.YAxis.Y, plane.YAxis.Z).unitized()
+                    f = Frame(pt, xaxis, yaxis)
 
-                normal = tangent_u.cross(tangent_v)
-                if normal.length < 1e-6:
-                    normal = Vector(0,0,1)
+                if rot_tan:
+                    R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=pt)
+                    f.transform(R)
+                if rot_norm:
+                    R = Rotation.from_axis_and_angle(f.yaxis, math.radians(rot_norm), point=pt)
+                    f.transform(R)
+
+                frames.append(f)
+
+        # --- Surface/Brep mode: use BrepFace.FrameAt(u,v) ---------------
+        elif self._rg_face is not None and self._uv_params:
+            face = self._rg_face
+            for pt, (u, v) in zip(self.points, self._uv_params):
+                ok, plane = face.FrameAt(u, v)
+                if not ok:
+                    # fallback: world frame
+                    f = Frame(pt, Vector(1, 0, 0), Vector(0, 1, 0))
                 else:
-                    normal.unitize()
+                    xaxis = Vector(plane.XAxis.X, plane.XAxis.Y, plane.XAxis.Z)
+                    yaxis = Vector(plane.YAxis.X, plane.YAxis.Y, plane.YAxis.Z)
+                    if xaxis.length < 1e-6:
+                        xaxis = Vector(1, 0, 0)
+                    else:
+                        xaxis.unitize()
+                    if yaxis.length < 1e-6:
+                        yaxis = _stable_perp(xaxis)
+                    else:
+                        yaxis.unitize()
+                    f = Frame(pt, xaxis, yaxis)
 
-                f = Frame(p, tangent_u, normal)
+                if rot_tan:
+                    R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=pt)
+                    f.transform(R)
+                if rot_norm:
+                    R = Rotation.from_axis_and_angle(f.yaxis, math.radians(rot_norm), point=pt)
+                    f.transform(R)
 
-            else:
-                # Curve-based fallback frame (previous version)
-                f = Frame(p, Vector(1,0,0), Vector(0,1,0))
+                frames.append(f)
 
-            # Apply frame rotations
-            if rot_tan:
-                R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=p)
-                f.transform(R)
-
-            if rot_norm:
-                R = Rotation.from_axis_and_angle(f.yaxis, math.radians(rot_norm), point=p)
-                f.transform(R)
-
-            frames.append(f)
+        else:
+            # fallback (should almost never be used)
+            for pt in self.points:
+                f = Frame(pt, Vector(1, 0, 0), Vector(0, 1, 0))
+                frames.append(f)
 
         self.frames = frames
         return frames
-
 
     # ------------------------------------------------------------------  
     # BLOCK 3 – EDGE FRAMES & VECTORS
@@ -542,14 +547,6 @@ class RootFrames:
         steps=1,
         bridge_index=None
     ):
-        """
-        mode: 'branch' or 'bridge'
-        face_index: which face to grow/bridge from (0–3)
-        angle: branch angle (deg)
-        offset01: [0,1] param along axis for branching, scaled length for bridging
-        steps: N-step chain in branch mode
-        bridge_index: if set, only edges touching this frame index are bridged
-        """
         mode = str(mode).strip().lower()
         sticks_out = []
 
@@ -639,7 +636,6 @@ class RootFrames:
             self.collisions = flags
             return flags
 
-        # thickness ~ max cross-section dimension
         base_thick = max(self.stick_width, self.stick_depth) + float(clearance)
 
         for i in range(n):
