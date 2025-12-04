@@ -445,33 +445,46 @@ class RootFrames:
 
         # ---- Surface FrameAt ---------------------------------------------
 # --- Surface mode: use TRUE 3D frames -----------------------------------
+# --- Surface mode: build TRUE 3D frames from derivatives ------------
         elif self._rg_face is not None and self._uv_params:
             face = self._rg_face
+            surf = face.UnderlyingSurface()  # << this fixes the TangentAt error
 
             for pt, (u, v) in zip(self.points, self._uv_params):
-                # 1. True geometric surface normal
-                normal = face.NormalAt(u, v)
-                n = Vector(normal.X, normal.Y, normal.Z)
+
+                # Evaluate up to 1st derivative: position, du, dv
+                ok, pos, du, dv = surf.Evaluate(u, v, 1)
+                if not ok:
+                    # fallback if something weird happens
+                    normal = surf.NormalAt(u, v)
+                    n = Vector(normal.X, normal.Y, normal.Z).unitized()
+                    xaxis = _stable_perp(n)
+                    yaxis = n.cross(xaxis).unitized()
+                    frames.append(Frame(pt, xaxis, yaxis))
+                    continue
+
+                # convert derivatives to COMPAS vectors
+                du_vec = Vector(du.X, du.Y, du.Z)
+                dv_vec = Vector(dv.X, dv.Y, dv.Z)
+
+                # true normal
+                n = du_vec.cross(dv_vec)
                 if n.length < 1e-6:
                     n = Vector(0, 0, 1)
                 else:
                     n.unitize()
 
-                # 2. Choose X-axis from the curve of iso-u or iso-v direction
-                # Compute tangent in u direction
-                du = face.TangentAt(u, v)[0]    # returns (du, dv)
-                tx = Vector(du.X, du.Y, du.Z)
+                # choose tangent direction
+                tx = du_vec if du_vec.length > 1e-6 else dv_vec
                 if tx.length < 1e-6:
-                    # if tangent is degenerate, fallback
                     tx = _stable_perp(n)
                 tx.unitize()
 
-                # 3. Ensure orthogonal frame
                 ty = n.cross(tx).unitized()
 
                 f = Frame(pt, tx, ty)
 
-                # apply user rotations
+                # apply designer rotations
                 if rot_tan:
                     R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=pt)
                     f.transform(R)
@@ -480,6 +493,7 @@ class RootFrames:
                     f.transform(R)
 
                 frames.append(f)
+
 
 
     # ------------------------------------------------------------
