@@ -74,9 +74,10 @@ class Stick:
 
 class BranchingModule:
     """
-    Simple local L-system:
-    - start from root stick
-    - repeatedly grow children from the last stick in the list
+    Local L-system:
+      - start from root stick
+      - each step grows one child from the *last* stick
+      - child grows along the chosen face normal (no overlap with parent).
     """
 
     def __init__(self, root_stick, stick_length=None, width=None, depth=None, offset=1.0):
@@ -86,9 +87,9 @@ class BranchingModule:
         self.depth = depth or Stick.DEPTH
         self.offset = float(offset)
 
-    def _face_frame(self, parent_stick, face_index, offset01):
+    def _face_frame_and_normal(self, parent_stick, face_index, offset01):
         """
-        Get a frame on one of the parent's faces.
+        Compute a frame at the center of a chosen face, plus that face's outward normal.
 
         face_index: 0,1,2,3 around x-axis
             0 → +Y, 1 → +Z, 2 → -Y, 3 → -Z
@@ -97,21 +98,61 @@ class BranchingModule:
         f = parent_stick.frame.copy()
         fi = int(face_index) % 4
 
-        # rotate around local X to select face
+        # 1) slide along parent axis
+        t = max(0.0, min(1.0, offset01))
+        axis_point = parent_stick.axis.point_at(t)
+        f.point = axis_point
+
+        # 2) rotate frame around local X to select face
         R = Rotation.from_axis_and_angle(f.xaxis, fi * math.pi / 2.0, point=f.point)
         f.transform(R)
 
-        # position along parent axis
-        t = max(0.0, min(1.0, offset01))
-        f.point = parent_stick.axis.point_at(t)
-
-        # move out to face: width on Y faces, depth on Z faces
+        # 3) determine face normal and move to face center
         if fi % 2 == 0:
-            f.point += f.yaxis * (self.width * 0.5)
+            # Y faces → normal = ±Y, thickness = width
+            face_normal = f.yaxis
+            f.point += face_normal * (self.width * 0.5)
         else:
-            f.point += f.zaxis * (self.depth * 0.5)
+            # Z faces → normal = ±Z, thickness = depth
+            face_normal = f.zaxis
+            f.point += face_normal * (self.depth * 0.5)
 
-        return f
+        face_normal.unitize()
+        return f, face_normal
+
+    def grow_once(self, face_index=0, angle=0.0, offset01=None):
+        """
+        Grow one child from the last stick in the chain.
+        Child axis is aligned with the face normal (no penetration).
+        """
+        parent = self.sticks[-1]
+        off = self.offset if offset01 is None else float(offset01)
+
+        f, face_normal = self._face_frame_and_normal(parent, face_index, off)
+
+        # Optional twist around the *face normal* itself
+        if angle:
+            R = Rotation.from_axis_and_angle(face_normal, math.radians(angle), point=f.point)
+            f.transform(R)
+
+        # Child grows away from parent along the face normal
+        axis = Line.from_point_and_vector(f.point, face_normal * self.stick_length)
+
+        child = Stick(axis,
+                      length=self.stick_length,
+                      width=self.width,
+                      depth=self.depth)
+
+        self.sticks.append(child)
+
+    def grow_chain(self, steps=1, face_index=0, angle=0.0, offset01=None):
+        """Grow a chain of N children."""
+        for _ in range(max(0, int(steps))):
+            self.grow_once(face_index=face_index, angle=angle, offset01=offset01)
+
+    def visualize(self):
+        return [s.geometry for s in self.sticks]
+
 
     def grow_once(self, face_index=0, angle=0.0, offset01=None):
         """Grow one child from the last stick in the chain."""
