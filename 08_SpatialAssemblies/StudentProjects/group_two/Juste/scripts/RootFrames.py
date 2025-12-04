@@ -74,69 +74,81 @@ class Stick:
 
 class BranchingModule:
     """
-    Local L-system:
-      - start from root stick
-      - each step grows one child from the *last* stick
-      - child grows along the chosen face normal (no overlap with parent).
+    Branching system:
+    - Each generation grows from the last stick
+    - Child grows away from the parent, starting at a chosen face
+    - Designer controls:
+        * face_index (0–3 around x-axis)
+        * stick_angle (tilt between face normal and parent x-axis)
+        * offset01 (0–1 along parent axis)
     """
 
-    def __init__(self, root_stick, stick_length=None, width=None, depth=None, offset=1.0):
+    def __init__(self, root_stick, stick_length=None, width=None, depth=None, offset=0.5):
         self.sticks = [root_stick]
         self.stick_length = stick_length or Stick.LENGTH
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
-        self.offset = float(offset)
+        self.offset01 = float(offset)  # 0–1 along parent axis
 
-    def _face_frame_and_normal(self, parent_stick, face_index, offset01):
+    # ----------------------------------------------------------------------
+    # Compute parent face geometry + face normal
+    # ----------------------------------------------------------------------
+    def _compute_face_frame(self, parent, face_index):
         """
-        Compute a frame at the center of a chosen face, plus that face's outward normal.
-
-        face_index: 0,1,2,3 around x-axis
-            0 → +Y, 1 → +Z, 2 → -Y, 3 → -Z
-        offset01 : 0..1 param along parent axis
+        Returns:
+            base_frame : Frame located at face center
+            normal     : Vector, outward face normal
         """
-        f = parent_stick.frame.copy()
+        f = parent.frame.copy()
         fi = int(face_index) % 4
 
-        # 1) slide along parent axis
-        t = max(0.0, min(1.0, offset01))
-        axis_point = parent_stick.axis.point_at(t)
-        f.point = axis_point
+        # 1) slide along parent axis to offset position
+        t = max(0.0, min(1.0, self.offset01))
+        f.point = parent.axis.point_at(t)
 
-        # 2) rotate frame around local X to select face
+        # 2) rotate frame around X to select face
         R = Rotation.from_axis_and_angle(f.xaxis, fi * math.pi / 2.0, point=f.point)
         f.transform(R)
 
         # 3) determine face normal and move to face center
-        if fi % 2 == 0:
-            # Y faces → normal = ±Y, thickness = width
-            face_normal = f.yaxis
-            f.point += face_normal * (self.width * 0.5)
-        else:
-            # Z faces → normal = ±Z, thickness = depth
-            face_normal = f.zaxis
-            f.point += face_normal * (self.depth * 0.5)
+        if fi in (0, 2):  # ±Y faces
+            normal = f.yaxis
+            f.point += normal * (self.width * 0.5)
+        else:             # ±Z faces
+            normal = f.zaxis
+            f.point += normal * (self.depth * 0.5)
 
-        face_normal.unitize()
-        return f, face_normal
+        normal.unitize()
+        return f, normal
 
-    def grow_once(self, face_index=0, angle=0.0, offset01=None):
+    # ----------------------------------------------------------------------
+    # Grow one child from last stick
+    # ----------------------------------------------------------------------
+    def grow_once(self, face_index=0, stick_angle=0.0):
         """
         Grow one child from the last stick in the chain.
-        Child axis is aligned with the face normal (no penetration).
+        - Child starts at parent face center
+        - Direction is a blend between face normal and parent.xaxis
+          controlled by stick_angle (deg).
         """
         parent = self.sticks[-1]
-        off = self.offset if offset01 is None else float(offset01)
 
-        f, face_normal = self._face_frame_and_normal(parent, face_index, off)
+        # Get face frame + outward normal
+        base_frame, normal = self._compute_face_frame(parent, face_index)
 
-        # Optional twist around the *face normal* itself
-        if angle:
-            R = Rotation.from_axis_and_angle(face_normal, math.radians(angle), point=f.point)
-            f.transform(R)
+        # Base direction along normal
+        n = normal
+        # Side direction for angular variation (parent.xaxis in the face frame)
+        side = base_frame.xaxis
 
-        # Child grows away from parent along the face normal
-        axis = Line.from_point_and_vector(f.point, face_normal * self.stick_length)
+        theta = math.radians(stick_angle)
+        # Blend normal and side to get final direction
+        d = n * math.cos(theta) + side * math.sin(theta)
+        if d.length < 1e-6:
+            d = n
+        d.unitize()
+
+        axis = Line(base_frame.point, base_frame.point + d * self.stick_length)
 
         child = Stick(axis,
                       length=self.stick_length,
@@ -145,14 +157,15 @@ class BranchingModule:
 
         self.sticks.append(child)
 
-    def grow_chain(self, steps=1, face_index=0, angle=0.0, offset01=None):
-        """Grow a chain of N children."""
+    # ----------------------------------------------------------------------
+    # N-step growth (L-system style)
+    # ----------------------------------------------------------------------
+    def grow_chain(self, steps=1, face_index=0, stick_angle=0.0):
         for _ in range(max(0, int(steps))):
-            self.grow_once(face_index=face_index, angle=angle, offset01=offset01)
+            self.grow_once(face_index=face_index, stick_angle=stick_angle)
 
     def visualize(self):
         return [s.geometry for s in self.sticks]
-
 
 
 # =============================================================================
@@ -491,7 +504,7 @@ class RootFrames:
         """
         mode: 'branch' or 'bridge'
         face_index: which face to grow from (0–3)
-        angle: yaw angle in degrees (branch mode)
+        angle: stick_angle in degrees (branch mode)
         offset01: [0,1] param along axis for branching,
                   scaled length for bridging
         steps: number of L-system steps (branching only)
@@ -527,10 +540,10 @@ class RootFrames:
                 mod.grow_chain(
                     steps=steps,
                     face_index=face_index,
-                    angle=angle,
-                    offset01=offset01
+                    stick_angle=angle
                 )
-                sticks_out.extend(mod.sticks[1:])  # exclude root duplicate
+                # skip the first (root) because we already added it
+                sticks_out.extend(mod.sticks[1:])
 
             self.sticks = sticks_out
             return sticks_out
