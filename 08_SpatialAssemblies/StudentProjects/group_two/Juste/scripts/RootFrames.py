@@ -405,87 +405,72 @@ class RootFrames:
     # BLOCK 2 – 3D FRAMES
     # ------------------------------------------------------------------  
 
+# --------------------------------------------------------------
+# BLOCK 2 — POINTS → FRAMES (correct 3D frames)
+# --------------------------------------------------------------
     def points_to_frames(self, rot_tan=0, rot_norm=0):
-        import Rhino.Geometry as rg
-
-        N = len(self.points)
-        if N == 0:
+        pts = self.points
+        if not pts:
             self.frames = []
             return []
 
         frames = []
 
-        # --- Curve mode: use curve.FrameAt(t) ---------------------------
-        if self._rg_curve is not None and self._curve_t:
-            crv = self._rg_curve
-            for pt, t in zip(self.points, self._curve_t):
-                success, plane = crv.FrameAt(t)
+        # If we sampled from a BrepFace, grab its surface
+        surface = None
+        if self.surface_input:
+            brep = self.surface_input.ToBrep()
+            surface = brep.Faces[0].UnderlyingSurface()
+
+        for p in pts:
+            if surface:
+                # Convert to UV space first
+                success, uv = surface.ClosestPoint(rg.Point3d(p.x, p.y, p.z))
                 if not success:
-                    # fallback: simple tangent frame
-                    tangent = crv.TangentAt(t)
-                    tvec = Vector(tangent.X, tangent.Y, tangent.Z)
-                    tvec.unitize()
-                    y = _stable_perp(tvec)
-                    f = Frame(pt, tvec, y)
+                    # fallback frame
+                    frames.append(Frame(p, Vector(1,0,0), Vector(0,1,0)))
+                    continue
+
+                # Evaluate first derivatives
+                ok, point3d, du, dv = surface.Evaluate(uv[0], uv[1], 1)
+                if not ok:
+                    frames.append(Frame(p, Vector(1,0,0), Vector(0,1,0)))
+                    continue
+
+                tangent_u = Vector(du.X, du.Y, du.Z)
+                tangent_v = Vector(dv.X, dv.Y, dv.Z)
+
+                if tangent_u.length < 1e-6:
+                    tangent_u = Vector(1,0,0)
                 else:
-                    xaxis = Vector(plane.XAxis.X, plane.XAxis.Y, plane.XAxis.Z).unitized()
-                    yaxis = Vector(plane.YAxis.X, plane.YAxis.Y, plane.YAxis.Z).unitized()
-                    f = Frame(pt, xaxis, yaxis)
+                    tangent_u.unitize()
 
-                if rot_tan:
-                    R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=pt)
-                    f.transform(R)
-                if rot_norm:
-                    R = Rotation.from_axis_and_angle(f.yaxis, math.radians(rot_norm), point=pt)
-                    f.transform(R)
-
-                frames.append(f)
-
-        # --- Surface/Brep mode: use TangentAt/NormalAt -----------------
-        elif self._rg_face is not None and self._uv_params:
-            face = self._rg_face
-            for (pt, (u, v)) in zip(self.points, self._uv_params):
-                tu = face.TangentAt(u, v)[0]
-                tv = face.TangentAt(u, v)[1]
-                # TangentAt in Rhino returns (succeeded, tanU, tanV) in C#; in IronPython:
-                # TanU, TanV = face.TangentAt(u, v)
-                # but many GH setups expose it as a tuple; handle defensively:
-                if hasattr(tu, "X") and hasattr(tv, "X"):
-                    tanU = tu
-                    tanV = tv
+                normal = tangent_u.cross(tangent_v)
+                if normal.length < 1e-6:
+                    normal = Vector(0,0,1)
                 else:
-                    # fallback if TangentAt gives something odd
-                    tanU, tanV = face.TangentAt(u, v)
+                    normal.unitize()
 
-                xaxis = Vector(tanU.X, tanU.Y, tanU.Z)
-                yaxis = Vector(tanV.X, tanV.Y, tanV.Z)
-                if xaxis.length < 1e-6:
-                    xaxis = _stable_perp(Vector(0, 0, 1))
-                if yaxis.length < 1e-6:
-                    yaxis = _stable_perp(xaxis)
-                xaxis.unitize()
-                yaxis.unitize()
+                f = Frame(p, tangent_u, normal)
 
-                f = Frame(pt, xaxis, yaxis)
+            else:
+                # Curve-based fallback frame (previous version)
+                f = Frame(p, Vector(1,0,0), Vector(0,1,0))
 
-                if rot_tan:
-                    R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=pt)
-                    f.transform(R)
-                if rot_norm:
-                    R = Rotation.from_axis_and_angle(f.yaxis, math.radians(rot_norm), point=pt)
-                    f.transform(R)
+            # Apply frame rotations
+            if rot_tan:
+                R = Rotation.from_axis_and_angle(f.xaxis, math.radians(rot_tan), point=p)
+                f.transform(R)
 
-                frames.append(f)
+            if rot_norm:
+                R = Rotation.from_axis_and_angle(f.yaxis, math.radians(rot_norm), point=p)
+                f.transform(R)
 
-        else:
-            # fallback: old world-Z–based frames (should rarely be used)
-            Z = Vector(0, 0, 1)
-            for i, p in enumerate(self.points):
-                f = Frame(p, Vector(1, 0, 0), Vector(0, 1, 0))
-                frames.append(f)
+            frames.append(f)
 
         self.frames = frames
         return frames
+
 
     # ------------------------------------------------------------------  
     # BLOCK 3 – EDGE FRAMES & VECTORS
