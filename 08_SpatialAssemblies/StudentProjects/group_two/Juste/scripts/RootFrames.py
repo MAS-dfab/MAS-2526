@@ -86,15 +86,13 @@ def _aabb_overlap(a, b, eps=1e-6):
 # =============================================================================
 # STICK
 # =============================================================================
-
-
 class Stick:
     DEFAULT_LEN = 100.0
     DEFAULT_SIZE = 5.0
 
     LENGTH = DEFAULT_LEN
-    WIDTH = DEFAULT_SIZE
-    DEPTH = DEFAULT_SIZE
+    WIDTH  = DEFAULT_SIZE
+    DEPTH  = DEFAULT_SIZE
 
     def __init__(self, axis, length=None, width=None, depth=None):
         """
@@ -103,19 +101,36 @@ class Stick:
         axis : compas.geometry.Line
             Centerline of the stick.
         length : float, optional
-        width : float, optional
-        depth : float, optional
+        width  : float, optional
+        depth  : float, optional
         """
-        self.axis = axis
+        self.axis   = axis
         self.length = length or Stick.LENGTH
-        self.width = width or Stick.WIDTH
-        self.depth = depth or Stick.DEPTH
+        self.width  = width  or Stick.WIDTH
+        self.depth  = depth  or Stick.DEPTH
+
+        # frame is always derived from the *axis*, never from a surface
         self.frame = self.compute_frame()
 
     def compute_frame(self):
-        x = self.axis.direction.unitized()
-        y = _stable_perp(x)
-        z = x.cross(y).unitized()
+        """Build a local frame from the 3D axis direction."""
+        x = self.axis.direction
+        if not x.length:
+            x = Vector(1, 0, 0)
+        else:
+            x.unitize()
+
+        # choose a reference that is not parallel to x
+        ref = Vector(0, 0, 1)
+        if abs(ref.dot(x)) > 0.9:
+            ref = Vector(0, 1, 0)
+
+        y = ref.cross(x)
+        if not y.length:
+            y = _stable_perp(x)
+        y.unitize()
+
+        # z is implied, but we let Frame construct it from x,y
         return Frame(self.axis.midpoint, x, y)
 
     @property
@@ -128,65 +143,73 @@ class Stick:
 
 
 # =============================================================================
-# BRANCHING MODULE  (L-system style, collision-safe contact)
+# BRANCHING MODULE  (L-system style, collision-aware face contact)
 # =============================================================================
-
 
 class BranchingModule:
     """
     Branch chain:
       - Each generation grows from the last stick.
-      - Child near face lies on a parent face (full-width/depth offset).
-      - Child axis is a blend of parent tangent and face normal.
+      - Child near face lies on a parent face (full width/depth offset).
+      - Child axis is tangent to the parent and rotated by stick_angle
+        in the plane orthogonal to the chosen face normal.
     """
 
     def __init__(self, root_stick, stick_length=None, width=None, depth=None, offset01=0.5):
-        self.sticks = [root_stick]
+        self.sticks       = [root_stick]
         self.stick_length = stick_length or Stick.LENGTH
-        self.width = width or Stick.WIDTH
-        self.depth = depth or Stick.DEPTH
-        self.offset01 = float(offset01)
+        self.width        = width  or Stick.WIDTH
+        self.depth        = depth  or Stick.DEPTH
+        self.offset01     = float(offset01)
 
+    # ------------------------------------------------------------------  
     def _build_child_from_face(self, parent, face_index, stick_angle):
+        """Construct one child stick from a given parent face."""
         fi = int(face_index) % 4
         pf = parent.frame
 
-        # position along parent axis (0–1)
+        # 1) position along parent axis (0–1)
         t = max(0.0, min(1.0, self.offset01))
         axis_pt = parent.axis.point_at(t)
 
-        # pick face normal & thickness (parent & child share dims)
-        if fi == 0:  # +Y
-            n = pf.yaxis.unitized()
+        # 2) face normal & thickness (parent and child share dimensions)
+        if fi == 0:          # +Y
+            n    = pf.yaxis.unitized()
             half = self.width * 0.5
-        elif fi == 2:  # -Y
-            n = (-pf.yaxis).unitized()
+        elif fi == 2:        # -Y
+            n    = (-pf.yaxis).unitized()
             half = self.width * 0.5
-        elif fi == 1:  # +Z
-            n = pf.zaxis.unitized()
+        elif fi == 1:        # +Z
+            n    = pf.zaxis.unitized()
             half = self.depth * 0.5
-        else:  # -Z
-            n = (-pf.zaxis).unitized()
+        else:                # -Z
+            n    = (-pf.zaxis).unitized()
             half = self.depth * 0.5
 
-        # parent face center
+        # parent face center (outer skin of parent box)
         parent_face_center = axis_pt + n * half
-
-        # child center so that its near face coincides with parent face
+        # child center so its near face sits exactly on the parent face
         child_center = parent_face_center + n * half
 
-        # tangent direction projected off the normal
+        # 3) tangent direction projected to the plane orthogonal to n
         tangent = pf.xaxis
         tangent_proj = tangent - n * tangent.dot(n)
         if tangent_proj.length < 1e-6:
             tangent_proj = _stable_perp(n)
         tangent_proj.unitize()
 
-        # blend normal & projected tangent with designer angle
+        # 4) rotate the projected tangent around the face normal by stick_angle
         theta = math.radians(stick_angle)
-        d_raw = n * math.cos(theta) + tangent_proj * math.sin(theta)
+        # pure rotation about n
+        # d_raw = R_n(theta) * tangent_proj
+        # implement as Rodrigues' formula:
+        d_raw = (
+            tangent_proj * math.cos(theta) +
+            n.cross(tangent_proj) * math.sin(theta) +
+            n * (n.dot(tangent_proj)) * (1.0 - math.cos(theta))
+        )
 
-        # reproject to plane orthogonal to n (for a clean face contact)
+        # ensure d is orthogonal to n (good for box cross-section)
         d = d_raw - n * d_raw.dot(n)
         if d.length < 1e-6:
             d = tangent_proj
@@ -194,21 +217,24 @@ class BranchingModule:
 
         x = d
         y = n
-        z = x.cross(y).unitized()
+        # z is implied; we keep frame orthonormal
         child_frame = Frame(child_center, x, y)
 
+        # 5) build child axis from its center and local x-direction
         half_len = self.stick_length * 0.5
         start = child_center - x * half_len
-        end = child_center + x * half_len
-        axis = Line(start, end)
+        end   = child_center + x * half_len
+        axis  = Line(start, end)
 
         child = Stick(axis, length=self.stick_length, width=self.width, depth=self.depth)
+        # override its auto-computed frame with our precise one
         child.frame = child_frame
         return child
 
+    # ------------------------------------------------------------------  
     def grow_once(self, face_index=0, stick_angle=0.0):
         parent = self.sticks[-1]
-        child = self._build_child_from_face(parent, face_index, stick_angle)
+        child  = self._build_child_from_face(parent, face_index, stick_angle)
         self.sticks.append(child)
 
     def grow_chain(self, steps=1, face_index=0, stick_angle=0.0):
