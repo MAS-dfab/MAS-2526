@@ -138,73 +138,61 @@ class BranchingModule:
     # Core: compute child from a parent face with correct offset
     # ------------------------------------------------------------------  
 
-    def _build_child_from_face(self, parent, face_index, stick_angle):
-        pf = parent.frame
-        fi = int(face_index) % 4
+        def _build_child_from_face(self, parent, face_index, stick_angle):
+            pf = parent.frame
+            fi = int(face_index) % 4
 
-        # --- 1. position along parent axis (local x) --------------------
-        # parent.frame.point is *midpoint* of the stick.
-        # offset01 in [0, 1] maps to [-L/2, +L/2] along local x-axis.
-        L = parent.length
-        s = (self.offset01 - 0.5) * L
-        parent_centerline_point = pf.point + pf.xaxis * s
+            # --- 1. position along parent axis (local x) --------------------
+            L = parent.length
+            s = (self.offset01 - 0.5) * L
+            parent_centerline_point = pf.point + pf.xaxis * s
 
-        # --- 2. face normal & thickness (parent & child share dims) -----
-        if fi == 0:           # +Y
-            n = pf.yaxis.unitized()
-            half = self.width * 0.5
-        elif fi == 2:         # -Y
-            n = (-pf.yaxis).unitized()
-            half = self.width * 0.5
-        elif fi == 1:         # +Z
-            n = pf.zaxis.unitized()
-            half = self.depth * 0.5
-        else:                 # -Z
-            n = (-pf.zaxis).unitized()
-            half = self.depth * 0.5
+            # --- 2. face normal & thickness (parent & child share dims) -----
+            if fi == 0:           # +Y
+                n = pf.yaxis.unitized()
+                half = self.width * 0.5
+            elif fi == 2:         # -Y
+                n = (-pf.yaxis).unitized()
+                half = self.width * 0.5
+            elif fi == 1:         # +Z
+                n = pf.zaxis.unitized()
+                half = self.depth * 0.5
+            else:                 # -Z
+                n = (-pf.zaxis).unitized()
+                half = self.depth * 0.5
 
-        # parent face center (on outer skin)
-        parent_face_center = parent_centerline_point + n * half
+            parent_face_center = parent_centerline_point + n * half
+            child_center       = parent_face_center + n * half
 
-        # child center so that its *near* face lies exactly on parent face
-        # parent and child thickness are equal, so we offset by another `half`
-        child_center = parent_face_center + n * half
+            # tangent direction projected into plane orthogonal to n
+            tangent = pf.xaxis
+            tangent_proj = tangent - n * tangent.dot(n)
+            if tangent_proj.length < 1e-6:
+                tangent_proj = _stable_perp(n)
+            tangent_proj.unitize()
 
-        # --- 3. directional logic --------------------------------------
-        # tangent direction: parent's local x-axis
-        tangent = pf.xaxis
+            # --- 3. 3D direction (no re-projection, keep normal component) ---
+            theta = math.radians(stick_angle)
+            d = n * math.cos(theta) + tangent_proj * math.sin(theta)
+            if d.length < 1e-6:
+                d = n.copy()
+            d.unitize()
 
-        # tangent projected onto plane orthogonal to n
-        tangent_proj = tangent - n * tangent.dot(n)
-        if tangent_proj.length < 1e-6:
-            tangent_proj = _stable_perp(n)
-        tangent_proj.unitize()
+            x = d
+            y = n
+            z = x.cross(y).unitized()
+            child_frame = Frame(child_center, x, y)
 
-        # blend normal & projected tangent with designer angle
-        theta = math.radians(stick_angle)
-        d_raw = n * math.cos(theta) + tangent_proj * math.sin(theta)
+            # --- 4. axis -----------------------------------------------
+            half_len = self.stick_length * 0.5
+            start = child_center - x * half_len
+            end   = child_center + x * half_len
+            axis  = Line(start, end)
 
-        # make sure direction is not leaning into the parent (safety)
-        # keep only component in tangent plane
-        d = d_raw - n * d_raw.dot(n)
-        if d.length < 1e-6:
-            d = tangent_proj
-        d.unitize()
+            child = Stick(axis, length=self.stick_length, width=self.width, depth=self.depth)
+            child.frame = child_frame
+            return child
 
-        x = d
-        y = n
-        z = x.cross(y).unitized()
-        child_frame = Frame(child_center, x, y)
-
-        # --- 4. define child axis centered on child_center -------------
-        half_len = self.stick_length * 0.5
-        start = child_center - x * half_len
-        end = child_center + x * half_len
-        axis = Line(start, end)
-
-        child = Stick(axis, length=self.stick_length, width=self.width, depth=self.depth)
-        child.frame = child_frame
-        return child
 
     # ------------------------------------------------------------------  
 
