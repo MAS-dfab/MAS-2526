@@ -33,6 +33,7 @@ class Aggregation:
         self._init_first_stick(first_frame)
 
 
+
     def _init_first_stick(self, first_frame):
         """
         Private method for creating the first stick.

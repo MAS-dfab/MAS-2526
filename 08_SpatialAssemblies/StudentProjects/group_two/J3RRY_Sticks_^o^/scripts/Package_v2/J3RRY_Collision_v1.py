@@ -157,3 +157,5 @@ class Collision:
         # 3. Parallel sticks check
 
         return True
+    
+
