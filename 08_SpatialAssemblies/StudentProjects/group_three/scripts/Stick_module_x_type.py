@@ -36,7 +36,7 @@ class BranchingModule_x_type:
 
         # new_frame = stick_frame.copy()
         # new_frame.transform(R)
-        
+
         # Choose a point along the stick axis:
         axis = stick.axis
         v_dir = axis.direction.unitized()
@@ -74,14 +74,14 @@ class BranchingModule_x_type:
         # 2. move further outwards so we are fully outside the parent stick
         position.point += position.yaxis * (self.depth / 2.0)
         # small offset along previous stick direction (old behavior)
-        position.point += position.xaxis * -10.0
+        position.point += position.xaxis * -Stick.DEPTH/2
 
         # 3. rotate around the face normal (y-axis of the frame at the face)
         R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), position.point)
         position.transform(R)
 
         # 4. small offset along new stick direction
-        position.point += position.xaxis * -10.0
+        position.point += position.xaxis * -Stick.DEPTH/2
 
         # 5. construct centerline
         dir_vec = position.xaxis  # Frame axes are unit vectors in compas
@@ -111,12 +111,8 @@ class BranchingModule_x_type:
 
         self.sticks.append(new_stick)
         return len(self.sticks) - 1  # return index of new stick
+    
 
     def visualize(self):
         """Return all stick geometries as Boxes."""
         return [stick.geometry for stick in self.sticks]
-
-
-
-
-
