@@ -1,146 +1,88 @@
 # stick_fixed.py
-# Safe version for RhinoCode / Grasshopper
+# A fully corrected 3D Stick class producing valid compas Frames and Boxes
 
-from compas.geometry import Line, Vector, Point, Frame, Box
-
-
-# ------------------------------------------------------------
-# Utility: stable perpendicular (used by bridge.py)
-# ------------------------------------------------------------
-
-def stable_perp(v):
-    """Return a unit vector stably perpendicular to v."""
-    if not isinstance(v, Vector):
-        v = Vector(*v)
-
-    if v.length < 1e-9:
-        return Vector(1, 0, 0)
-
-    v = v.unitized()
-
-    ref = Vector(0, 0, 1)
-    if abs(ref.dot(v)) > 0.9:
-        ref = Vector(0, 1, 0)
-
-    perp = ref.cross(v)
-    if perp.length < 1e-9:
-        return Vector(1, 0, 0)
-
-    return perp.unitized()
+from compas.geometry import Point, Vector, Line, Frame, Box
 
 
-# ------------------------------------------------------------
-# Stick class (fully safe)
-# ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Frame builder (stable, robust, works for any axis direction)
+# ------------------------------------------------------------------------------
+
+def build_frame_from_axis(axis, up_hint=Vector(0, 0, 1)):
+    """
+    Build a stable orthonormal frame from a Line axis.
+    axis    : compas.geometry.Line
+    up_hint : Vector used to resolve perpendicular direction
+    """
+
+    start = axis.start
+    end   = axis.end
+
+    # Primary axis direction
+    xaxis = Vector.from_start_end(start, end)
+    if xaxis.length < 1e-6:
+        xaxis = Vector(1, 0, 0)
+    xaxis.unitize()
+
+    # Compute a stable perpendicular using up_hint
+    yaxis = up_hint.cross(xaxis)
+    if yaxis.length < 1e-6:
+        # If parallel to up_hint, choose another vector
+        yaxis = Vector(0, 1, 0).cross(xaxis)
+    yaxis.unitize()
+
+    # zaxis implied by right-hand orientation
+    zaxis = xaxis.cross(yaxis)
+    if zaxis.length < 1e-6:
+        zaxis = Vector(0, 0, 1)
+    zaxis.unitize()
+
+    return Frame(start, xaxis, yaxis)
+
+
+# ------------------------------------------------------------------------------
+# Stick class
+# ------------------------------------------------------------------------------
 
 class Stick:
-    """
-    A simple oriented stick represented as:
-      - axis : compas Line
-      - frame : compas Frame
-      - geometry : compas Box
-    """
+    DEFAULT_LEN  = 1.0
+    DEFAULT_SIZE = 0.2
 
-    DEFAULT_LEN = 1.0
-    DEFAULT_SIZE = 0.1
+    def __init__(self, axis: Line, length=None, width=None, depth=None, parent_frame=None):
+        """
+        axis         : compas.geometry.Line
+        parent_frame : optional Frame to enforce orientation continuity
+        """
 
-    def __init__(self, axis, length=None, width=None, depth=None, parent_frame=None):
+        # Store axis
+        self.axis   = axis
 
-        if not isinstance(axis, Line):
-            raise TypeError("Stick axis must be a compas.geometry.Line.")
+        # Dimensions
+        self.length = float(length or Stick.DEFAULT_LEN)
+        self.width  = float(width  or Stick.DEFAULT_SIZE)
+        self.depth  = float(depth  or Stick.DEFAULT_SIZE)
 
-        # convert axis endpoints explicitly to COMPAS Points
-        start = Point(axis.start.x, axis.start.y, axis.start.z)
-        end   = Point(axis.end.x,   axis.end.y,   axis.end.z)
-        self.axis = Line(start, end)
+        # ------------------------------------------------------------------
+        # Compute orientation frame
+        # ------------------------------------------------------------------
+        if parent_frame:
+            # Inherit parent's orthonormal frame orientation
+            self.frame = parent_frame.copy()
 
-        self.length = float(length) if length else self.DEFAULT_LEN
-        self.width  = float(width)  if width  else self.DEFAULT_SIZE
-        self.depth  = float(depth)  if depth  else self.DEFAULT_SIZE
+            # Update origin but keep orientation
+            origin_shift = axis.midpoint
+            self.frame.point = origin_shift
 
-        # build stable 3D frame
-        self.frame = self._make_frame(self.axis, parent_frame)
+        else:
+            # Full 3D reconstruction from axis (correct, stable)
+            self.frame = build_frame_from_axis(axis)
 
-        # create oriented box geometry
+        # ------------------------------------------------------------------
+        # Build solid geometry
+        # COMPAS Box signature:
+        #     Box(frame, xsize, ysize, zsize)
+        # ------------------------------------------------------------------
         self.geometry = Box(self.frame, self.length, self.width, self.depth)
 
-
-    # ------------------------------------------------------------
-    # INTERNAL: build local frame from axis
-    # ------------------------------------------------------------
-
-    def _make_frame(self, axis, parent_frame):
-
-        # --- X direction ---
-        dx = axis.end.x - axis.start.x
-        dy = axis.end.y - axis.start.y
-        dz = axis.end.z - axis.start.z
-
-        x = Vector(dx, dy, dz)
-        if x.length < 1e-9:
-            x = Vector(1, 0, 0)
-        x.unitize()
-
-        # --------------------------------------------------------
-        # Y direction (preserve parent orientation if possible)
-        # --------------------------------------------------------
-        if parent_frame:
-            py = Vector(parent_frame.yaxis.x,
-                        parent_frame.yaxis.y,
-                        parent_frame.yaxis.z)
-
-            # projection of py onto plane perpendicular to x
-            dot = py.dot(x)
-            y = py - x * dot
-
-            if y.length < 1e-6:
-                pz = Vector(parent_frame.zaxis.x,
-                            parent_frame.zaxis.y,
-                            parent_frame.zaxis.z)
-                y = pz - x * pz.dot(x)
-
-            if y.length < 1e-6:
-                y = Vector(0, 0, 1)
-        else:
-            # world fallback
-            y = Vector(0, 0, 1)
-            if abs(y.dot(x)) > 0.9:
-                y = Vector(0, 1, 0)
-
-        y.unitize()
-
-        # --- Z direction ---
-        z = x.cross(y)
-        if z.length < 1e-6:
-            z = Vector(0, 0, 1)
-        z.unitize()
-
-        # --------------------------------------------------------
-        # Origin — COMPAS SAFE POINT (NEVER Rhino midpoint)
-        # --------------------------------------------------------
-        origin = axis.point_at(0.5)
-        origin = Point(origin.x, origin.y, origin.z)
-
-        # build frame
-        return Frame(origin, x, y)
-
-
-    # ------------------------------------------------------------
-    # Collision helper (light)
-    # ------------------------------------------------------------
-
-    def intersects(self, other, clearance=0.0):
-        """Capsule-like intersection test."""
-        if not isinstance(other, Stick):
-            return False
-
-        r1 = 0.5 * max(self.width, self.depth) + clearance
-        r2 = 0.5 * max(other.width, other.depth) + clearance
-        R  = r1 + r2
-
-        try:
-            d = self.axis.distance_to_line(other.axis)
-        except Exception:
-            return False
-
-        return d <= R
+    def __repr__(self):
+        return "Stick(len={}, w={}, d={})".format(self.length, self.width, self.depth)
