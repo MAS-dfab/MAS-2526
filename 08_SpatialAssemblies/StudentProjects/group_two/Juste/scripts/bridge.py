@@ -1,7 +1,8 @@
 # bridge.py
 
-from compas.geometry import Line, Point, Frame, Vector
-from stick_fixed import Stick, stable_perp
+from stick_fixed import Stick
+from compas.geometry import Line, Vector
+
 
 
 def detect_bridging_candidates(sticks, threshold=9999999):
