@@ -717,9 +717,196 @@ def extract_zyx_euler_angles(frame_1, frame_2):
     
     return z_angle, y_angle, x_angle
 
+def extract_euler_angles_all_sequences(frame_0, frame_1):
+    """
+    Extract Euler angles for all 12 sequences (6 Tait-Bryan + 6 Proper Euler)
+    
+    Returns dictionary with all sequences
+    """
+    from compas.geometry import Transformation
+    
+    # Compute relative transformation
+    T_0 = Transformation.from_frame(frame_0)
+    T_1 = Transformation.from_frame(frame_1)
+    T_rel = T_1 * T_0.inverted()
+    
+    # Get rotation matrix
+    R = [[T_rel.matrix[i][j] for j in range(3)] for i in range(3)]
+    
+    sequences = {}
+    
+    # ========== TAIT-BRYAN SEQUENCES (all different axes) ==========
+    
+    # XYZ sequence
+    try:
+        y_xyz = math.asin(max(-1, min(1, R[0][2])))
+        if abs(math.cos(y_xyz)) > 0.00001:
+            x_xyz = math.atan2(-R[1][2], R[2][2])
+            z_xyz = math.atan2(-R[0][1], R[0][0])
+        else:
+            x_xyz = math.atan2(R[2][1], R[1][1])
+            z_xyz = 0
+        sequences['XYZ'] = (x_xyz, y_xyz, z_xyz)
+    except:
+        sequences['XYZ'] = (0, 0, 0)
+    
+    # XZY sequence
+    try:
+        z_xzy = math.asin(max(-1, min(1, -R[0][1])))
+        if abs(math.cos(z_xzy)) > 0.00001:
+            x_xzy = math.atan2(R[2][1], R[1][1])
+            y_xzy = math.atan2(R[0][2], R[0][0])
+        else:
+            x_xzy = math.atan2(-R[1][2], R[2][2])
+            y_xzy = 0
+        sequences['XZY'] = (x_xzy, z_xzy, y_xzy)
+    except:
+        sequences['XZY'] = (0, 0, 0)
+    
+    # YXZ sequence
+    try:
+        x_yxz = math.asin(max(-1, min(1, -R[1][2])))
+        if abs(math.cos(x_yxz)) > 0.00001:
+            y_yxz = math.atan2(R[0][2], R[2][2])
+            z_yxz = math.atan2(R[1][0], R[1][1])
+        else:
+            y_yxz = math.atan2(-R[2][0], R[0][0])
+            z_yxz = 0
+        sequences['YXZ'] = (y_yxz, x_yxz, z_yxz)
+    except:
+        sequences['YXZ'] = (0, 0, 0)
+    
+    # YZX sequence
+    try:
+        z_yzx = math.asin(max(-1, min(1, R[1][0])))
+        if abs(math.cos(z_yzx)) > 0.00001:
+            y_yzx = math.atan2(-R[2][0], R[0][0])
+            x_yzx = math.atan2(-R[1][2], R[1][1])
+        else:
+            y_yzx = math.atan2(R[0][2], R[2][2])
+            x_yzx = 0
+        sequences['YZX'] = (y_yzx, z_yzx, x_yzx)
+    except:
+        sequences['YZX'] = (0, 0, 0)
+    
+    # ZXY sequence
+    try:
+        x_zxy = math.asin(max(-1, min(1, R[2][1])))
+        if abs(math.cos(x_zxy)) > 0.00001:
+            z_zxy = math.atan2(-R[0][1], R[1][1])
+            y_zxy = math.atan2(-R[2][0], R[2][2])
+        else:
+            z_zxy = math.atan2(R[1][0], R[0][0])
+            y_zxy = 0
+        sequences['ZXY'] = (z_zxy, x_zxy, y_zxy)
+    except:
+        sequences['ZXY'] = (0, 0, 0)
+    
+    # ZYX sequence
+    try:
+        y_zyx = math.asin(max(-1, min(1, -R[2][0])))
+        if abs(math.cos(y_zyx)) > 0.00001:
+            z_zyx = math.atan2(R[1][0], R[0][0])
+            x_zyx = math.atan2(R[2][1], R[2][2])
+        else:
+            z_zyx = math.atan2(-R[0][1], R[1][1])
+            x_zyx = 0
+        sequences['ZYX'] = (z_zyx, y_zyx, x_zyx)
+    except:
+        sequences['ZYX'] = (0, 0, 0)
+    
+    # ========== PROPER EULER SEQUENCES (repeat one axis) ==========
+    
+    # XYX sequence
+    try:
+        y_xyx = math.acos(max(-1, min(1, R[0][0])))
+        if abs(math.sin(y_xyx)) > 0.00001:
+            x1_xyx = math.atan2(R[1][0], -R[2][0])
+            x2_xyx = math.atan2(R[0][1], R[0][2])
+        else:
+            x1_xyx = math.atan2(-R[1][2], R[1][1])
+            x2_xyx = 0
+        sequences['XYX'] = (x1_xyx, y_xyx, x2_xyx)
+    except:
+        sequences['XYX'] = (0, 0, 0)
+    
+    # XZX sequence
+    try:
+        z_xzx = math.acos(max(-1, min(1, R[0][0])))
+        if abs(math.sin(z_xzx)) > 0.00001:
+            x1_xzx = math.atan2(R[2][0], R[1][0])
+            x2_xzx = math.atan2(R[0][2], -R[0][1])
+        else:
+            x1_xzx = math.atan2(R[2][1], R[2][2])
+            x2_xzx = 0
+        sequences['XZX'] = (x1_xzx, z_xzx, x2_xzx)
+    except:
+        sequences['XZX'] = (0, 0, 0)
+    
+    # YXY sequence
+    try:
+        x_yxy = math.acos(max(-1, min(1, R[1][1])))
+        if abs(math.sin(x_yxy)) > 0.00001:
+            y1_yxy = math.atan2(R[0][1], R[2][1])
+            y2_yxy = math.atan2(R[1][0], -R[1][2])
+        else:
+            y1_yxy = math.atan2(R[0][2], R[0][0])
+            y2_yxy = 0
+        sequences['YXY'] = (y1_yxy, x_yxy, y2_yxy)
+    except:
+        sequences['YXY'] = (0, 0, 0)
+    
+    # YZY sequence
+    try:
+        z_yzy = math.acos(max(-1, min(1, R[1][1])))
+        if abs(math.sin(z_yzy)) > 0.00001:
+            y1_yzy = math.atan2(R[2][1], -R[0][1])
+            y2_yzy = math.atan2(R[1][2], R[1][0])
+        else:
+            y1_yzy = math.atan2(-R[2][0], R[2][2])
+            y2_yzy = 0
+        sequences['YZY'] = (y1_yzy, z_yzy, y2_yzy)
+    except:
+        sequences['YZY'] = (0, 0, 0)
+    
+    # ZXZ sequence
+    try:
+        x_zxz = math.acos(max(-1, min(1, R[2][2])))
+        if abs(math.sin(x_zxz)) > 0.00001:
+            z1_zxz = math.atan2(R[0][2], -R[1][2])
+            z2_zxz = math.atan2(R[2][0], R[2][1])
+        else:
+            z1_zxz = math.atan2(-R[0][1], R[0][0])
+            z2_zxz = 0
+        sequences['ZXZ'] = (z1_zxz, x_zxz, z2_zxz)
+    except:
+        sequences['ZXZ'] = (0, 0, 0)
+    
+    # ZYZ sequence
+    try:
+        y_zyz = math.acos(max(-1, min(1, R[2][2])))
+        if abs(math.sin(y_zyz)) > 0.00001:
+            z1_zyz = math.atan2(R[1][2], R[0][2])
+            z2_zyz = math.atan2(R[2][1], -R[2][0])
+        else:
+            z1_zyz = math.atan2(R[1][0], R[1][1])
+            z2_zyz = 0
+        sequences['ZYZ'] = (z1_zyz, y_zyz, z2_zyz)
+    except:
+        sequences['ZYZ'] = (0, 0, 0)
+    
+    return sequences
 
-def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, depth=None, angle_tolerance=0.01):
-    """Create bridges using ZYX decomposition for robotic assembly"""
+
+def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, depth=None, angle_tolerance=0.01, sequence='ZYX'):
+    """
+    Create bridges using Euler angle decomposition for robotic assembly
+    
+    Parameters:
+    -----------
+    sequence : str
+        Euler angle sequence to use: 'XYZ', 'XZY', 'YXZ', 'YZX', 'ZXY', or 'ZYX'
+    """
     
     if width is None:
         width = 13.0
@@ -729,8 +916,50 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
     frame_0 = stick_0.center_frame
     frame_1 = stick_1.center_frame
     
-    # Extract ZYX Euler angles
-    z_angle, y_angle, x_angle = extract_zyx_euler_angles(frame_0, frame_1)
+    # Extract all Euler angle sequences
+    all_sequences = extract_euler_angles_all_sequences(frame_0, frame_1)
+    
+    # Print all sequences for comparison
+    print("=" * 60)
+    print("ALL EULER ANGLE SEQUENCES:")
+    for seq_name, angles in all_sequences.items():
+        print(f"{seq_name}: {math.degrees(angles[0]):>7.1f}°, {math.degrees(angles[1]):>7.1f}°, {math.degrees(angles[2]):>7.1f}°")
+    print("=" * 60)
+    
+    # Use selected sequence
+    if sequence not in all_sequences:
+        print(f"WARNING: Unknown sequence '{sequence}', defaulting to 'ZYX'")
+        sequence = 'ZYX'
+    
+    angle_1, angle_2, angle_3 = all_sequences[sequence]
+    print(f"USING SEQUENCE: {sequence}")
+    print(f"Angles: {math.degrees(angle_1):.1f}°, {math.degrees(angle_2):.1f}°, {math.degrees(angle_3):.1f}°")
+    
+     # Map to our bridge variables based on sequence
+    if sequence == 'ZYX':
+        z_angle, y_angle, x_angle = angle_1, angle_2, angle_3
+    elif sequence == 'ZXY':
+        z_angle, x_angle, y_angle = angle_1, angle_2, angle_3
+    elif sequence == 'YZX':
+        y_angle, z_angle, x_angle = angle_1, angle_2, angle_3
+    elif sequence == 'YXZ':
+        y_angle, x_angle, z_angle = angle_1, angle_2, angle_3
+    elif sequence == 'XZY':
+        x_angle, z_angle, y_angle = angle_1, angle_2, angle_3
+    elif sequence == 'XYZ':
+        x_angle, y_angle, z_angle = angle_1, angle_2, angle_3
+    elif sequence == 'XYX':
+        x_angle, y_angle, x_angle = angle_1, angle_2, angle_3  # Note: X repeats
+    elif sequence == 'XZX':
+        x_angle, z_angle, x_angle = angle_1, angle_2, angle_3  # Note: X repeats
+    elif sequence == 'YXY':
+        y_angle, x_angle, y_angle = angle_1, angle_2, angle_3  # Note: Y repeats
+    elif sequence == 'YZY':
+        y_angle, z_angle, y_angle = angle_1, angle_2, angle_3  # Note: Y repeats
+    elif sequence == 'ZXZ':
+        z_angle, x_angle, z_angle = angle_1, angle_2, angle_3  # Note: Z repeats
+    elif sequence == 'ZYZ':
+        z_angle, y_angle, z_angle = angle_1, angle_2, angle_3  # Note: Z repeats
     
     # Calculate Z-height difference
     z_diff = abs(frame_1.point.z - frame_0.point.z)
@@ -755,7 +984,8 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         'x_angle_deg': math.degrees(x_angle),
         'z_height_diff': z_diff,
         'xy_distance': xy_distance,
-        'bridge_length': bridge_length
+        'bridge_length': bridge_length,
+        'solution_used': sequence
     }
     
     # Find face most parallel to XY (world) plane on stick_0
@@ -784,16 +1014,22 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         # Slide amount
         x_slide = xy_distance / 2.0
         
-        # Calculate anchor position
+        # Calculate anchor position using geometric distance check
         if x_slide > bridge_length:
             anchor_A = 0.1
         else:
-            bridge_A_direction = bridge_A_temp.center_frame.xaxis
-            direction_to_stick1 = Vector.from_start_end(face_frame.point, stick_1_xy_projection).unitized()
+            # Check which end of bridge A is closer to stick_1's projection
+            bridge_A_start = bridge_A_temp.axis.start
+            bridge_A_end = bridge_A_temp.axis.end
             
-            if direction_to_stick1.dot(bridge_A_direction) > 0:
+            dist_start = distance_point_point(bridge_A_start, stick_1_xy_projection)
+            dist_end = distance_point_point(bridge_A_end, stick_1_xy_projection)
+            
+            if dist_end < dist_start:
+                # End is closer - bridge extends toward stick_1
                 anchor_A = 0.5 - (x_slide / bridge_length)
             else:
+                # Start is closer - bridge extends away from stick_1
                 anchor_A = 0.5 + (x_slide / bridge_length)
             
             anchor_A = max(0.0, min(1.0, anchor_A))
@@ -819,10 +1055,6 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         stick_1_axis_3d = stick_1.axis
         stick_1_direction = Vector.from_start_end(stick_1_axis_3d.start, stick_1_axis_3d.end).unitized()
         
-        # Project stick_1's axis onto reference XY plane
-        stick_1_start_projected = Point(stick_1_axis_3d.start.x, stick_1_axis_3d.start.y, frame_0.point.z)
-        stick_1_end_projected = Point(stick_1_axis_3d.end.x, stick_1_axis_3d.end.y, frame_0.point.z)
-        
         # Plane normal = bridge A direction (parallel to bridge A)
         plane_normal = bridge_A_direction.copy()
         
@@ -835,21 +1067,12 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         from compas.geometry import Plane
         roll_plane = Plane(stick_1.center_frame.point, rotated_plane_normal)
         
-        print(f"DEBUG: Created roll_plane")
-        print(f"  Origin: {roll_plane.point}")
-        print(f"  Normal: {roll_plane.normal}")
-        
         # Store plane for visualization
         info['roll_plane'] = roll_plane
-        print(f"DEBUG: Stored roll_plane in info")
         
         # Find intersection with bridge A's axis
         from compas.geometry import intersection_line_plane
         intersection_pt = intersection_line_plane(bridge_A_axis, roll_plane)
-        
-        print(f"DEBUG: Bridge A axis start: {bridge_A_axis.start}")
-        print(f"DEBUG: Bridge A axis end: {bridge_A_axis.end}")
-        print(f"DEBUG: Intersection point (raw): {intersection_pt}")
         
         if intersection_pt:
             # Convert to Point if it's a list
@@ -862,21 +1085,15 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
             # Calculate attachment position parameter
             to_intersection = Vector.from_start_end(bridge_A_axis.start, intersection_pt)
             
-            print(f"DEBUG: Vector to intersection: length = {to_intersection.length:.2f}")
-            print(f"DEBUG: Bridge A full length: {bridge_A_vector_full.length:.2f}")
-            
             if bridge_A_vector_full.length > 0.001:
                 t = to_intersection.dot(bridge_A_vector_full) / (bridge_A_vector_full.length ** 2)
             else:
                 t = 0.5
             
-            print(f"DEBUG: Raw t value = {t:.3f}")
             attachment_position = max(0.1, min(0.9, t))
-            print(f"DEBUG: After clamping, attachment_position = {attachment_position:.3f}")
         else:
             # No intersection, use default
             attachment_position = 0.5
-            print(f"DEBUG: No intersection, using default attachment_position = 0.5")
         
         # Project stick_1's axis
         stick_1_axis = stick_1.axis
@@ -902,8 +1119,6 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
             next_face_idx = adjacent_face_2
             face_frame_B = face_frame_B2
         
-        print(f"DEBUG: Chose face {next_face_idx} for Bridge B attachment")
-        
         # Rotate Bridge B by X-angle (roll) in the plane of its attachment face
         if abs(x_angle) > angle_tolerance:
             # Determine rotation direction based on which face we're attaching to
@@ -912,8 +1127,6 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
                 rotation_angle = x_angle
             else:
                 rotation_angle = -x_angle
-            
-            print(f"DEBUG: Rotating Bridge B by {math.degrees(rotation_angle):.1f}° on face {next_face_idx}")
             
             # Rotate the face frame around its normal (zaxis)
             R_B = Rotation.from_axis_and_angle(face_frame_B.zaxis, rotation_angle, face_frame_B.point)
@@ -931,11 +1144,8 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         
         intersection_distance = distance_point_point(cp_B, cp_1)
         
-        print(f"DEBUG: Collision check - intersection_distance = {intersection_distance:.2f}, depth = {depth:.2f}")
-        
         # If axes would intersect, slide bridge B
         if intersection_distance < depth:
-            print(f"DEBUG: Collision detected, sliding bridge B")
             slide_distance_base = depth - intersection_distance
             
             # Calculate angle between Bridge B axis and stick_1 axis
@@ -954,10 +1164,6 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
             
             # Adjusted slide distance accounting for approach angle
             slide_distance = slide_distance_base / sin_angle
-            
-            print(f"DEBUG: Base slide distance = {slide_distance_base:.2f}mm")
-            print(f"DEBUG: Angle between axes = {math.degrees(math.asin(sin_angle)):.1f}°")
-            print(f"DEBUG: Adjusted slide distance = {slide_distance:.2f}mm")
             
             bridge_A_direction_slide = current_stick.center_frame.xaxis
             direction_to_stick1 = Vector.from_start_end(face_frame_B.point, stick_1_midpoint).unitized()
@@ -984,15 +1190,12 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
                 attachment_position_adjusted_clamped = max(0.1, min(0.9, attachment_position_adjusted))
             
             attachment_position = attachment_position_adjusted_clamped
-            print(f"DEBUG: AFTER SLIDING, attachment_position = {attachment_position:.3f}")
             
             # Get adjusted face frame
             face_frame_B = current_stick.get_face_frame_at(next_face_idx, attachment_position)
             
             # Re-apply rotation after sliding adjustment
             if abs(x_angle) > angle_tolerance:
-                # Determine rotation direction based on which face we're attaching to
-                # Faces 0 and 2 use x_angle, faces 1 and 3 use -x_angle
                 if next_face_idx in [0, 2]:
                     rotation_angle = x_angle
                 else:
@@ -1002,8 +1205,6 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
                 rotated_face_B = face_frame_B.copy()
                 rotated_face_B.transform(R_B)
                 face_frame_B = rotated_face_B
-        else:
-            print(f"DEBUG: No collision, keeping attachment_position = {attachment_position:.3f}")
         
         # Calculate anchor position for Bridge B based on Z-difference
         z_extension_needed = z_diff / 2.0  # Half the Z-difference
@@ -1034,20 +1235,15 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
             # Clamp to valid range
             anchor_B = max(0.1, min(0.9, anchor_B))
         
-        print(f"DEBUG: Final Bridge B anchor = {anchor_B:.3f}")
+        # Create bridge B with calculated anchor
+        bridge_B = stick_from_face_frame(face_frame_B, "side", bridge_length, width, depth, anchor_position=anchor_B)
         
-            # Create bridge B with calculated anchor
-    bridge_B = stick_from_face_frame(face_frame_B, "side", bridge_length, width, depth, anchor_position=anchor_B)
-
-    bridges.append(bridge_B)
-    sequence.append(('B', attachment_position, next_face_idx, anchor_B))
-
-    # UPDATE CURRENT STICK FOR BRIDGE C
-    current_stick = bridge_B
-
+        bridges.append(bridge_B)
+        sequence.append(('B', attachment_position, next_face_idx, anchor_B))
+        
+        # UPDATE CURRENT STICK FOR BRIDGE C
+        current_stick = bridge_B
     
-
-
     # Bridge C: Created if Y-rotation is NOT zero OR stick_1's XY projection doesn't intersect Bridge A's XY projection
     if len(bridges) > 0:
         # Project Bridge A's axis onto reference XY plane
@@ -1073,15 +1269,11 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         
         # Check if intersection is within Bridge A (0 <= t <= 1)
         intersects_bridge_A = (0.0 <= t_xy <= 1.0)
-        
-        print(f"DEBUG: stick_1 XY projection - t on Bridge A = {t_xy:.3f}, intersects = {intersects_bridge_A}")
     else:
         intersects_bridge_A = True
-
+    
     # Create Bridge C if Y-rotation exists OR stick_1 doesn't intersect Bridge A in XY
     if abs(y_angle) > angle_tolerance or not intersects_bridge_A:
-        print(f"DEBUG: Creating Bridge C - y_angle={math.degrees(y_angle):.1f}°, intersects_bridge_A={intersects_bridge_A}")
-        
         # Get current stick's axis (could be Bridge B, Bridge A, or stick_0)
         bridge_C_ref_axis = current_stick.axis
         
@@ -1106,8 +1298,6 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         # Create plane with rotated normal through stick_1's center
         pitch_plane = Plane(stick_1.center_frame.point, rotated_plane_normal_C)
         
-        print(f"DEBUG: Created pitch_plane for Bridge C")
-        
         # Store plane for visualization
         info['pitch_plane'] = pitch_plane
         
@@ -1127,13 +1317,10 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
             else:
                 t_C = 0.5
             
-            print(f"DEBUG: Raw t value for Bridge C = {t_C:.3f}")
             attachment_position_C = max(0.1, min(0.9, t_C))
-            print(f"DEBUG: After clamping, attachment_position_C = {attachment_position_C:.3f}")
         else:
             # No intersection, use default
             attachment_position_C = 0.5
-            print(f"DEBUG: No intersection for Bridge C, using default = 0.5")
         
         # Project stick_1's axis
         stick_1_axis = stick_1.axis
@@ -1150,16 +1337,12 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
             face_frame_temp = current_stick.get_face_frame_at(face_idx, attachment_position_C)
             alignment = abs(face_frame_temp.zaxis.dot(stick_1_direction))
             
-            print(f"DEBUG: Face {face_idx} alignment with stick_1 axis = {alignment:.3f}")
-            
             if alignment > max_alignment:
                 max_alignment = alignment
                 best_face_C = face_idx
                 face_frame_C = face_frame_temp
         
         next_face_idx_C = best_face_C
-        
-        print(f"DEBUG: Chose face {next_face_idx_C} for Bridge C attachment (most perpendicular to stick_1, alignment={max_alignment:.3f})")
         
         # Rotate Bridge C by Y-angle (pitch) in the plane of its attachment face
         if abs(y_angle) > angle_tolerance:
@@ -1168,8 +1351,6 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
                 rotation_angle_C = y_angle
             else:
                 rotation_angle_C = -y_angle
-            
-            print(f"DEBUG: Rotating Bridge C by {math.degrees(rotation_angle_C):.1f}° on face {next_face_idx_C}")
             
             # Rotate the face frame around its normal (zaxis)
             R_C = Rotation.from_axis_and_angle(face_frame_C.zaxis, rotation_angle_C, face_frame_C.point)
@@ -1187,11 +1368,8 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         
         intersection_distance_C = distance_point_point(cp_C, cp_1_C)
         
-        print(f"DEBUG: Bridge C collision check - intersection_distance = {intersection_distance_C:.2f}, depth = {depth:.2f}")
-        
         # If axes would intersect, slide bridge C
         if intersection_distance_C < depth:
-            print(f"DEBUG: Collision detected for Bridge C, sliding")
             slide_distance_base_C = depth - intersection_distance_C
             
             # Calculate angle between Bridge C axis and stick_1 axis
@@ -1267,15 +1445,13 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
             
             anchor_C = max(0.1, min(0.9, anchor_C))
         
-        print(f"DEBUG: Final Bridge C anchor = {anchor_C:.3f}")
-        
         # Create bridge C
         bridge_C = stick_from_face_frame(face_frame_C, "side", bridge_length, width, depth, anchor_position=anchor_C)
         
         bridges.append(bridge_C)
         sequence.append(('C', attachment_position_C, next_face_idx_C, anchor_C))
         current_stick = bridge_C
-        
+    
     # Update info at the end
     info['num_bridges'] = len(bridges)
     info['sequence'] = sequence
