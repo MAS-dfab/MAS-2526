@@ -53,7 +53,7 @@ class Stick(object):
       - geometry : BoxGeom (COMPAS-level box)
     """
 
-    DEFAULT_LEN = 1000
+    DEFAULT_LEN = 600
     DEFAULT_SIZE = 13
 
     def __init__(self, axis, length=None, width=None, depth=None, parent_frame=None):
