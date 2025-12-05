@@ -1,7 +1,8 @@
 # stick_fixed.py
-# Final stable version — NO compas Box, no Shape.frame usage.
+# Option A: full compas geometry engine.
+# Stick owns a compas Box (geometry), axis, frame, and dimensions.
 
-from compas.geometry import Point, Vector, Line, Frame
+from compas.geometry import Point, Vector, Line, Frame, Box
 
 
 def build_frame_from_axis(axis, up_hint=None):
@@ -9,7 +10,7 @@ def build_frame_from_axis(axis, up_hint=None):
     Build a stable orthonormal frame from a Line axis.
 
     axis    : compas.geometry.Line
-    up_hint : optional Vector used to resolve perpendicular direction
+    up_hint : optional Vector for resolving perpendicular direction
     """
     start = axis.start
     end   = axis.end
@@ -26,7 +27,7 @@ def build_frame_from_axis(axis, up_hint=None):
 
     yaxis = up_hint.cross(xaxis)
     if yaxis.length < 1e-6:
-        # If parallel to up_hint, choose a new vector
+        # if parallel to up_hint, pick another helper
         yaxis = Vector(0, 1, 0).cross(xaxis)
 
     if yaxis.length < 1e-6:
@@ -42,16 +43,15 @@ def build_frame_from_axis(axis, up_hint=None):
 
 class Stick:
     """
-    Minimal stick representation (no compas Box):
-
+    Stick:
       - axis   : compas Line
       - frame  : compas Frame (orientation)
       - length : float (along frame.xaxis)
       - width  : float (along frame.yaxis)
       - depth  : float (along frame.zaxis)
+      - geometry : compas Box
 
-    NOTE:
-        No compas Box() object is created here — GH builds its own Rhino Brep.
+    All higher-level logic (branching, bridging, collisions) can rely on this.
     """
 
     DEFAULT_LEN  = 1.0
@@ -67,27 +67,32 @@ class Stick:
         self.width  = float(width  or Stick.DEFAULT_SIZE)
         self.depth  = float(depth  or Stick.DEFAULT_SIZE)
 
-        # Orientation: inherit from parent if given, else build frame from axis
-        if parent_frame is not None:
+        # Orientation: inherit from parent if given (and valid), else build from axis.
+        if isinstance(parent_frame, Frame):
             mid = axis.point_at(0.5)
 
-            # Copy parent orientation safely
-            x = Vector(parent_frame.xaxis.x,
-                       parent_frame.xaxis.y,
-                       parent_frame.xaxis.z)
-            y = Vector(parent_frame.yaxis.x,
-                       parent_frame.yaxis.y,
-                       parent_frame.yaxis.z)
+            x = Vector(
+                parent_frame.xaxis.x,
+                parent_frame.xaxis.y,
+                parent_frame.xaxis.z,
+            )
+            y = Vector(
+                parent_frame.yaxis.x,
+                parent_frame.yaxis.y,
+                parent_frame.yaxis.z,
+            )
 
             self.frame = Frame(mid, x, y)
-
         else:
             self.frame = build_frame_from_axis(axis)
 
-        # IMPORTANT:
-        # DO NOT construct a compas Box here — Box(Frame) triggers Shape.frame setter,
-        # which causes the 'float is not subscriptable' crash under Rhinocode.
-        self.geometry = None
+        # ✅ Build compas Box using keyword args (avoids the float/frame confusion).
+        self.geometry = Box(
+            frame=self.frame,
+            xsize=self.length,
+            ysize=self.width,
+            zsize=self.depth,
+        )
 
     # ----------------------------------------------------------------------
     # Collision helper
@@ -95,7 +100,6 @@ class Stick:
 
     def intersects(self, other, clearance=0.0):
         """Capsule-like intersection test using axis + width/depth."""
-
         if not isinstance(other, Stick):
             return False
 
