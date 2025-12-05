@@ -936,7 +936,28 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         # If axes would intersect, slide bridge B
         if intersection_distance < depth:
             print(f"DEBUG: Collision detected, sliding bridge B")
-            slide_distance = depth - intersection_distance
+            slide_distance_base = depth - intersection_distance
+            
+            # Calculate angle between Bridge B axis and stick_1 axis
+            bridge_B_direction = Vector.from_start_end(bridge_B_axis.start, bridge_B_axis.end).unitized()
+            stick_1_axis_direction = Vector.from_start_end(stick_1_axis.start, stick_1_axis.end).unitized()
+            
+            # Dot product gives cos(angle)
+            cos_angle = abs(bridge_B_direction.dot(stick_1_axis_direction))
+            
+            # Sin of angle (sin^2 + cos^2 = 1)
+            sin_angle = math.sqrt(1 - cos_angle**2)
+            
+            # Avoid division by very small numbers (nearly parallel axes)
+            if sin_angle < 0.1:  # Less than ~6 degrees
+                sin_angle = 0.1
+            
+            # Adjusted slide distance accounting for approach angle
+            slide_distance = slide_distance_base / sin_angle
+            
+            print(f"DEBUG: Base slide distance = {slide_distance_base:.2f}mm")
+            print(f"DEBUG: Angle between axes = {math.degrees(math.asin(sin_angle)):.1f}°")
+            print(f"DEBUG: Adjusted slide distance = {slide_distance:.2f}mm")
             
             bridge_A_direction_slide = current_stick.center_frame.xaxis
             direction_to_stick1 = Vector.from_start_end(face_frame_B.point, stick_1_midpoint).unitized()
@@ -1015,12 +1036,246 @@ def bridge_sticks_zyx_decomposed(stick_0, stick_1, bridge_length, width=None, de
         
         print(f"DEBUG: Final Bridge B anchor = {anchor_B:.3f}")
         
-        # Create bridge B with calculated anchor
-        bridge_B = stick_from_face_frame(face_frame_B, "side", bridge_length, width, depth, anchor_position=anchor_B)
-        
-        bridges.append(bridge_B)
-        sequence.append(('B', attachment_position, next_face_idx, anchor_B))
+            # Create bridge B with calculated anchor
+    bridge_B = stick_from_face_frame(face_frame_B, "side", bridge_length, width, depth, anchor_position=anchor_B)
+
+    bridges.append(bridge_B)
+    sequence.append(('B', attachment_position, next_face_idx, anchor_B))
+
+    # UPDATE CURRENT STICK FOR BRIDGE C
+    current_stick = bridge_B
+
     
+
+
+    # Bridge C: Created if Y-rotation is NOT zero OR stick_1's XY projection doesn't intersect Bridge A's XY projection
+    if len(bridges) > 0:
+        # Project Bridge A's axis onto reference XY plane
+        bridge_A_axis_ref = bridges[0].axis
+        bridge_A_start_xy = Point(bridge_A_axis_ref.start.x, bridge_A_axis_ref.start.y, frame_0.point.z)
+        bridge_A_end_xy = Point(bridge_A_axis_ref.end.x, bridge_A_axis_ref.end.y, frame_0.point.z)
+        bridge_A_axis_xy = Line(bridge_A_start_xy, bridge_A_end_xy)
+        
+        # Project stick_1 center onto reference XY plane
+        stick_1_center_xy = Point(frame_1.point.x, frame_1.point.y, frame_0.point.z)
+        
+        # Find closest point on Bridge A's XY projection
+        closest_on_bridge_A_xy = closest_point_on_line(stick_1_center_xy, bridge_A_axis_xy)
+        
+        # Calculate parameter t along Bridge A
+        bridge_A_vec = Vector.from_start_end(bridge_A_start_xy, bridge_A_end_xy)
+        to_closest_vec = Vector.from_start_end(bridge_A_start_xy, closest_on_bridge_A_xy)
+        
+        if bridge_A_vec.length > 0.001:
+            t_xy = to_closest_vec.dot(bridge_A_vec) / (bridge_A_vec.length ** 2)
+        else:
+            t_xy = 0.5
+        
+        # Check if intersection is within Bridge A (0 <= t <= 1)
+        intersects_bridge_A = (0.0 <= t_xy <= 1.0)
+        
+        print(f"DEBUG: stick_1 XY projection - t on Bridge A = {t_xy:.3f}, intersects = {intersects_bridge_A}")
+    else:
+        intersects_bridge_A = True
+
+    # Create Bridge C if Y-rotation exists OR stick_1 doesn't intersect Bridge A in XY
+    if abs(y_angle) > angle_tolerance or not intersects_bridge_A:
+        print(f"DEBUG: Creating Bridge C - y_angle={math.degrees(y_angle):.1f}°, intersects_bridge_A={intersects_bridge_A}")
+        
+        # Get current stick's axis (could be Bridge B, Bridge A, or stick_0)
+        bridge_C_ref_axis = current_stick.axis
+        
+        # Calculate attachment position for Bridge C accounting for pitch (Y-angle)
+        
+        # Get reference stick's direction - KEEP FULL LENGTH VERSION
+        bridge_C_ref_vector_full = Vector.from_start_end(bridge_C_ref_axis.start, bridge_C_ref_axis.end)
+        bridge_C_ref_direction = bridge_C_ref_vector_full.unitized()
+        
+        # Get stick_1's actual axis
+        stick_1_axis_3d = stick_1.axis
+        stick_1_direction = Vector.from_start_end(stick_1_axis_3d.start, stick_1_axis_3d.end).unitized()
+        
+        # Plane normal = reference stick direction (parallel to reference stick)
+        plane_normal_C = bridge_C_ref_direction.copy()
+        
+        # Rotate plane normal by Y-angle around stick_1's axis
+        R_pitch = Rotation.from_axis_and_angle(stick_1_direction, y_angle, stick_1.center_frame.point)
+        rotated_plane_normal_C = plane_normal_C.copy()
+        rotated_plane_normal_C.transform(R_pitch)
+        
+        # Create plane with rotated normal through stick_1's center
+        pitch_plane = Plane(stick_1.center_frame.point, rotated_plane_normal_C)
+        
+        print(f"DEBUG: Created pitch_plane for Bridge C")
+        
+        # Store plane for visualization
+        info['pitch_plane'] = pitch_plane
+        
+        # Find intersection with reference stick's axis
+        intersection_pt_C = intersection_line_plane(bridge_C_ref_axis, pitch_plane)
+        
+        if intersection_pt_C:
+            # Convert to Point if it's a list
+            if isinstance(intersection_pt_C, list):
+                intersection_pt_C = Point(*intersection_pt_C)
+            
+            # Calculate attachment position parameter
+            to_intersection_C = Vector.from_start_end(bridge_C_ref_axis.start, intersection_pt_C)
+            
+            if bridge_C_ref_vector_full.length > 0.001:
+                t_C = to_intersection_C.dot(bridge_C_ref_vector_full) / (bridge_C_ref_vector_full.length ** 2)
+            else:
+                t_C = 0.5
+            
+            print(f"DEBUG: Raw t value for Bridge C = {t_C:.3f}")
+            attachment_position_C = max(0.1, min(0.9, t_C))
+            print(f"DEBUG: After clamping, attachment_position_C = {attachment_position_C:.3f}")
+        else:
+            # No intersection, use default
+            attachment_position_C = 0.5
+            print(f"DEBUG: No intersection for Bridge C, using default = 0.5")
+        
+        # Project stick_1's axis
+        stick_1_axis = stick_1.axis
+        stick_1_midpoint = stick_1_axis.midpoint
+        
+        # Find which face is most perpendicular to stick_1's axis
+        # (face normal MOST aligned with stick_1's axis direction)
+        
+        best_face_C = 0
+        max_alignment = 0
+        face_frame_C = None
+        
+        for face_idx in range(4):
+            face_frame_temp = current_stick.get_face_frame_at(face_idx, attachment_position_C)
+            alignment = abs(face_frame_temp.zaxis.dot(stick_1_direction))
+            
+            print(f"DEBUG: Face {face_idx} alignment with stick_1 axis = {alignment:.3f}")
+            
+            if alignment > max_alignment:
+                max_alignment = alignment
+                best_face_C = face_idx
+                face_frame_C = face_frame_temp
+        
+        next_face_idx_C = best_face_C
+        
+        print(f"DEBUG: Chose face {next_face_idx_C} for Bridge C attachment (most perpendicular to stick_1, alignment={max_alignment:.3f})")
+        
+        # Rotate Bridge C by Y-angle (pitch) in the plane of its attachment face
+        if abs(y_angle) > angle_tolerance:
+            # Determine rotation direction based on which face we're attaching to
+            if next_face_idx_C in [0, 2]:
+                rotation_angle_C = y_angle
+            else:
+                rotation_angle_C = -y_angle
+            
+            print(f"DEBUG: Rotating Bridge C by {math.degrees(rotation_angle_C):.1f}° on face {next_face_idx_C}")
+            
+            # Rotate the face frame around its normal (zaxis)
+            R_C = Rotation.from_axis_and_angle(face_frame_C.zaxis, rotation_angle_C, face_frame_C.point)
+            rotated_face_C = face_frame_C.copy()
+            rotated_face_C.transform(R_C)
+            face_frame_C = rotated_face_C
+        
+        # Check if bridge C's axis would intersect with stick_1's axis
+        temp_bridge_C = stick_from_face_frame(face_frame_C, "side", bridge_length, width, depth)
+        bridge_C_axis = temp_bridge_C.axis
+        
+        # Check if axes intersect
+        cp_C = closest_point_on_line(stick_1_midpoint, bridge_C_axis)
+        cp_1_C = closest_point_on_line(cp_C, stick_1_axis)
+        
+        intersection_distance_C = distance_point_point(cp_C, cp_1_C)
+        
+        print(f"DEBUG: Bridge C collision check - intersection_distance = {intersection_distance_C:.2f}, depth = {depth:.2f}")
+        
+        # If axes would intersect, slide bridge C
+        if intersection_distance_C < depth:
+            print(f"DEBUG: Collision detected for Bridge C, sliding")
+            slide_distance_base_C = depth - intersection_distance_C
+            
+            # Calculate angle between Bridge C axis and stick_1 axis
+            bridge_C_direction = Vector.from_start_end(bridge_C_axis.start, bridge_C_axis.end).unitized()
+            stick_1_axis_direction = Vector.from_start_end(stick_1_axis.start, stick_1_axis.end).unitized()
+            
+            cos_angle_C = abs(bridge_C_direction.dot(stick_1_axis_direction))
+            sin_angle_C = math.sqrt(1 - cos_angle_C**2)
+            
+            if sin_angle_C < 0.1:
+                sin_angle_C = 0.1
+            
+            slide_distance_C = slide_distance_base_C / sin_angle_C
+            
+            bridge_C_ref_direction_slide = current_stick.center_frame.xaxis
+            direction_to_stick1_C = Vector.from_start_end(face_frame_C.point, stick_1_midpoint).unitized()
+            
+            slide_amount_C = slide_distance_C / current_stick.length
+            
+            if direction_to_stick1_C.dot(bridge_C_ref_direction_slide) > 0:
+                attachment_position_C_adjusted = attachment_position_C - slide_amount_C
+            else:
+                attachment_position_C_adjusted = attachment_position_C + slide_amount_C
+            
+            attachment_position_C_adjusted_clamped = max(0.1, min(0.9, attachment_position_C_adjusted))
+            
+            if abs(attachment_position_C_adjusted - attachment_position_C_adjusted_clamped) > 0.01:
+                if attachment_position_C_adjusted > attachment_position_C:
+                    attachment_position_C_adjusted = attachment_position_C - slide_amount_C
+                else:
+                    attachment_position_C_adjusted = attachment_position_C + slide_amount_C
+                
+                attachment_position_C_adjusted_clamped = max(0.1, min(0.9, attachment_position_C_adjusted))
+            
+            attachment_position_C = attachment_position_C_adjusted_clamped
+            
+            # Get adjusted face frame
+            face_frame_C = current_stick.get_face_frame_at(next_face_idx_C, attachment_position_C)
+            
+            # Re-apply rotation
+            if abs(y_angle) > angle_tolerance:
+                if next_face_idx_C in [0, 2]:
+                    rotation_angle_C = y_angle
+                else:
+                    rotation_angle_C = -y_angle
+                
+                R_C = Rotation.from_axis_and_angle(face_frame_C.zaxis, rotation_angle_C, face_frame_C.point)
+                rotated_face_C = face_frame_C.copy()
+                rotated_face_C.transform(R_C)
+                face_frame_C = rotated_face_C
+        
+        # Calculate remaining distance to stick_1 for anchor
+        remaining_distance = distance_point_point(face_frame_C.point, stick_1.center_frame.point)
+        anchor_extension_C = remaining_distance / 2.0
+        
+        # Create temp bridge to check direction
+        temp_bridge_C_dir = stick_from_face_frame(face_frame_C, "side", bridge_length, width, depth, anchor_position=0.5)
+        bridge_C_dir = temp_bridge_C_dir.center_frame.xaxis
+        
+        # Direction toward stick_1
+        direction_to_stick1_final = Vector.from_start_end(face_frame_C.point, stick_1.center_frame.point).unitized()
+        
+        # Check if bridge C points toward stick_1
+        points_toward = bridge_C_dir.dot(direction_to_stick1_final) > 0
+        
+        if anchor_extension_C > bridge_length:
+            anchor_C = 0.1
+        else:
+            if points_toward:
+                anchor_C = 0.5 - (anchor_extension_C / bridge_length)
+            else:
+                anchor_C = 0.5 + (anchor_extension_C / bridge_length)
+            
+            anchor_C = max(0.1, min(0.9, anchor_C))
+        
+        print(f"DEBUG: Final Bridge C anchor = {anchor_C:.3f}")
+        
+        # Create bridge C
+        bridge_C = stick_from_face_frame(face_frame_C, "side", bridge_length, width, depth, anchor_position=anchor_C)
+        
+        bridges.append(bridge_C)
+        sequence.append(('C', attachment_position_C, next_face_idx_C, anchor_C))
+        current_stick = bridge_C
+        
     # Update info at the end
     info['num_bridges'] = len(bridges)
     info['sequence'] = sequence
