@@ -1,6 +1,5 @@
 from compas.geometry import distance_line_line, dot_vectors
 import math
-# from J3RRY_SingleStick_v1 import Stick
 
 
 class Collision:
@@ -130,25 +129,27 @@ class Collision:
         return math.sqrt(dot(dP, dP))
 
 
-    def project_corners_onto_axis(self, stick, axis):
+    def _project_corners_onto_axis(self, stick, axis):
         """
-        Private method to calculate dot products between stick corners and the other stick axis.
+        Helper for sat_6_axis (1/2):
+            Private method to calculate dot products between stick corners and the other stick axis.
 
         Args:
             stick: type Stick, the stick whose corners to project.
             axis: type Vector, the axis to project onto.
         
         Returns:
-            tuple: (min dot product, max dot product)
+            tuple : (min dot product, max dot product)
         """
         unit_axis = axis.unitized()
         dots = [dot_vectors(c, unit_axis) for c in stick.corners]
         return min(dots), max(dots)
 
 
-    def interval_overlap(self, minA, maxA, minB, maxB):
+    def _interval_overlap(self, minA, maxA, minB, maxB):
         """
-        Private method to check if two 1D intervals overlap.
+        Helper for sat_6_axis (2/2):
+            Private method to check if two 1D intervals overlap.
         
         Args:
             minA: Minimum of interval A.
@@ -183,28 +184,26 @@ class Collision:
         ]
 
         for axis in axes:
-            minA, maxA = self.project_corners_onto_axis(A, axis)
-            minB, maxB = self.project_corners_onto_axis(B, axis)
-            if not self.interval_overlap(minA, maxA, minB, maxB):
+            minA, maxA = self._project_corners_onto_axis(A, axis)
+            minB, maxB = self._project_corners_onto_axis(B, axis)
+            if not self._interval_overlap(minA, maxA, minB, maxB):
                 return False
         return True
     
 
-    def check_collision(self, radius=None):
+    def check_collision(self):
         """
         Check collision between two sticks using:
-        1. AABB --broad-phase
-        2. Segment-segment distance --mid-phase (deleted)
-        3. Reduced SAT, only check longest axis (X axis) --narrow-phase
+        1. Broad-phase: AABB
+        2. Mid-phase: Segment-segment distance (Using for rounded pipe-like sticks, not for rectangular sticks)
+        3. Narrow-phase: Six-axis SAT (Separating Axis Theorem)
 
         Args:
             radius: collision thickness, default = stick width
 
         Returns:
-            bool: True if collide
+            bool: True if collision dectected.
         """
-        s1 = self.stick1
-        s2 = self.stick2
         EPS = 1e-6  # tolerance for floating point comparison
 
         # 1. AABB
@@ -214,12 +213,12 @@ class Collision:
         """
         # 2. Segment distance
         dist = self.segment_distance
-        threshold = radius or max(s1.width, s2.width)
+        threshold = radius or max(self.stick1.width, self.stick2.width)
         if dist >= threshold - EPS:
             return False
         """
 
-        # 3. Six axes SAT
+        # 3. Six-axis SAT
         if not self.sat_6_axis():
             return False
         return True

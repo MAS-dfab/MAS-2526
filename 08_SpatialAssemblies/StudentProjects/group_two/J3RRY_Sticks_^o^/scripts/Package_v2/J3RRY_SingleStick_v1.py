@@ -1,5 +1,4 @@
-from compas.geometry import Plane, Box, Line, Vector, Frame, Rotation
-from compas.geometry import angle_vectors, Rotation
+from compas.geometry import Box, Line, Rotation
 import math
 
 
@@ -12,12 +11,12 @@ class Stick:
         Constructor for single Stick.
         Args:
             frame: Frame representing the start of the stick.
-            length: Length of the stick (defaults to 50.0)
+            length: Length of the stick (defaults to 100.0)
             width: Width of the stick (defaults to Stick.width)
             depth: Depth of the stick (defaults to Stick.depth)
         """
         self.frame = frame
-        self.length = length or 50.0
+        self.length = length or 100.0
         self.width = width or Stick.width
         self.depth = depth or Stick.depth
 

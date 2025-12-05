@@ -1,27 +1,25 @@
-from compas.geometry import Transformation
 from J3RRY_SingleStick_v1 import Stick
 from J3RRY_Collision_v1 import Collision
 import math, random
 
 
 class Aggregation:
-    def __init__(self, first_frame, length=100.0, aggregation_type=0, global_seed=None):
+    def __init__(self, first_frame, length_pattern=[100], angle_pattern=[0], aggregation_type=0, global_seed=None):
         """
         Constructor for Stick Aggregation.
         
         Args:
             first_frame: Frame for the first stick.
-            length: Length of each stick (defaults to 100.0)
+            length_pattern: List of lengths or single length value for sticks.
             aggregation_type: 0 = regular, 1 = random
             global_seed: Seed for random generator (defaults to None)
         """
         self.sticks = []
         self.axes = []
         self.frames = []
-        self.from_frames = []
-        self.to_frames = []
-        self.length = length
-        
+        self.length_pattern = length_pattern
+        self.angle_pattern = angle_pattern
+
         self.failed_sticks = []
         self.collision_log = []
 
@@ -41,13 +39,33 @@ class Aggregation:
         Args:
             first_frame: Frame for the first stick.
         """
-        first_stick = Stick(first_frame, self.length)
+        first_stick = Stick(first_frame, self._next_length())
         self.sticks.append(first_stick)
         self.axes.append(first_stick.axis)
         self.frames.append(first_frame)
 
+    
+    def _next_length(self):
+        """
+        Private method to get the next length from the length pattern.
+        
+        Returns:
+            float: next length value.
+        """
+        return random.choice(self.length_pattern)
+    
 
-    def spawn_next_stick(self, angle=0, from_index=0, from_t=0.5, to_index=1, to_t=0.5):
+    def _next_angle(self):
+        """
+        Private method to get the next angle from the angle pattern.
+        
+        Returns:
+            float: next angle in degrees.
+        """
+        return random.choice(self.angle_pattern)
+        
+
+    def spawn_next_stick(self, from_index=0, from_t=0.5, to_index=1, to_t=0.5):
         """
         Spawns next stick based on specified face index and t value.
         
@@ -59,30 +77,38 @@ class Aggregation:
             to_t: Relative position along the to-face (0.0 to 1.0).
         """
         current_stick = self.sticks[-1]
-
+        new_length = self._next_length()
+        angle = self._next_angle()
+        # Evlaute frames for next stick
         from_frame = current_stick.eval_frame(from_index, from_t)
-        to_frame = current_stick.eval_frame(to_index, to_t)
+        dir_vec = from_frame.zaxis
+        dir_vec.unitize()
+        next_frame = from_frame.copy()
+        # Move next_frame along normal by half current stick depth
+        next_frame.point += dir_vec * (current_stick.depth / 2)
+        
+        # Define which face relative to new stick attaches to previous stick
+        which_face = to_index * 90
+        next_frame.rotate(math.radians(which_face), next_frame.xaxis, next_frame.point)
 
-        # Flip frame (fixed X axis)
-        from_frame.yaxis = -from_frame.yaxis
-        # Rotate to_frame
-        to_frame.rotate(math.radians(angle), to_frame.zaxis, to_frame.point)
+        # Rotate next_frame around normal
+        if angle != 0:
+            next_frame.rotate(math.radians(angle), dir_vec, next_frame.point)
 
-        # Orient stick frame using frame to frame
-        T = Transformation.from_frame_to_frame(from_frame, to_frame)
-        new_frame = current_stick.frame.transformed(T)
-        new_stick = Stick(new_frame, length=self.length)
+        # Adjust start point along negative x-axis by new stick length
+        offset = next_frame.xaxis.unitized() * (to_t * new_length)
+        next_frame.point -= offset
+
+        # Create new stick
+        new_stick = Stick(next_frame, length=new_length)
 
         # Collect Data
         self.sticks.append(new_stick)
         self.axes.append(new_stick.axis)
-        self.from_frames.append(from_frame)
-        self.to_frames.append(to_frame)
-        self.frames.append(new_frame)
-        # return [from_frame, to_frame, new_frame]
+        self.frames.append(next_frame)
 
 
-    def spawn_next_stick_random(self, angle=0, local_seed=None):
+    def spawn_next_stick_random(self, local_seed=None):
         """
         Spawns next stick based on random face index and t value.
 
@@ -99,10 +125,10 @@ class Aggregation:
         from_t = random.random()
         to_index = random.randint(0, 3)
         to_t = random.random()
-        self.spawn_next_stick(angle, from_index, from_t, to_index, to_t)
+        self.spawn_next_stick(from_index, from_t, to_index, to_t)
 
 
-    def spawn_next_stick_random_with_rejection(self, angle=0, max_attempts=10, local_seed=None):
+    def spawn_next_stick_random_with_rejection(self, max_attempts=10, local_seed=None):
         """
         Spawns next stick based on random face index and t value with collision rejection sampling.
 
@@ -128,31 +154,39 @@ class Aggregation:
 
 
         current_stick = self.sticks[-1]
+
+
         for attempt in range(max_attempts):
-        
+            new_length = self._next_length()
+            angle = self._next_angle()
             # Create random index and t value for the next stick
             from_index = random.randint(0, 3)
             from_t = random.random()
             to_index = random.randint(0, 3)
             to_t = random.random()
 
-            params_from_index.append(from_index)
-            params_from_t.append(from_t)
-            params_to_index.append(to_index)
-            params_to_t.append(to_t)
-
+            # Evlaute frames for next stick
             from_frame = current_stick.eval_frame(from_index, from_t)
-            to_frame = current_stick.eval_frame(to_index, to_t)
+            dir_vec = from_frame.zaxis
+            dir_vec.unitize()
+            next_frame = from_frame.copy()
+            # Move next_frame along normal by half current stick depth
+            next_frame.point += dir_vec * (current_stick.depth / 2)
+            
+            # Define which face relative to new stick attaches to previous stick
+            which_face = to_index * 90
+            next_frame.rotate(math.radians(which_face), next_frame.xaxis, next_frame.point)
 
-            # Flip frame (fixed X axis)
-            from_frame.yaxis = -from_frame.yaxis
-            # Rotate to_frame
-            to_frame.rotate(math.radians(angle), to_frame.zaxis, to_frame.point)
+            # Rotate next_frame around normal
+            if angle != 0:
+                next_frame.rotate(math.radians(angle), dir_vec, next_frame.point)
 
-            # Orient stick frame using frame to frame
-            T = Transformation.from_frame_to_frame(from_frame, to_frame)
-            new_frame = current_stick.frame.transformed(T)
-            new_stick = Stick(new_frame, length=self.length)
+            # Adjust start point along negative x-axis by new stick length
+            offset = next_frame.xaxis.unitized() * (to_t * new_length)
+            next_frame.point -= offset
+
+            # Create new stick
+            new_stick = Stick(next_frame, length=new_length)
 
             # --- collision checking
             collision_found = False
@@ -175,6 +209,7 @@ class Aggregation:
                     "from_t": params_from_t,
                     "to_index": params_to_index,
                     "to_t": params_to_t,
+                    "length": new_stick.length,  
                     "angle": angle
                 }
             })
@@ -182,9 +217,7 @@ class Aggregation:
             # SUCCESS: append and return
             self.sticks.append(new_stick)
             self.axes.append(new_stick.axis)
-            self.from_frames.append(from_frame)
-            self.to_frames.append(to_frame)
-            self.frames.append(new_frame)
+            self.frames.append(next_frame)
             return new_stick
         
         # If all attempts fail
@@ -199,11 +232,18 @@ class Aggregation:
                 "from_t": params_from_t,
                 "to_index": params_to_index,
                 "to_t": params_to_t,
+                "length": new_stick.length,
                 "angle": angle
             }
         })
         return None
-    
+
+
+    def spawn_next_stick_random_in_boundary_with_rejection(self, boundary, angle=0, max_attempts=10):
+        
+
+        return None
+
 
     def visualize(self):
         """
