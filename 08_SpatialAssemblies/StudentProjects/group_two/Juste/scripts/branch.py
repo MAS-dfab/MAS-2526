@@ -54,55 +54,54 @@ class BranchingModule:
         stick_angle : float (degrees)
             Angle between the face normal and the parent tangent.
         """
-        # parent local frame
         f = parent.frame
 
-        # clamp offset parameter
+        # 1) Where along the parent axis do we attach?
         t_param = max(0.0, min(1.0, self.offset01))
-        axis_pt = parent.axis.point_at(t_param)
+        axis_pt = parent.axis.point_at(t_param)  # point on the parent axis
 
-        # map index -> face normal in parent-local coordinates
+        # 2) Choose face normal in parent-local coordinates
         fi = int(face_index) % 4
         if fi == 0:          # +Y
             n = f.yaxis.unitized()
+            parent_half = self.width * 0.5
         elif fi == 2:        # -Y
             n = (-f.yaxis).unitized()
+            parent_half = self.width * 0.5
         elif fi == 1:        # +Z
             n = f.zaxis.unitized()
+            parent_half = self.depth * 0.5
         else:                # -Z
             n = (-f.zaxis).unitized()
-
-        # figure out which half-size applies in the normal direction
-        # (Y-aligned faces use width, Z-aligned faces use depth)
-        if abs(n.dot(f.yaxis)) > 0.9:
-            parent_half = self.width * 0.5
-        else:
             parent_half = self.depth * 0.5
 
-        # assume child has same cross-section as parent
+        # 3) Child has same cross-section as parent
         child_half = parent_half
 
-        # move from parent axis out to the *parent far face*,
-        # then out again by half the child thickness so that the
-        # child's near face sits exactly on the parent's far face.
-        attach_pt = axis_pt + n * (parent_half + child_half)
+        # 4) True 3D face center:
+        #    start from axis point, move out to parent far face,
+        #    then further out by half child thickness so the
+        #    child's near face sits exactly on the parent's far face.
+        face_center = axis_pt + n * parent_half
+        child_center = face_center + n * child_half
 
-        # parent tangent (local x-axis)
+        # 5) Parent tangent (local x-axis)
         tangent = f.xaxis.unitized()
 
-        # blend normal & tangent according to designer angle
+        # 6) Blend parent tangent + face normal
+        #    B-behavior: "grow tangentially along the surface normal"
         theta = math.radians(float(stick_angle))
-        d = n * math.cos(theta) + tangent * math.sin(theta)
+        d = tangent * math.cos(theta) + n * math.sin(theta)
 
         # if degenerate, fall back to tangent
         if d.length < 1e-6:
             d = tangent
         d.unitize()
 
-        # build child axis centered at attach_pt
+        # 7) Build child axis centered at child_center
         half_len = 0.5 * self.stick_length
-        start = attach_pt - d * half_len
-        end = attach_pt + d * half_len
+        start = child_center - d * half_len
+        end = child_center + d * half_len
         axis = Line(start, end)
 
         # Stick will compute its own frame from the axis
