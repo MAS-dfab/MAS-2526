@@ -72,56 +72,53 @@ class Stick:
     # ------------------------------------------------------------
     # Frame construction (full safe version)
     # ------------------------------------------------------------
-    def _build_frame_from_axis(self, axis, parent_frame=None):
-        """
-        Build a Frame whose X-axis matches the axis direction, with Y/Z
-        inherited from parent_frame (if available) to avoid flattening.
-        """
+        def _build_frame_from_axis(self, axis, parent_frame=None):
 
-        # --- X direction ---
-        x = Vector.from_start_end(axis.start, axis.end)
-        if x.length < 1e-9:
-            x = Vector(1, 0, 0)
-        x = Vector(x.x, x.y, x.z)  # force COMPAS type
-        x.unitize()
+            # --- X direction ---
+            x = Vector.from_start_end(axis.start, axis.end)
+            if x.length < 1e-9:
+                x = Vector(1, 0, 0)
+            x = Vector(x.x, x.y, x.z)
+            x.unitize()
 
-        # --- Y direction ---
-        if parent_frame:
-            # force COMPAS vectors
-            py = Vector(parent_frame.yaxis.x,
-                        parent_frame.yaxis.y,
-                        parent_frame.yaxis.z)
+            # --- Y direction ---
+            if parent_frame:
+                py = Vector(parent_frame.yaxis.x,
+                            parent_frame.yaxis.y,
+                            parent_frame.yaxis.z)
 
-            # projection onto plane ⟂ x
-            y = py - x * py.dot(x)
-            y = Vector(y.x, y.y, y.z)
-
-            if y.length < 1e-6:
-                pz = Vector(parent_frame.zaxis.x,
-                            parent_frame.zaxis.y,
-                            parent_frame.zaxis.z)
-                y = pz - x * pz.dot(x)
+                y = py - x * py.dot(x)
                 y = Vector(y.x, y.y, y.z)
 
-            if y.length < 1e-6:
+                if y.length < 1e-6:
+                    pz = Vector(parent_frame.zaxis.x,
+                                parent_frame.zaxis.y,
+                                parent_frame.zaxis.z)
+                    y = pz - x * pz.dot(x)
+                    y = Vector(y.x, y.y, y.z)
+
+                if y.length < 1e-6:
+                    y = Vector(0, 0, 1)
+
+            else:
                 y = Vector(0, 0, 1)
-        else:
-            # no parent frame: use world axis
-            y = Vector(0, 0, 1)
-            if abs(y.dot(x)) > 0.9:
-                y = Vector(0, 1, 0)
+                if abs(y.dot(x)) > 0.9:
+                    y = Vector(0, 1, 0)
 
-        y.unitize()
+            y.unitize()
 
-        # --- Z direction ---
-        z = x.cross(y)
-        z = Vector(z.x, z.y, z.z)
-        if z.length < 1e-6:
-            z = Vector(0, 0, 1)
-        z.unitize()
+            # --- Z direction ---
+            z = x.cross(y)
+            z = Vector(z.x, z.y, z.z)
+            if z.length < 1e-6:
+                z = Vector(0, 0, 1)
+            z.unitize()
 
-        origin = axis.midpoint
-        return Frame(origin, x, y)
+            # --- REPLACE midpoint with point_at() ---
+            origin = axis.point_at(0.5)   # SAFE COMPAS POINT
+            origin = Vector(origin.x, origin.y, origin.z)  # convert to Vector for Frame constructor
+
+            return Frame(origin, x, y)
 
     # ------------------------------------------------------------
     # Lightweight collision detection
