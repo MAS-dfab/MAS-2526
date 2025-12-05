@@ -38,62 +38,83 @@ class BranchingModule:
         self.depth = depth or Stick.DEFAULT_SIZE
         self.offset01 = float(offset01)
 
-        # ------------------------------------------------------------------ #
-        # internal: build one child on a parent face                         #
-        # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------ #
+    # internal: build one child on a parent face                         #
+    # ------------------------------------------------------------------ #
 
-        def _build_child_from_face(self, parent, face_index, stick_angle):
-            f = parent.frame
+    def _build_child_from_face(self, parent, face_index, stick_angle):
+        """
+        Construct a single child Stick from a parent Stick.
 
-            # axis position along parent stick (offset01)
-            t_param = max(0.0, min(1.0, self.offset01))
-            axis_pt = parent.axis.point_at(t_param)
+        face_index : 0..3
+            0 -> +Y face
+            1 -> +Z face
+            2 -> -Y face
+            3 -> -Z face
+        stick_angle : float (degrees)
+            Angle between the face normal and the parent tangent.
+        """
+        # parent local frame
+        f = parent.frame
 
-            # parent face normals mapped by index
-            face_normals = {
-                0: f.yaxis.unitized(),       # +Y
-                1: f.zaxis.unitized(),       # +Z
-                2: (-f.yaxis).unitized(),    # -Y
-                3: (-f.zaxis).unitized()     # -Z
-            }
+        # clamp offset parameter
+        t_param = max(0.0, min(1.0, self.offset01))
+        axis_pt = parent.axis.point_at(t_param)
 
-            n = face_normals[int(face_index) % 4]
+        # map index -> face normal in parent-local coordinates
+        fi = int(face_index) % 4
+        if fi == 0:          # +Y
+            n = f.yaxis.unitized()
+        elif fi == 2:        # -Y
+            n = (-f.yaxis).unitized()
+        elif fi == 1:        # +Z
+            n = f.zaxis.unitized()
+        else:                # -Z
+            n = (-f.zaxis).unitized()
 
-            # Parent box half-size in direction of n
-            if abs(n.dot(f.yaxis)) > 0.9:
-                parent_half = self.width * 0.5
-            else:
-                parent_half = self.depth * 0.5
+        # figure out which half-size applies in the normal direction
+        # (Y-aligned faces use width, Z-aligned faces use depth)
+        if abs(n.dot(f.yaxis)) > 0.9:
+            parent_half = self.width * 0.5
+        else:
+            parent_half = self.depth * 0.5
 
-            # Child box half-size in direction of n
-            child_half = parent_half  # same width/depth
+        # assume child has same cross-section as parent
+        child_half = parent_half
 
-            # 3D offset: parent far face → child near face
-            attach_pt = axis_pt + n * (parent_half + child_half)
+        # move from parent axis out to the *parent far face*,
+        # then out again by half the child thickness so that the
+        # child's near face sits exactly on the parent's far face.
+        attach_pt = axis_pt + n * (parent_half + child_half)
 
-            # Build direction blended between tangent + normal
-            tangent = f.xaxis.unitized()
-            theta = math.radians(float(stick_angle))
-            d = n * math.cos(theta) + tangent * math.sin(theta)
-            if d.length < 1e-6:
-                d = tangent
-            d.unitize()
+        # parent tangent (local x-axis)
+        tangent = f.xaxis.unitized()
 
-            # Construct child axis so the near face sits exactly at attach_pt
-            half_len = 0.5 * self.stick_length
-            start = attach_pt - d * half_len
-            end   = attach_pt + d * half_len
-            axis  = Line(start, end)
+        # blend normal & tangent according to designer angle
+        theta = math.radians(float(stick_angle))
+        d = n * math.cos(theta) + tangent * math.sin(theta)
 
-            return Stick(axis, self.stick_length, self.width, self.depth)
+        # if degenerate, fall back to tangent
+        if d.length < 1e-6:
+            d = tangent
+        d.unitize()
 
+        # build child axis centered at attach_pt
+        half_len = 0.5 * self.stick_length
+        start = attach_pt - d * half_len
+        end = attach_pt + d * half_len
+        axis = Line(start, end)
+
+        # Stick will compute its own frame from the axis
+        child = Stick(axis, length=self.stick_length,
+                      width=self.width, depth=self.depth)
+        return child
 
     # ------------------------------------------------------------------ #
     # public: one step / multi-step growth                               #
     # ------------------------------------------------------------------ #
 
     def grow_once(self, face_index=0, stick_angle=0.0):
-
         """
         Grow one new child from the **last** stick in the chain.
 
@@ -107,7 +128,7 @@ class BranchingModule:
     def grow_chain(self, steps=1, face_index=0, stick_angle=0.0):
         """
         Convenience wrapper to grow multiple generations in one call.
-        (Currently not used by RootFrames, but handy for testing.)
+        (Not required by RootFrames, but useful for testing.)
         """
         steps = max(1, int(steps))
         for _ in range(steps):
