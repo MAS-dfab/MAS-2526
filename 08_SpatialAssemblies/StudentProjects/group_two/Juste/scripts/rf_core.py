@@ -116,18 +116,34 @@ class RootFrames:
                 pts.append(p)
                 self._curve_t.append(t)
 
+        # ----------------------------------------------------------
+        # SURFACE MODE
+        # ----------------------------------------------------------
         else:
-            # ------------------------------------------------------
-            # SURFACE MODE
-            # ------------------------------------------------------
             brep = self.surface_input.ToBrep()
             face = brep.Faces[0]
             self._rg_face = face
 
-            # Fix GH MethodBinding bug
-            udom = _ensure_interval(face.Domain(0), face, 0)
-            vdom = _ensure_interval(face.Domain(1), face, 1)
+            # ------------------------------------------------------
+            # NEW: Force proper Interval extraction
+            # ------------------------------------------------------
+            def get_domain(face, idx):
+                try:
+                    dom = face.Domain(idx)  # face.Domain is MethodBinding → MUST call it
+                    # Must have T0 / T1 => Interval
+                    if hasattr(dom, "T0") and hasattr(dom, "T1"):
+                        return dom
+                except:
+                    pass
+                raise RuntimeError("GH Domain binding failed at axis {} — got {}"
+                                .format(idx, type(face.Domain(idx))))
 
+            udom = get_domain(face, 0)
+            vdom = get_domain(face, 1)
+
+            # ------------------------------------------------------
+            # Perform uniform sampling
+            # ------------------------------------------------------
             for _ in range(max(1, self.point_density)):
                 u = random.uniform(udom.T0, udom.T1)
                 v = random.uniform(vdom.T0, vdom.T1)
@@ -137,9 +153,10 @@ class RootFrames:
 
             pts.sort(key=lambda p: p.Z)
 
-        # Convert to COMPAS points
+        # convert to COMPAS
         self.points = [Point(p.X, p.Y, p.Z) for p in pts]
         return self.points
+
 
     # ==================================================================
     # 2 — BUILD FRAMES
