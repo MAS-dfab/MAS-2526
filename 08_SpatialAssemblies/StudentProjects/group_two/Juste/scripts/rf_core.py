@@ -1,6 +1,6 @@
 # rf_core.py
 # Clean, stable RootFrames core
-# Matches original behavior (no GPU-heavy optimizations)
+# Uses 3D-aware Stick and BranchingModule
 
 import random
 import Rhino.Geometry as rg  # type: ignore
@@ -271,10 +271,14 @@ class RootFrames:
         self.root_sticks = []
         self.branch_sticks = []
 
-        # Build root sticks
+        # Build root sticks (IMPORTANT: pass edge frame as parent_frame)
         for f, v in zip(self.edge_frames, self.edge_vectors):
             axis = Line(f.point, f.point + v * self.stick_length)
-            s = Stick(axis, self.stick_length, self.stick_width, self.stick_depth)
+            s = Stick(axis,
+                      length=self.stick_length,
+                      width=self.stick_width,
+                      depth=self.stick_depth,
+                      parent_frame=f)
             self.root_sticks.append(s)
             self.branch_sticks.append(s)
 

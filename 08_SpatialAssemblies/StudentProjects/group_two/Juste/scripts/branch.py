@@ -53,14 +53,19 @@ class BranchingModule:
             3 -> -Z face
         stick_angle : float (degrees)
             Angle between the face normal and the parent tangent.
+
+        Behavior B:
+            Child direction is a blend of parent tangent (xaxis) and
+            face normal (y/z), so it "grows tangentially along the
+            surface normal".
         """
         f = parent.frame
 
-        # 1) Where along the parent axis do we attach?
+        # 1) Position along parent axis
         t_param = max(0.0, min(1.0, self.offset01))
-        axis_pt = parent.axis.point_at(t_param)  # point on the parent axis
+        axis_pt = parent.axis.point_at(t_param)
 
-        # 2) Choose face normal in parent-local coordinates
+        # 2) Face normal and thickness in that direction
         fi = int(face_index) % 4
         if fi == 0:          # +Y
             n = f.yaxis.unitized()
@@ -75,38 +80,34 @@ class BranchingModule:
             n = (-f.zaxis).unitized()
             parent_half = self.depth * 0.5
 
-        # 3) Child has same cross-section as parent
+        # child has same cross-section as parent (for now)
         child_half = parent_half
 
-        # 4) True 3D face center:
-        #    start from axis point, move out to parent far face,
-        #    then further out by half child thickness so the
-        #    child's near face sits exactly on the parent's far face.
+        # 3) From axis → parent far face → child near face
         face_center = axis_pt + n * parent_half
         child_center = face_center + n * child_half
 
-        # 5) Parent tangent (local x-axis)
+        # 4) Build direction: blend tangent + normal
         tangent = f.xaxis.unitized()
-
-        # 6) Blend parent tangent + face normal
-        #    B-behavior: "grow tangentially along the surface normal"
         theta = math.radians(float(stick_angle))
         d = tangent * math.cos(theta) + n * math.sin(theta)
 
-        # if degenerate, fall back to tangent
         if d.length < 1e-6:
             d = tangent
         d.unitize()
 
-        # 7) Build child axis centered at child_center
+        # 5) Build child axis centered at child_center
         half_len = 0.5 * self.stick_length
         start = child_center - d * half_len
         end = child_center + d * half_len
         axis = Line(start, end)
 
-        # Stick will compute its own frame from the axis
-        child = Stick(axis, length=self.stick_length,
-                      width=self.width, depth=self.depth)
+        # IMPORTANT: pass parent frame so child inherits 3D orientation
+        child = Stick(axis,
+                      length=self.stick_length,
+                      width=self.width,
+                      depth=self.depth,
+                      parent_frame=f)
         return child
 
     # ------------------------------------------------------------------ #
@@ -116,9 +117,6 @@ class BranchingModule:
     def grow_once(self, face_index=0, stick_angle=0.0):
         """
         Grow one new child from the **last** stick in the chain.
-
-        This is what RootFrames.grow_branching() calls in a loop,
-        with face_index / stick_angle driven by your L-system rules.
         """
         parent = self.sticks[-1]
         child = self._build_child_from_face(parent, face_index, stick_angle)
