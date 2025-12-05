@@ -21,6 +21,8 @@ class Aggregation:
         self.angle_pattern = angle_pattern
 
         self.failed_sticks = []
+        self.valid_sticks = []
+        self.scores = []
         self.collision_log = []
 
         # 0 = regular, 1 = random
@@ -47,7 +49,7 @@ class Aggregation:
     
     def _next_length(self):
         """
-        Private method to get the next length from the length pattern.
+        Private method to get the next length from the list of length pattern.
         
         Returns:
             float: next length value.
@@ -57,13 +59,66 @@ class Aggregation:
 
     def _next_angle(self):
         """
-        Private method to get the next angle from the angle pattern.
+        Private method to get the next angle from the list of angle pattern.
         
         Returns:
             float: next angle in degrees.
         """
         return random.choice(self.angle_pattern)
+
+
+    def _remap_t_with_margin(self, t, length, margin=None):
+        """
+        Private method to remap t value with margin.
+
+        Args:
+            t: float, original t value (0.0 to 1.0).
+            margin: float, margin to apply (defaults to stick width).
+
+        Returns:
+            float: remapped t value within margin constraints.
+        """
+        if margin is None:
+            margin = self.width
         
+        # Avoid 2 * margin > length
+        max_margin = length * 0.5 * 0.999
+        m = min(margin, max_margin)
+
+        t = max(0.0 ,min(1.0, t))
+
+        u_min = m / length
+        u_max = 1.0 - (m / length)
+        u = u_min + t * (u_max - u_min)
+        return u
+    
+
+    def _center_to_existing(self, candidate):
+        """
+        Private method to find the smallest distance between the center point of a candidate stick to all existing sticks, excluding the last stick(parent).
+        
+        Args:
+            candidate: type Stick, candidate stick.
+        
+        Returns:
+            float: smallest distance between candidate center to existing sticks, excluding the last stick(parent).
+        """
+        if not self.sticks:
+            return float('inf')
+        
+        min_dist = float('inf')
+        cx, cy, cz = candidate.midframe.point
+        for s in self.sticks[:-1]:
+            px, py, pz = s.midframe.point
+            dx = cx - px
+            dy = cy - py
+            dz = cz - pz
+            dist = dx*dx + dy*dy + dz*dz
+
+            if dist < min_dist:
+                min_dist = dist
+        return math.sqrt(min_dist)
+    
 
     def spawn_next_stick(self, from_index=0, from_t=0.5, to_index=1, to_t=0.5):
         """
@@ -79,8 +134,11 @@ class Aggregation:
         current_stick = self.sticks[-1]
         new_length = self._next_length()
         angle = self._next_angle()
+
+        # Apply margin to from_t
+        safe_from_t = self._remap_t_with_margin(from_t, length=current_stick.length, margin=current_stick.width / 2)
         # Evlaute frames for next stick
-        from_frame = current_stick.eval_frame(from_index, from_t)
+        from_frame = current_stick.eval_frame(from_index, safe_from_t)
         dir_vec = from_frame.zaxis
         dir_vec.unitize()
         next_frame = from_frame.copy()
@@ -95,8 +153,10 @@ class Aggregation:
         if angle != 0:
             next_frame.rotate(math.radians(angle), dir_vec, next_frame.point)
 
+        # Apply margin to to_t
+        safe_to_t = self._remap_t_with_margin(to_t, length=new_length, margin=current_stick.width / 2)
         # Adjust start point along negative x-axis by new stick length
-        offset = next_frame.xaxis.unitized() * (to_t * new_length)
+        offset = next_frame.xaxis.unitized() * (safe_to_t * new_length)
         next_frame.point -= offset
 
         # Create new stick
@@ -147,6 +207,8 @@ class Aggregation:
 
         # Preparation for logging
         failed_candidates = []
+        params_length = []
+        params_angle = []
         params_from_index = []
         params_from_t = []
         params_to_index = []
@@ -154,26 +216,36 @@ class Aggregation:
 
 
         current_stick = self.sticks[-1]
-
-
         for attempt in range(max_attempts):
             new_length = self._next_length()
             angle = self._next_angle()
             # Create random index and t value for the next stick
             from_index = random.randint(0, 3)
+            # Apply margin to from_t
             from_t = random.random()
+            safe_from_t = self._remap_t_with_margin(from_t, length=current_stick.length, margin=current_stick.width / 2)
             to_index = random.randint(0, 3)
+            # Apply margin to to_t
             to_t = random.random()
+            safe_to_t = self._remap_t_with_margin(to_t, length=new_length, margin=current_stick.width / 2)
 
-            # Evlaute frames for next stick
-            from_frame = current_stick.eval_frame(from_index, from_t)
+            # Collect Data for logging
+            params_from_index.append(from_index)
+            params_from_t.append(safe_from_t)
+            params_to_index.append(to_index)
+            params_to_t.append(safe_to_t)
+            params_length.append(new_length)
+            params_angle.append(angle)
+
+            # Evaluate frames for next stick
+            from_frame = current_stick.eval_frame(from_index, safe_from_t)
             dir_vec = from_frame.zaxis
             dir_vec.unitize()
             next_frame = from_frame.copy()
             # Move next_frame along normal by half current stick depth
             next_frame.point += dir_vec * (current_stick.depth / 2)
             
-            # Define which face relative to new stick attaches to previous stick
+            # Define which face of new stick attaches to previous stick
             which_face = to_index * 90
             next_frame.rotate(math.radians(which_face), next_frame.xaxis, next_frame.point)
 
@@ -182,7 +254,7 @@ class Aggregation:
                 next_frame.rotate(math.radians(angle), dir_vec, next_frame.point)
 
             # Adjust start point along negative x-axis by new stick length
-            offset = next_frame.xaxis.unitized() * (to_t * new_length)
+            offset = next_frame.xaxis.unitized() * (safe_to_t * new_length)
             next_frame.point -= offset
 
             # Create new stick
@@ -193,6 +265,7 @@ class Aggregation:
             for other in self.sticks[:-1]:    # skip parent
                 if Collision(new_stick, other).check_collision():
                     collision_found = True
+                    break
                     
             if collision_found:
                 failed_candidates.append(new_stick)
@@ -209,8 +282,8 @@ class Aggregation:
                     "from_t": params_from_t,
                     "to_index": params_to_index,
                     "to_t": params_to_t,
-                    "length": new_stick.length,  
-                    "angle": angle
+                    "length": params_length,  
+                    "angle": params_angle
                 }
             })
 
@@ -232,18 +305,116 @@ class Aggregation:
                 "from_t": params_from_t,
                 "to_index": params_to_index,
                 "to_t": params_to_t,
-                "length": new_stick.length,
-                "angle": angle
+                "length": params_length,
+                "angle": params_angle
             }
         })
         return None
 
 
-    def spawn_next_stick_random_in_boundary_with_rejection(self, boundary, angle=0, max_attempts=10):
+    def spawn_next_stick_random_in_boundary(self, boundary=None, max_attempts=10, local_seed=None):
+        """
+        Spawns next stick based on random face index and t value with collision rejection sampling.
+
+        Args:
+            boundary: type Mesh, to constrain sticks within boundary.
+            max_attempts: Maximum number of attempts to find a non-colliding position.
+            local_seed: Seed for random generator (overrides global seed if provided).
+
+        Records:
+            - collision_log: pure metadata
+            - failed_sticks: list of Stick objects colliding in each spawn attempt
+        """
+        # 0 = regular, 1 = random
+        if self.aggregation_type == 0 and local_seed is not None:
+            random.seed(local_seed)
+
+        # Preparation for selecting candidate
+        valid_candidates = []
+        valid_scores = []
+
+        # Preparation for logging
+        failed_candidates = []
+        params_length = []
+        params_angle = []
+        params_from_index = []
+        params_from_t = []
+        params_to_index = []
+        params_to_t = []
+
+
+        current_stick = self.sticks[-1]
+        for attempt in range(max_attempts):
+            new_length = self._next_length()
+            angle = self._next_angle()
+            # Create random index and t value for the next stick
+            from_index = random.randint(0, 3)
+            # Apply margin to from_t
+            from_t = random.random()
+            safe_from_t = self._remap_t_with_margin(from_t, length=current_stick.length, margin=current_stick.width / 2)
+            to_index = random.randint(0, 3)
+            # Apply margin to to_t
+            to_t = random.random()
+            safe_to_t = self._remap_t_with_margin(to_t, length=new_length, margin=current_stick.width / 2)
+            
+            # Collect Data for logging
+            params_from_index.append(from_index)
+            params_from_t.append(safe_from_t)
+            params_to_index.append(to_index)
+            params_to_t.append(safe_to_t)
+            params_length.append(new_length)
+            params_angle.append(angle)
+            
+            # Evaluate frames for next stick
+            from_frame = current_stick.eval_frame(from_index, safe_from_t)
+            dir_vec = from_frame.zaxis
+            dir_vec.unitize()
+            next_frame = from_frame.copy()
+            # Move next_frame along normal by half current stick depth
+            next_frame.point += dir_vec * (current_stick.depth / 2)
+            
+            # Define which face of new stick attaches to previous stick
+            which_face = to_index * 90
+            next_frame.rotate(math.radians(which_face), next_frame.xaxis, next_frame.point)
+            # Rotate next_frame around normal
+            if angle != 0:
+                next_frame.rotate(math.radians(angle), dir_vec, next_frame.point)
+
+            # Adjust start point along negative x-axis by new stick length
+            offset = next_frame.xaxis.unitized() * (safe_to_t * new_length)
+            next_frame.point -= offset
+            # Create new stick
+            new_stick = Stick(next_frame, length=new_length)
+
+            ### ------- collision checking -------
+            collision_found = False
+            for other in self.sticks[:-1]:    # skip parent
+                if Collision(new_stick, other).check_collision():
+                    collision_found = True
+                    break
+                    
+            if collision_found:
+                failed_candidates.append(new_stick)
+            else:
+                valid_candidates.append(new_stick)
+                valid_scores.append(self._center_to_existing(new_stick))
+        self.failed_sticks.append(failed_candidates)
+        self.valid_sticks.append(valid_candidates)
+        self.scores.append(valid_scores)
+
+        # Select best candidate based on score
+        if not valid_candidates:
+            return None
+        best_idx = max(range(len(valid_scores)), key=lambda i: valid_scores[i])
+        best_candidate = valid_candidates[best_idx]
+
+        # SUCCESS: append and return
+        self.sticks.append(best_candidate)
+        self.axes.append(best_candidate.axis)
+        self.frames.append(best_candidate.frame)
+        return best_candidate
+
         
-
-        return None
-
 
     def visualize(self):
         """

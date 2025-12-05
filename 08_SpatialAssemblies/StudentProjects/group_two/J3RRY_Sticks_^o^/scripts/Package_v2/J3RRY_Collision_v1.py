@@ -144,7 +144,7 @@ class Collision:
         unit_axis = axis.unitized()
         dots = [dot_vectors(c, unit_axis) for c in stick.corners]
         return min(dots), max(dots)
-
+    
 
     def _interval_overlap(self, minA, maxA, minB, maxB):
         """
