@@ -107,6 +107,7 @@ class BranchingModule:
     # ------------------------------------------------------------------ #
 
     def grow_once(self, face_index=0, stick_angle=0.0):
+
         """
         Grow one new child from the **last** stick in the chain.
 
