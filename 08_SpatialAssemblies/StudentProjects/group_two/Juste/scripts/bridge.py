@@ -1,7 +1,7 @@
 # bridge.py
 
 from stick_fixed import Stick
-from compas.geometry import Line, Vector
+from compas.geometry import Line, Vector, Point
 
 
 
