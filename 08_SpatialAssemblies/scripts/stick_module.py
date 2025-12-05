@@ -1,6 +1,6 @@
 from compas.geometry import Line, Frame, Vector
 
-from Sticks import Stick
+from sticks import Stick
 import math
 
 from compas.geometry import Rotation
