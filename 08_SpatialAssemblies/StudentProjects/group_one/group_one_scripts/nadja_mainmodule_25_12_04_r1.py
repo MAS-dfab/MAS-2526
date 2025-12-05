@@ -6,7 +6,7 @@ import math
 from compas.geometry import Rotation
 
 
-class StickModuleC:
+class StickModuleFJ:
     def __init__(self, frame, stick_width, stick_depth, stick_length):
         self.frame = frame
         self.width = stick_width
@@ -39,3 +39,4 @@ class StickModuleC:
 
         stick_z = Stick(Line(offsetpt_z, offsetpt_z+self.frame.zaxis*self.length), width = self.width, depth = self.depth)
         self.sticks.append(stick_z)
+
