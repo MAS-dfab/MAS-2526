@@ -4,7 +4,7 @@
 import math
 from compas.geometry import Line, Vector
 
-from stick import Stick
+from stick_fixed import Stick
 
 
 class BranchingModule:

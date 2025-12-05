@@ -6,7 +6,7 @@ import random
 import Rhino.Geometry as rg  # type: ignore
 from compas.geometry import Point, Vector, Line, Frame
 
-from stick import Stick
+from stick_fixed import Stick
 from branch import BranchingModule
 from bridge import BridgingModule
 
