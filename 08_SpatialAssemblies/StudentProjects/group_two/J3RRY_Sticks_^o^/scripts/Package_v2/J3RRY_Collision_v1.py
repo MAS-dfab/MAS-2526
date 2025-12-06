@@ -36,7 +36,8 @@ class Collision:
     def axis_distance(self):
         """
         Private method to compute the shortest distance between the infinite axes of two sticks.
-
+        Using for rounded pipe-like sticks.
+        
         Returns:
             float: shortest distance between two infinite axes.
         """
@@ -47,6 +48,7 @@ class Collision:
     def segment_distance(self):
         """
         Private method to compute the shortest distance between the line segments of two sticks.
+        Using for rounded pipe-like sticks.
 
         Returns:
             float: the shortest distance between two line SEGMENTS.

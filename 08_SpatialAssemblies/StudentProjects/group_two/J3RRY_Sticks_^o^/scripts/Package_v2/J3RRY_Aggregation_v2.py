@@ -1,3 +1,5 @@
+from compas_rhino.conversions import mesh_to_compas
+from compas.geometry import Polyhedron, is_point_in_polyhedron
 from J3RRY_SingleStick_v1 import Stick
 from J3RRY_Collision_v1 import Collision
 import math, random
@@ -14,16 +16,18 @@ class Aggregation:
             aggregation_type: 0 = regular, 1 = random
             global_seed: Seed for random generator (defaults to None)
         """
+        self.length_pattern = length_pattern
+        self.angle_pattern = angle_pattern
         self.sticks = []
         self.axes = []
         self.frames = []
-        self.length_pattern = length_pattern
-        self.angle_pattern = angle_pattern
 
         self.failed_sticks = []
         self.valid_sticks = []
         self.scores = []
         self.collision_log = []
+
+        self._boundary_polyhedron = None
 
         # 0 = regular, 1 = random
         self.aggregation_type = aggregation_type
@@ -95,13 +99,13 @@ class Aggregation:
 
     def _center_to_existing(self, candidate):
         """
-        Private method to find the smallest distance between the center point of a candidate stick to all existing sticks, excluding the last stick(parent).
+        Private method to find the smallest distance(not squared) between the center point of a candidate stick to all existing sticks, excluding the last stick(parent).
         
         Args:
             candidate: type Stick, candidate stick.
         
         Returns:
-            float: smallest distance between candidate center to existing sticks, excluding the last stick(parent).
+            float: smallest distance(not squared) between candidate center to existing sticks, excluding the last stick(parent).
         """
         if not self.sticks:
             return float('inf')
@@ -117,8 +121,45 @@ class Aggregation:
 
             if dist < min_dist:
                 min_dist = dist
-        return math.sqrt(min_dist)
+        # return math.sqrt(min_dist)
+        return min_dist
     
+
+    def _set_boundary_polyhedron(self, mesh):
+        """
+        Private method to convert Rhino Mesh to COMPAS Polyhedron for boundary checking, and store it internally.
+        
+        Args:
+            mesh: type Rhino Mesh, must be closed mesh. Will convert to COMPAS Polyhedron.
+            
+        Returns:
+            type Polyhedron: COMPAS Polyhedron.
+        """
+        if mesh is None:
+            return None
+        if self._boundary_polyhedron is None:
+            compas_mesh = mesh_to_compas(mesh)
+            vertices, faces = compas_mesh.to_vertices_and_faces()
+            self._boundary_polyhedron = Polyhedron(vertices, faces)
+    
+
+    def point_in_mesh(self, point, mesh):
+        """
+        Check if a point is inside a closed mesh boundary.
+
+        Args:
+            point: type Point, point to check.
+            mesh: type Rhino Mesh, must be closed mesh. Will convert to COMPAS Polyhedron.
+
+        Returns:/
+            bool: True if point is inside mesh.
+        """
+        self._set_boundary_polyhedron(mesh)  # Lazy init
+        if self._boundary_polyhedron is None:
+            return True  # No boundary defined, view all points as inside
+        
+        return is_point_in_polyhedron(point, self._boundary_polyhedron)
+
 
     def spawn_next_stick(self, from_index=0, from_t=0.5, to_index=1, to_t=0.5):
         """
@@ -317,7 +358,7 @@ class Aggregation:
         Spawns next stick based on random face index and t value with collision rejection sampling.
 
         Args:
-            boundary: type Mesh, to constrain sticks within boundary.
+            boundary: type Rhino Mesh, to constrain sticks within boundary.
             max_attempts: Maximum number of attempts to find a non-colliding position.
             local_seed: Seed for random generator (overrides global seed if provided).
 
@@ -386,6 +427,12 @@ class Aggregation:
             # Create new stick
             new_stick = Stick(next_frame, length=new_length)
 
+            ### ------- boundary checking -------
+            if boundary is not None:
+                is_inside = self.point_in_mesh(new_stick.midframe.point, boundary)
+                if not is_inside:
+                    failed_candidates.append(new_stick)
+                    continue
             ### ------- collision checking -------
             collision_found = False
             for other in self.sticks[:-1]:    # skip parent
@@ -415,7 +462,6 @@ class Aggregation:
         return best_candidate
 
         
-
     def visualize(self):
         """
         Compute all stick geometries.
