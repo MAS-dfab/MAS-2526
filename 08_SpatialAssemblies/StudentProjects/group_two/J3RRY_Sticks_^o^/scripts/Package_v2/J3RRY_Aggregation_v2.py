@@ -40,12 +40,12 @@ class Aggregation:
 
     def _init_first_stick(self, first_frame):
         """
-        Private method for creating the first stick.
+        Private method for creating the first stick with the first index of length_pattern.
         
         Args:
             first_frame: Frame for the first stick.
         """
-        first_stick = Stick(first_frame, self._next_length())
+        first_stick = Stick(first_frame, self.length_pattern[0])
         self.sticks.append(first_stick)
         self.axes.append(first_stick.axis)
         self.frames.append(first_frame)
@@ -143,9 +143,9 @@ class Aggregation:
             self._boundary_polyhedron = Polyhedron(vertices, faces)
     
 
-    def point_in_mesh(self, point, mesh):
+    def is_stick_in_mesh(self, stick, mesh):
         """
-        Check if a point is inside a closed mesh boundary.
+        Check if all corners of a stick are inside a given closed mesh.
 
         Args:
             point: type Point, point to check.
@@ -158,7 +158,7 @@ class Aggregation:
         if self._boundary_polyhedron is None:
             return True  # No boundary defined, view all points as inside
         
-        return is_point_in_polyhedron(point, self._boundary_polyhedron)
+        return all(is_point_in_polyhedron(c, self._boundary_polyhedron) for c in stick.corners)
 
 
     def spawn_next_stick(self, from_index=0, from_t=0.5, to_index=1, to_t=0.5):
@@ -383,6 +383,10 @@ class Aggregation:
         params_to_index = []
         params_to_t = []
 
+        # Initial boundary check for the first stick
+        if boundary is not None and len(self.sticks) ==1:
+            if not self.is_stick_in_mesh(self.sticks[0], boundary):
+                raise ValueError("The first stick is outside the boundary mesh.")
 
         current_stick = self.sticks[-1]
         for attempt in range(max_attempts):
@@ -429,10 +433,10 @@ class Aggregation:
 
             ### ------- boundary checking -------
             if boundary is not None:
-                is_inside = self.point_in_mesh(new_stick.midframe.point, boundary)
-                if not is_inside:
+                if not self.is_stick_in_mesh(new_stick, boundary):
                     failed_candidates.append(new_stick)
                     continue
+
             ### ------- collision checking -------
             collision_found = False
             for other in self.sticks[:-1]:    # skip parent
