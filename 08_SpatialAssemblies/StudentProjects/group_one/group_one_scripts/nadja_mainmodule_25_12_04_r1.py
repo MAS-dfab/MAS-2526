@@ -1,9 +1,7 @@
-from compas.geometry import Line, Frame, Vector
+from compas.geometry import Line, Frame, Vector, Rotation, Polyline, Plane, Point, Box
 
 from group_one_sticks import Stick
 import math
-
-from compas.geometry import Rotation
 
 
 class StickModuleFJ:
@@ -40,3 +38,36 @@ class StickModuleFJ:
         stick_z = Stick(Line(offsetpt_z, offsetpt_z+self.frame.zaxis*self.length), width = self.width, depth = self.depth)
         self.sticks.append(stick_z)
 
+class StickModuleA:
+    
+    LENGTH = 200
+    
+    def __init__(self):
+        self.length = StickModuleA.LENGTH
+        self.sticks = {"stick1": None, "stick2": None, "stick3": None}
+        # self.sticks = []
+        
+    def create_module(self, plane, angle):
+        """
+        Docstring for create_module
+        
+        :param self: angle of the stick one and stick two and legth
+        :param plane: plane where the module is created
+        """
+        base_frame = plane
+        
+        # Stick one
+        line1 = Line.from_point_and_vector(base_frame.point, base_frame.zaxis * self.length)
+        stick1 = Stick(line1, base_frame)
+        self.sticks["stick1"] = stick1
+        
+        # Stick two
+        base_point = line1.midpoint - (base_frame.xaxis * (self.length / 2))
+        line2 = Line.from_point_and_vector(base_point, base_frame.xaxis * self.length)
+        stick2 = Stick(line2, base_frame)
+        self.sticks["stick2"] = stick2
+        
+        # Stick three
+        line_3 = line2.rotated(math.radians(angle), base_frame.zaxis, line1.midpoint)
+        stick3 = Stick(line_3, base_frame)
+        self.sticks["stick3"] = stick3

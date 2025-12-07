@@ -6,7 +6,7 @@ class StickModule:
     
     LENGTH = 200
     
-    def __init__(self, angle_a = 45, angle_b = 45, sticks_distance = 5 ):
+    def __init__(self, angle_a = 45, angle_b = 45, sticks_distance = 5):
         self.angle_a = angle_a
         self.angle_b = angle_b
         self.length = StickModule.LENGTH
