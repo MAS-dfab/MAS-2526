@@ -100,7 +100,7 @@ class Stick:
         Private method to compute the axis-aligned bounding box of the stick.
 
         Returns:
-            (min_point, max_point): tuple of two points defining the AABB
+            (min_point, max_point): tuple of two points defining the AABB.
         """
         corners = self.corners
         xs = [p[0] for p in corners]
