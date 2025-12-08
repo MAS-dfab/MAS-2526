@@ -1,400 +1,121 @@
-# rf_core.py
-# Clean, synchronized RootFrames engine for Grasshopper integration
-# Uses COMPAS geometry and stick_fixed / branch / bridge modules
+# stick_fixed.py
+# Clean Stick class compatible with the new rf_core, branch, and bridge modules.
+# No circular imports. Fully self-contained.
 
-import random
-import Rhino.Geometry as rg  # type: ignore
-from compas.geometry import Point, Vector, Line, Frame
-
-from branch import BranchingModule
-from bridge import BridgingModule
+from compas.geometry import Point, Vector, Line, Frame, Box
 
 
-class RootFrames:
+# ======================================================================
+# UTILITY — build an orthonormal, stable frame from an axis line
+# ======================================================================
+
+def build_frame_from_axis(axis, up_hint=None):
     """
-    RootFrames engine:
-
-    1) Sample points on surface or curve
-    2) Build 3D frames using Rhino native frames (Curve.FrameAt / Surface.FrameAt)
-    3) Build nearest-neighbor edges & edge-frames
-    4) Branching phase (L-system rules)
-    5) Optional bridging (non-coplanar sticks)
-    6) Optional collision detection via Stick AABBs
-
-    Exposed debug channels:
-        - self.root_sticks
-        - self.branch_sticks
-        - self.bridge_sticks
-        - self.collision_flags
-        - self.frames
+    Build a stable orthonormal Frame from a Line axis.
+    axis: compas Line
+    up_hint: optional Vector used to disambiguate perpendicular
     """
 
-    def __init__(
-        self,
-        surface=None,
-        curve=None,
-        point_density=10,
-        stick_length=None,
-        stick_width=None,
-        stick_depth=None,
-    ):
-        # geometry input
-        self.surface_input = surface
-        self.curve_input = curve
+    start = axis.start
+    end = axis.end
 
-        # sampling
-        self.point_density = int(point_density)
+    xaxis = Vector.from_start_end(start, end)
+    if xaxis.length < 1e-8:
+        xaxis = Vector(1, 0, 0)
+    xaxis.unitize()
 
-        # stick geometry
-        self.stick_length = stick_length or Stick.DEFAULT_LEN
-        self.stick_width = stick_width or Stick.DEFAULT_SIZE
-        self.stick_depth = stick_depth or Stick.DEFAULT_SIZE
+    if up_hint is None:
+        up_hint = Vector(0, 0, 1)
 
-        # storage
-        self.points = []
-        self.frames = []
-        self.edge_frames = []
-        self.edge_vectors = []
-        self.edges = []
+    yaxis = up_hint.cross(xaxis)
 
-        self.root_sticks = []
-        self.branch_sticks = []
-        self.bridge_sticks = []
-        self.collision_flags = []
+    # if up_hint is colinear with xaxis → choose fallback
+    if yaxis.length < 1e-8:
+        up_hint = Vector(0, 1, 0)
+        yaxis = up_hint.cross(xaxis)
 
-        # components for surface sampling
-        self._rg_face = None
-        self._uv_params = []
-        self._rg_curve = None
-        self._curve_t = []
+    if yaxis.length < 1e-8:
+        yaxis = Vector(0, 1, 0)
 
-    # ----------------------------------------------------------------------
-    # 1. POINT SAMPLING
-    # ----------------------------------------------------------------------
+    yaxis.unitize()
 
-    def sample_points(self):
-        """Sample points on curve or surface input."""
+    origin = axis.point_at(0.5)
 
-        pts = []
-        self._uv_params = []
-        self._curve_t = []
-        self._rg_face = None
-        self._rg_curve = None
+    return Frame(origin, xaxis, yaxis)
 
-        # ------------------------
-        # CURVE MODE
-        # ------------------------
-        if self.curve_input is not None and self.surface_input is None:
-            crv = self.curve_input
-            self._rg_curve = crv
 
-            dom = crv.Domain
-            t0, t1 = dom.T0, dom.T1
+# ======================================================================
+# MAIN Stick CLASS
+# ======================================================================
 
-            for _ in range(max(1, self.point_density)):
-                t = random.uniform(t0, t1)
-                p = crv.PointAt(t)
-                pts.append(p)
-                self._curve_t.append(t)
+class Stick:
+    """
+    Minimal but complete 3D stick geometry container.
 
-        # ------------------------
-        # SURFACE MODE
-        # ------------------------
+    A Stick has:
+        - axis (Line)
+        - frame (Frame)
+        - length (float)
+        - width, depth (float)
+        - geometry (COMPAS Box)
+    """
+
+    DEFAULT_LEN = 1.0
+    DEFAULT_SIZE = 0.2
+
+    def __init__(self, axis,
+                 length=None, width=None, depth=None,
+                 parent_frame=None):
+
+        if not isinstance(axis, Line):
+            raise TypeError("Stick axis must be a compas.geometry.Line")
+
+        # fundamental geometry
+        self.axis = axis
+        self.length = float(length or Stick.DEFAULT_LEN)
+        self.width = float(width or Stick.DEFAULT_SIZE)
+        self.depth = float(depth or Stick.DEFAULT_SIZE)
+
+        # determine orientation
+        if parent_frame is not None:
+            # inherit orientation; move origin to midpoint of axis
+            mid = axis.point_at(0.5)
+            x = Vector(*parent_frame.xaxis)
+            y = Vector(*parent_frame.yaxis)
+            self.frame = Frame(mid, x, y)
         else:
-            surf = self.surface_input
-            brep = surf.ToBrep()
-            face = brep.Faces[0]
-            self._rg_face = face
+            self.frame = build_frame_from_axis(axis)
 
-            udom = face.Domain(0)
-            vdom = face.Domain(1)
+        # construct actual box geometry
+        # COMPAS Box takes full lengths in X,Y,Z directions of the frame
+        self.geometry = Box(self.frame, self.length, self.width, self.depth)
 
-            for _ in range(max(1, self.point_density)):
-                u = random.uniform(udom.T0, udom.T1)
-                v = random.uniform(vdom.T0, vdom.T1)
-                p = face.PointAt(u, v)
-                pts.append(p)
-                self._uv_params.append((u, v))
+    # ------------------------------------------------------------------
+    # COLLISION APPROXIMATION — AABB distance between axes (capsules)
+    # ------------------------------------------------------------------
 
-            # optional: sort by height for more stable results
-            pts.sort(key=lambda p: p.Z)
+    def intersects(self, other, clearance=0.0):
+        """
+        Approximate intersection test using axis-to-axis distance
+        + stick radius (max(width, depth)/2).
+        """
+        if not isinstance(other, Stick):
+            return False
 
-        # convert to COMPAS Points
-        self.points = [Point(p.X, p.Y, p.Z) for p in pts]
-        return self.points
+        r1 = 0.5 * max(self.width, self.depth) + clearance
+        r2 = 0.5 * max(other.width, other.depth) + clearance
+        R = r1 + r2
 
-    # ----------------------------------------------------------------------
-    # 2. FRAME GENERATION
-    # ----------------------------------------------------------------------
+        try:
+            d = self.axis.distance_to_line(other.axis)
+        except Exception:
+            return False
 
-    def frames_from_geometry(self):
-        """Create COMPAS Frames at sampled points using Rhino's local frames."""
-        frames = []
+        return d <= R
 
-        # ------------------------
-        # CURVE MODE
-        # ------------------------
-        if self._rg_curve and self._curve_t:
-            crv = self._rg_curve
+    # ------------------------------------------------------------------
 
-            for pt, t in zip(self.points, self._curve_t):
-                ok, plane = crv.FrameAt(t)
-
-                if ok:
-                    x = Vector(plane.XAxis.X, plane.XAxis.Y, plane.XAxis.Z)
-                    y = Vector(plane.YAxis.X, plane.YAxis.Y, plane.YAxis.Z)
-                else:
-                    # fallback to tangent and world up
-                    tan = crv.TangentAt(t)
-                    x = Vector(tan.X, tan.Y, tan.Z)
-                    y = Vector(0, 0, 1).cross(x)
-
-                if x.length < 1e-6:
-                    x = Vector(1, 0, 0)
-                if y.length < 1e-6:
-                    y = Vector(0, 1, 0)
-
-                x.unitize()
-                y.unitize()
-
-                frames.append(Frame(pt, x, y))
-
-        # ------------------------
-        # SURFACE MODE
-        # ------------------------
-        elif self._rg_face and self._uv_params:
-            face = self._rg_face
-
-            for pt, (u, v) in zip(self.points, self._uv_params):
-                ok, plane = face.FrameAt(u, v)
-
-                if ok:
-                    x = Vector(plane.XAxis.X, plane.XAxis.Y, plane.XAxis.Z)
-                    y = Vector(plane.YAxis.X, plane.YAxis.Y, plane.YAxis.Z)
-                else:
-                    x = Vector(1, 0, 0)
-                    y = Vector(0, 1, 0)
-
-                if x.length < 1e-6:
-                    x = Vector(1, 0, 0)
-                if y.length < 1e-6:
-                    y = Vector(0, 1, 0)
-
-                x.unitize()
-                y.unitize()
-
-                frames.append(Frame(pt, x, y))
-
-        # ------------------------
-        # FALLBACK
-        # ------------------------
-        else:
-            for pt in self.points:
-                frames.append(Frame(pt, Vector(1, 0, 0), Vector(0, 1, 0)))
-
-        self.frames = frames
-        return frames
-
-    # ----------------------------------------------------------------------
-    # 3. NEAREST NEIGHBOR EDGES
-    # ----------------------------------------------------------------------
-
-    def frames_to_edges(self):
-        """Compute nearest-neighbor edges between frames."""
-        pts = [f.point for f in self.frames]
-        n = len(pts)
-
-        if n < 2:
-            self.edges = []
-            self.edge_frames = []
-            self.edge_vectors = []
-            return [], []
-
-        edges = set()
-
-        for i in range(n):
-            pi = pts[i]
-            best = 1e9
-            j_best = None
-
-            for j in range(n):
-                if i == j:
-                    continue
-                d = pi.distance_to_point(pts[j])
-                if d < best:
-                    best = d
-                    j_best = j
-
-            edges.add(tuple(sorted((i, j_best))))
-
-        edges = list(edges)
-        self.edges = edges
-
-        eframes = []
-        evectors = []
-
-        for i, j in edges:
-            f0 = self.frames[i]
-            p0 = f0.point
-            p1 = self.frames[j].point
-
-            v = Vector.from_start_end(p0, p1)
-            if v.length < 1e-6:
-                continue
-
-            v.unitize()
-
-            # simple frame: x along vector, y orthonormal
-            z = Vector(0, 0, 1)
-            y = z.cross(v)
-            if y.length < 1e-6:
-                y = Vector(0, 1, 0)
-            y.unitize()
-
-            eframes.append(Frame(p0, v, y))
-            evectors.append(v)
-
-        self.edge_frames = eframes
-        self.edge_vectors = evectors
-
-        return eframes, evectors
-
-    # ----------------------------------------------------------------------
-    # Utility for L-system rule parsing
-    # ----------------------------------------------------------------------
-
-    def _parse_rule(self, rule_str):
-        if not rule_str:
-            return []
-        vals = []
-        for tok in rule_str.split(","):
-            tok = tok.strip()
-            if not tok:
-                continue
-            try:
-                vals.append(float(tok))
-            except:
-                pass
-        return vals
-
-    # ----------------------------------------------------------------------
-    # 4. BRANCHING
-    # ----------------------------------------------------------------------
-
-    def grow_branching(self, steps, stick_angle, offset01,
-                       face_rule=None, angle_rule=None):
-
-        self.root_sticks = []
-        self.branch_sticks = []
-
-        # build root sticks
-        for f, v in zip(self.edge_frames, self.edge_vectors):
-            axis = Line(f.point, f.point + v * self.stick_length)
-            s = Stick(axis,
-                      length=self.stick_length,
-                      width=self.stick_width,
-                      depth=self.stick_depth,
-                      parent_frame=f)
-            self.root_sticks.append(s)
-            self.branch_sticks.append(s)
-
-        face_seq = self._parse_rule(face_rule)
-        angle_seq = self._parse_rule(angle_rule)
-
-        for root in self.root_sticks:
-            B = BranchingModule(
-                root_stick=root,
-                stick_length=self.stick_length,
-                width=self.stick_width,
-                depth=self.stick_depth,
-                offset01=offset01
-            )
-
-            for k in range(int(steps)):
-                fi = int(face_seq[k % len(face_seq)]) if face_seq else 0
-                ang = float(angle_seq[k % len(angle_seq)]) if angle_seq else stick_angle
-
-                B.grow_once(face_index=fi, stick_angle=ang)
-
-            # skip duplicate root
-            self.branch_sticks.extend(B.sticks[1:])
-
-        return self.branch_sticks
-
-    # ----------------------------------------------------------------------
-    # 5. BRIDGING
-    # ----------------------------------------------------------------------
-
-    def grow_bridging(self):
-        if not self.branch_sticks:
-            self.bridge_sticks = []
-            return []
-
-        BM = BridgingModule(
-            stick_list=self.branch_sticks,
-            stick_length=self.stick_length,
-            width=self.stick_width,
-            depth=self.stick_depth,
+    def __repr__(self):
+        return "Stick(len=%.3f, w=%.3f, d=%.3f)" % (
+            self.length, self.width, self.depth
         )
-        self.bridge_sticks = BM.build()
-        return self.bridge_sticks
-
-    # ----------------------------------------------------------------------
-    # 6. COLLISION DETECTION
-    # ----------------------------------------------------------------------
-
-    def detect_collisions(self, clearance=0.0):
-        sticks = self.branch_sticks + self.bridge_sticks
-        n = len(sticks)
-        flags = [False] * n
-
-        for i in range(n):
-            for j in range(i + 1, n):
-                if sticks[i].intersects(sticks[j], clearance=clearance):
-                    flags[i] = True
-                    flags[j] = True
-
-        self.collision_flags = flags
-        return flags
-
-    # ----------------------------------------------------------------------
-    # 7. RUN PIPELINE
-    # ----------------------------------------------------------------------
-
-    def run(
-        self,
-        steps=1,
-        stick_angle=0.0,
-        offset01=0.5,
-        detect_collisions=False,
-        do_bridging=False,
-        face_rule=None,
-        angle_rule=None,
-    ):
-        """Main pipeline entry."""
-
-        self.sample_points()
-        self.frames_from_geometry()
-        self.frames_to_edges()
-
-        self.grow_branching(
-            steps=steps,
-            stick_angle=stick_angle,
-            offset01=offset01,
-            face_rule=face_rule,
-            angle_rule=angle_rule,
-        )
-
-        if do_bridging:
-            self.grow_bridging()
-        else:
-            self.bridge_sticks = []
-
-        if detect_collisions:
-            self.detect_collisions(clearance=0.0)
-        else:
-            self.collision_flags = [False] * (
-                len(self.branch_sticks) + len(self.bridge_sticks)
-            )
-
-        return self.branch_sticks + self.bridge_sticks
