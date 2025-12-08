@@ -1,13 +1,3 @@
-# branch.py
-# Stable L-system branching module for RootFrames.
-# Branches:
-#   - start on a parent Y or Z face
-#   - direction is blend(parent.xaxis, face_normal)
-#   - rotation is around parent.xaxis (Option B)
-#
-# No world-XYZ except for degenerate fallbacks.
-
-
 # stick_fixed.py
 from compas.geometry import Point, Vector, Line, Frame
 
@@ -26,139 +16,68 @@ class Stick:
     DEFAULT_SIZE = 13.0
 
     def __init__(self, axis, length=None, width=None, depth=None, parent_frame=None):
-        ...
-        # full Stick definition here
 
+        # -------------------------------------
+        # 1. axis → COMPAS Line
+        # -------------------------------------
+        if isinstance(axis, Line):
+            line = axis
+        else:
+            try:
+                p0 = Point(axis.From.X, axis.From.Y, axis.From.Z)
+                p1 = Point(axis.To.X, axis.To.Y, axis.To.Z)
+                line = Line(p0, p1)
+            except:
+                raise ValueError("Stick(): axis is not a valid Line-like object.")
 
+        self.axis = line
+        self.length = float(length or Stick.DEFAULT_LEN)
+        self.width  = float(width  or Stick.DEFAULT_SIZE)
+        self.depth  = float(depth  or Stick.DEFAULT_SIZE)
 
-def face_direction(parent_frame, face_index):
-    """
-    Map a face index to a local normal + family code.
+        # -------------------------------------
+        # 2. Build oriented frame
+        # -------------------------------------
+        origin = line.point_at(0.5)
+        xaxis = _unit(Vector.from_start_end(line.start, line.end), Vector(1,0,0))
 
-    Convention:
-        2,3 -> Y-family (± yaxis)
-        4,5 -> Z-family (± zaxis)
-        All others: invalid (no branch).
-    """
+        if parent_frame:
+            z_parent = parent_frame.zaxis
+            if abs(z_parent.dot(xaxis)) > 0.99:
+                z_parent = _unit(parent_frame.yaxis.cross(xaxis), Vector(0,0,1))
+            zaxis = _unit(z_parent, Vector(0,0,1))
+            yaxis = _unit(zaxis.cross(xaxis), Vector(0,1,0))
 
-    if face_index in (2, 3):  # Y-family faces
-        normal = parent_frame.yaxis.copy()
-        fam = "Y"
+        else:
+            zaxis = Vector(0,0,1)
+            if abs(zaxis.dot(xaxis)) > 0.99:
+                zaxis = Vector(0,1,0)
+            zaxis = _unit(zaxis, Vector(0,0,1))
+            yaxis = _unit(zaxis.cross(xaxis), Vector(0,1,0))
 
-    elif face_index in (4, 5):  # Z-family faces
-        # z-axis from frame; guaranteed orthogonal in our Stick class.
-        normal = parent_frame.zaxis.copy()
-        fam = "Z"
+        self.frame = Frame(origin, xaxis, yaxis)
 
-    else:
-        return None, None
+        # -------------------------------------
+        # 3. bookkeeping
+        # -------------------------------------
+        self.children = []
+        self.parent_frame = self.frame
+        self.family = None
+        self.is_root = False
+        self.is_bridge = False
+        self.collided = False
 
-    # reverse if odd face index
-    if face_index % 2 == 1:
-        normal *= -1.0
+    # -----------------------------------------
+    def intersects(self, other, clearance=0.0):
+        if not isinstance(other, Stick):
+            return False
+        r1 = 0.5 * max(self.width, self.depth) + clearance
+        r2 = 0.5 * max(other.width, other.depth) + clearance
+        try:
+            d = self.axis.distance_to_line(other.axis)
+        except:
+            return False
+        return d <= r1 + r2
 
-    return normal, fam
-
-
-class BranchingModule:
-    """
-    Branching L-system for a single root stick.
-
-    Parameters:
-        root_stick          : initial Stick
-        stick_length        : child stick length
-        width, depth        : child stick cross-section
-        offset01            : blend factor between tangent and normal
-        collision_clearance : radius for collision-safe growth
-    """
-
-    def __init__(self, root_stick, stick_length, width, depth,
-                 offset01=0.5, collision_clearance=0.0):
-
-        self.root = root_stick
-        self.stick_length = stick_length
-        self.width = width
-        self.depth = depth
-        self.offset01 = offset01
-        self.collision_clearance = collision_clearance
-
-        self.sticks = [root_stick]
-
-    # ---------------------------------------------------------
-    # BRANCHING STEP
-    # ---------------------------------------------------------
-
-    def grow_once(self, face_index, stick_angle,
-                  existing_sticks=None, collision_safe=False):
-        """
-        Single branching step.
-
-        - face_index indicates which parent face to branch from.
-        - stick_angle is in degrees.
-        - if collision_safe is True, the candidate child is tested
-          against existing_sticks and skipped if it collides.
-        """
-
-        parent = self.sticks[-1]
-        pf = parent.frame
-
-        normal, fam = face_direction(pf, face_index)
-        if normal is None:
-            return None
-
-        x = pf.xaxis.copy()
-        y = pf.yaxis.copy()
-        z = pf.zaxis.copy()
-
-        # -------------------------------------------------
-        # 1. Compute new origin ON THE PARENT FACE
-        # -------------------------------------------------
-        if fam == "Y":
-            offset_dist = parent.width * 0.5 + self.width * 0.5
-            offset_dir = y
-        else:  # "Z"
-            offset_dist = parent.depth * 0.5 + self.depth * 0.5
-            offset_dir = z
-
-        start = pf.point + offset_dir * offset_dist
-
-        # -------------------------------------------------
-        # 2. Compute child direction (blend + rotate around local X)
-        # -------------------------------------------------
-        t = self.offset01
-        dir_vec = (1 - t) * x + t * normal
-        if dir_vec.length < EPS:
-            dir_vec = normal
-        dir_vec.unitize()
-
-        ang = stick_angle * 3.141592653589793 / 180.0
-        dir_vec = dir_vec.rotated(ang, x)   # Option B: rotate around parent.xaxis
-
-        end = start + dir_vec * self.stick_length
-        axis = Line(start, end)
-
-        # -------------------------------------------------
-        # 3. Build child stick
-        # -------------------------------------------------
-        child = Stick(
-            axis,
-            length=self.stick_length,
-            width=self.width,
-            depth=self.depth,
-            parent_frame=pf,
-        )
-        child.family = fam
-        child.parent = parent
-        parent.children.append(child)
-
-        # -------------------------------------------------
-        # 4. Collision-safe gate
-        # -------------------------------------------------
-        if collision_safe and existing_sticks:
-            for other in existing_sticks:
-                if child.intersects(other, clearance=self.collision_clearance):
-                    # discard this child
-                    return None
-
-        self.sticks.append(child)
-        return child
+    def __repr__(self):
+        return f"Stick(len={self.length}, w={self.width}, d={self.depth}, fam={self.family})"
