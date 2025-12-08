@@ -48,7 +48,7 @@ class BranchStickModulesUpdates:
         
         
         position.point += position.xaxis * (-self.stick_length /2 - self.depth * 2)
-        position.point += position.yaxis * (-self.stick_length /2 - self.depth * 4)
+        position.point += position.yaxis * (-self.stick_length /2)
         position.point += position.zaxis * self.depth * 2
         # position.point += position.yaxis * self.depth/2 - position.xaxis*self.width/2
 
