@@ -6,31 +6,54 @@ import math, random
 
 
 def run_multiround_aggregation(first_frames, length_pattern, angle_pattern,
-                               agg_type, seed, rounds=2, boundary_mesh=None, max_attempts=10
-                               ):
-    all_aggs = []
-    current_frames = list(first_frames)
+                               agg_type, seed, agg_count, agg_round=2, branch_count=2,
+                               boundary_mesh=None, max_attempts=10):
+    
+    all_rounds = []
+    global_sticks = []
+    # ------- Round 0 -------
+    current_aggs = []
+    for i, frame in enumerate(first_frames):
+        agg = Aggregation(frame, length_pattern, angle_pattern, agg_type, seed+i*100, init=True)
+        for j in range(agg_count):
+            new_stick = agg.spawn_next_stick_random_in_boundary(
+                        boundary_mesh, max_attempts, seed+i*100 + j, global_sticks
+                        )
+            if new_stick is not None:
+                global_sticks.append(new_stick)
 
-    for round in range(rounds):
-        next_frames = []
-        new_aggs = []
+        current_aggs.append(agg)
+    all_rounds.append(current_aggs)
 
-        external_sticks = [s for agg in all_aggs for s in agg.sticks]
+    # -------Subsequent Rounds -------
+    for r in range(1, agg_round):
+        next_aggs = []
+        for idx, parent_agg in enumerate(current_aggs):
+            parent_last_stick = parent_agg.sticks[-1]
+            branch_frame = parent_last_stick.frame
 
-        for i, frame in enumerate(current_frames):
-            agg = Aggregation(frame, length_pattern, angle_pattern, agg_type, seed + round*1000 + i)
-            new_aggs.append(agg)
-            agg.spawn_next_stick_random_in_boundary(boundary_mesh, max_attempts, seed + round*1000 + i)
-            
-            idx = random.randint(0, len(agg.sticks)-1)
-            next_frames.append(agg.sticks[idx].frame)
-        
+            for b in range(branch_count):
+                child_seed = r*1000 + idx*branch_count + b
+                child_agg = Aggregation(branch_frame, length_pattern, angle_pattern, agg_type, child_seed,
+                                        init=False, parent_stick=parent_last_stick)
+                for j in range(agg_count):
+                    new_stick = child_agg.spawn_next_stick_random_in_boundary(
+                                boundary_mesh, max_attempts, child_seed + j, global_sticks
+                                )
+                    if new_stick is not None:
+                        global_sticks.append(new_stick)
+                next_aggs.append(child_agg)
 
-                               
+        all_rounds.append(next_aggs)
+        current_aggs = next_aggs
+        if not current_aggs:
+            break
+    return all_rounds
 
 
 class Aggregation:
-    def __init__(self, first_frame, length_pattern=[100], angle_pattern=[0], aggregation_type=0, global_seed=None):
+    def __init__(self, first_frame, length_pattern=[100], angle_pattern=[0],
+                 aggregation_type=0, global_seed=None, init=True, parent_stick=None):
         """
         Constructor for Stick Aggregation.
         
@@ -53,13 +76,16 @@ class Aggregation:
 
         self._boundary_polyhedron = None
 
+        self.parent_stick = parent_stick
+        
         # 0 = regular, 1 = random
         self.aggregation_type = aggregation_type
         self.global_seed = global_seed
         if global_seed is not None:
             random.seed(global_seed)
 
-        self._init_first_stick(first_frame)
+        if init:
+            self._init_first_stick(first_frame)
 
 
     def _init_first_stick(self, first_frame):
@@ -419,8 +445,15 @@ class Aggregation:
             if not self.is_stick_in_mesh(self.sticks[0], boundary):
                 raise ValueError("The first stick is outside the boundary mesh.")
 
-        current_stick = self.sticks[-1]
-        for attempt in range(max_attempts):
+        # Determine current stick, if running multiple rounds of aggregation, use parent stick as the last stick of previous aggregation
+        if self.sticks:
+            current_stick = self.sticks[-1]
+        elif self.parent_stick is not None:
+                current_stick = self.parent_stick
+        else:
+            return None
+        
+        for _ in range(max_attempts):
             new_length = self._next_length()
             angle = self._next_angle()
             # Create random index and t value for the next stick
