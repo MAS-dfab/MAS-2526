@@ -12,7 +12,7 @@
 
 import random
 import Rhino.Geometry as rg  # type: ignore
-import System.Drawing as sd  # for GH colors
+import System.Drawing as sd  # type: ignore # for GH colors
 
 from compas.geometry import Point, Vector, Line, Frame
 
@@ -80,12 +80,15 @@ class RootFrames:
         self._rg_curve = None
         self._rg_face = None
 
+        # ------------------------
         # CURVE MODE
+        # ------------------------
         if self.curve_input is not None and self.surface_input is None:
             crv = self.curve_input
             self._rg_curve = crv
 
-            dom = crv.Domain
+            # FIXED: Domain is a method in RhinoCode
+            dom = crv.Domain()
             t0, t1 = dom.Min, dom.Max
 
             for _ in range(max(1, self.point_density)):
@@ -94,7 +97,9 @@ class RootFrames:
                 pts.append(p)
                 self._curve_t.append(t)
 
+        # ------------------------
         # SURFACE MODE
+        # ------------------------
         else:
             surf = self.surface_input
             brep = surf.ToBrep()
@@ -103,22 +108,20 @@ class RootFrames:
 
             udom = face.Domain(0)
             vdom = face.Domain(1)
-            u0, u1 = udom.Min, udom.Max
-            v0, v1 = vdom.Min, vdom.Max
 
             for _ in range(max(1, self.point_density)):
-                u = random.uniform(u0, u1)
-                v = random.uniform(v0, v1)
+                u = random.uniform(udom.Min, udom.Max)
+                v = random.uniform(vdom.Min, vdom.Max)
                 p = face.PointAt(u, v)
                 pts.append(p)
                 self._uv_params.append((u, v))
 
-            # Stabilize ordering
             pts.sort(key=lambda p: p.Z)
 
-        # Convert to COMPAS Points
+        # convert to COMPAS Points
         self.points = [Point(p.X, p.Y, p.Z) for p in pts]
         return self.points
+
 
     # ----------------------------------------------------------------------
     # 2. FRAME GENERATION (root frames at sample points)
