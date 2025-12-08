@@ -215,47 +215,57 @@ class RootFrames(object):
         # -------------------------------------------------
         elif self._rg_face and self._uv_params:
             face = self._rg_face
-            srf = face.UnderlyingSurface()
+            srf  = face.UnderlyingSurface()
 
             for pt, (u, v) in zip(self.points, self._uv_params):
 
-                # 1. Surface normal from BrepFace
-                nrm = face.NormalAt(u, v)
-                z = Vector(nrm.X, nrm.Y, nrm.Z)
+                # === 1. TRUE NORMAL ===
+                n = face.NormalAt(u, v)
+                z = Vector(n.X, n.Y, n.Z)
                 if z.length < EPS:
                     z = Vector(0, 0, 1)
                 z.unitize()
 
-                # 2. Tangent directions from underlying surface
+                # === 2. TANGENTS USING UNIVERSAL DERIVATIVE ACCESS ===
+                du = dv = None
                 try:
-                    ev = srf.Evaluate(u, v, 1)  # (pt, du, dv, ...)
-                    du = ev[1]
-                    dv = ev[2]
-                except Exception:
-                    du = rg.Vector3d(1, 0, 0)
-                    dv = rg.Vector3d(0, 1, 0)
+                    # returns: (pt, d1, d2, d3, ...)
+                    derivs = srf.Evaluate(u, v, 1)
+                    # derivs[1] may be a Vector3d OR a list of Vector3d
+                    raw_du = derivs[1]
+                    raw_dv = derivs[2]
 
-                tu = Vector(du.X, du.Y, du.Z)
-                tv = Vector(dv.X, dv.Y, dv.Z)
+                    # unwrap arrays if necessary
+                    if hasattr(raw_du, "__len__"):
+                        raw_du = raw_du[0]
+                    if hasattr(raw_dv, "__len__"):
+                        raw_dv = raw_dv[0]
 
-                # pick stronger tangent for x
-                x = tu if tu.length >= tv.length else tv
+                    du = Vector(raw_du.X, raw_du.Y, raw_du.Z)
+                    dv = Vector(raw_dv.X, raw_dv.Y, raw_dv.Z)
 
-                # orthogonalize x vs z
+                except:
+                    # fallback: fabricate orthogonal tangents
+                    du = Vector(1, 0, 0)
+                    dv = Vector(0, 1, 0)
+
+                # Pick strongest tangent for x-axis
+                x = du if du.length >= dv.length else dv
+
+                # Orthonormalize x vs z
                 x = x - z * x.dot(z)
                 if x.length < EPS:
                     x = Vector(1, 0, 0).cross(z)
-                    if x.length < EPS:
-                        x = Vector(0, 1, 0).cross(z)
                 x.unitize()
 
-                # 3. y = z × x
+                # y = z × x
                 y = z.cross(x)
                 if y.length < EPS:
-                    y = Vector(0, 1, 0)
+                    y = Vector(0, 1, 0).cross(z)
                 y.unitize()
 
                 frames.append(Frame(pt, x, y))
+
 
         # -------------------------------------------------
         # FALLBACK MODE
