@@ -1,6 +1,6 @@
 from compas.geometry import Line, Frame, Vector
 from compas.geometry import Rotation
-from group_one_sticks import Stick
+from sticks_251207 import Stick
 import math
 
 
@@ -163,7 +163,7 @@ class StickModule:
                       + z_direction * (self.depth * 0))
          
         stick_xa_axis = Line(offsetpt_xa, offsetpt_xa + x_direction * self.length)
-        stick_xa = Stick(stick_xa_axis, width=self.width, depth=self.depth)
+        stick_xa = Stick(stick_xa_axis, self.frame, width=self.width, depth=self.depth)
         
         self.sticks.append(stick_xa)
 
@@ -174,7 +174,7 @@ class StickModule:
                       + z_direction * (self.depth * 0))
          
         stick_xb_axis = Line(offsetpt_xb, offsetpt_xb + x_direction * self.length)
-        stick_xb = Stick(stick_xb_axis, width=self.width, depth=self.depth)
+        stick_xb = Stick(stick_xb_axis, self.frame, width=self.width, depth=self.depth)
         
         self.sticks.append(stick_xb)
 
@@ -185,7 +185,7 @@ class StickModule:
                       - z_direction * (self.depth * 1))
          
         stick_ya_axis = Line(offsetpt_ya, offsetpt_ya + y_direction * self.length)
-        stick_ya = Stick(stick_ya_axis, width=self.width, depth=self.depth)
+        stick_ya = Stick(stick_ya_axis, self.frame, width=self.width, depth=self.depth)
         
         self.sticks.append(stick_ya)
 
@@ -196,7 +196,7 @@ class StickModule:
                       + z_direction * (self.depth * 1))
          
         stick_yb_axis = Line(offsetpt_yb, offsetpt_yb + y_direction * self.length)
-        stick_yb = Stick(stick_yb_axis, width=self.width, depth=self.depth)
+        stick_yb = Stick(stick_yb_axis, self.frame, width=self.width, depth=self.depth)
         
         self.sticks.append(stick_yb)
 
@@ -207,7 +207,7 @@ class StickModule:
                       - z_direction * (self.depth * 4))
          
         stick_yb_axis = Line(offsetpt_yb, offsetpt_yb + z_direction * self.length)
-        stick_yb = Stick(stick_yb_axis, width=self.width, depth=self.depth)
+        stick_yb = Stick(stick_yb_axis, self.frame, width=self.width, depth=self.depth)
         
         self.sticks.append(stick_yb)
      
