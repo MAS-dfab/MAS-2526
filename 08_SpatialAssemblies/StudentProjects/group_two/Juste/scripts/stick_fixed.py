@@ -1,10 +1,18 @@
 # stick_fixed.py
-from compas.geometry import Point, Vector, Line, Frame
+# Minimal, robust Stick object for RootFrames / Branching / Bridging.
+# Geometry (Brep) is built in GH from:
+#   - self.axis  (compas Line)
+#   - self.frame (compas Frame)
+#   - self.length, self.width, self.depth
+
+from compas.geometry import Point, Vector, Line, Frame, distance_line_line
 
 EPS = 1e-9
 
-def _safe_unit(v, fallback):
-    v = v.copy()
+
+def _safe_unit(vec, fallback):
+    """Return a unit copy of vec; if degenerate, use fallback."""
+    v = vec.copy()
     if v.length < EPS:
         v = fallback.copy()
     v.unitize()
@@ -16,59 +24,89 @@ class Stick:
     DEFAULT_SIZE = 13.0
 
     def __init__(self, axis, length=None, width=None, depth=None, parent_frame=None):
-        self.axis = axis
-        self.length = length or Stick.DEFAULT_LEN
-        self.width  = width  or Stick.DEFAULT_SIZE
-        self.depth  = depth  or Stick.DEFAULT_SIZE
+        """
+        axis          : COMPAS Line or RhinoCommon Line-like
+        length/width/depth : dimensions along local x/y/z
+        parent_frame  : optional COMPAS Frame (for orientation continuity)
+        """
+
+        # -------------------------------------------------
+        # 1. Sanitize axis → COMPAS Line
+        # -------------------------------------------------
+        if isinstance(axis, Line):
+            line = axis
+        else:
+            # RhinoCommon Line-like
+            try:
+                p0 = Point(axis.From.X, axis.From.Y, axis.From.Z)
+                p1 = Point(axis.To.X, axis.To.Y, axis.To.Z)
+                line = Line(p0, p1)
+            except Exception:
+                raise ValueError("Stick(): axis is not a valid Line-like object.")
+
+        self.axis = line
+        self.length = float(length or Stick.DEFAULT_LEN)
+        self.width = float(width or Stick.DEFAULT_SIZE)
+        self.depth = float(depth or Stick.DEFAULT_SIZE)
 
         self.parent = None
         self.children = []
-        self.family = None
+        self.family = None        # "Y", "Z", "BRIDGE"
         self.is_root = False
         self.is_bridge = False
         self.collided = False
 
-        # -----------------------------
-        # FRAME CONSTRUCTION (CRITICAL)
-        # -----------------------------
-        p0 = axis.start
-        p1 = axis.end
+        # -------------------------------------------------
+        # 2. Robust frame construction
+        # -------------------------------------------------
+        # Origin at axis MIDPOINT (better for offsets)
+        origin = line.point_at(0.5)
 
-        x = Vector.from_start_end(p0, p1)
+        # Local x-axis = axis direction
+        x = Vector.from_start_end(line.start, line.end)
         x = _safe_unit(x, Vector(1, 0, 0))
 
-        # Build y-axis from parent if available
-        if parent_frame:
-            # Project parent.y onto plane perpendicular to x
-            parent_y = parent_frame.yaxis.copy()
-            parent_y -= x * parent_y.dot(x)
-            y = _safe_unit(parent_y, Vector(0, 0, 1))
+        # We want to inherit parent orientation if present,
+        # but keep the frame orthonormal and 3D.
+        if parent_frame is not None:
+            # Use parent's y-axis, but make it perpendicular to x
+            py = parent_frame.yaxis
+            py_proj = py - x * py.dot(x)
+            y = _safe_unit(py_proj, Vector(0, 0, 1))
+
+            # z = x × y
+            z = x.cross(y)
+            z = _safe_unit(z, Vector(0, 0, 1))
         else:
-            # If no parent, use generic perpendicular to x
+            # No parent → pick any stable perpendicular basis
             trial = Vector(0, 0, 1)
             if abs(trial.dot(x)) > 0.99:
                 trial = Vector(0, 1, 0)
-            y = _safe_unit(trial.cross(x), Vector(0,1,0))
+            y = _safe_unit(trial.cross(x), Vector(0, 1, 0))
+            z = x.cross(y)
+            z = _safe_unit(z, Vector(0, 0, 1))
 
-        z = x.cross(y)
-        z = _safe_unit(z, Vector(0,0,1))
+        self.frame = Frame(origin, x, y)
+        # keep z for debugging if needed
+        self._zaxis = z
 
-        self.frame = Frame(p0, x, y)
-        self.frame._zaxis = z.copy()   # store for debugging
-
-    # --------------------------------------------------------
-    # COLLISION CHECK (bounding cylinder approximation)
-    # --------------------------------------------------------
+    # ---------------------------------------------------------
+    # Collision helper — approximate capsule/cylinder distance
+    # ---------------------------------------------------------
 
     def intersects(self, other, clearance=0.0):
-        a0 = self.axis.start
-        a1 = self.axis.end
-        b0 = other.axis.start
-        b1 = other.axis.end
+        if not isinstance(other, Stick):
+            return False
 
-        # distance between two segments
-        import compas.geometry as cg
-        d = cg.distance_line_line((a0, a1), (b0, b1))
+        # use distance between line segments
+        d = distance_line_line((self.axis.start, self.axis.end),
+                               (other.axis.start, other.axis.end))
 
-        thresh = (self.width + other.width) * 0.5 + clearance
-        return d < thresh
+        r1 = 0.5 * max(self.width, self.depth)
+        r2 = 0.5 * max(other.width, other.depth)
+        return d <= (r1 + r2 + clearance)
+
+    def __repr__(self):
+        return "Stick(len={:.3f}, w={:.3f}, d={:.3f}, fam={})".format(
+            self.length, self.width, self.depth, self.family
+        )
