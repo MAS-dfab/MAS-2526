@@ -7,10 +7,28 @@
 #
 # No world-XYZ except for degenerate fallbacks.
 
-from compas.geometry import Vector, Line
 
+# stick_fixed.py
+from compas.geometry import Point, Vector, Line, Frame
 
 EPS = 1e-9
+
+def _unit(vec, fallback):
+    v = vec.copy()
+    if v.length < EPS:
+        v = fallback.copy()
+    v.unitize()
+    return v
+
+
+class Stick:
+    DEFAULT_LEN = 250.0
+    DEFAULT_SIZE = 13.0
+
+    def __init__(self, axis, length=None, width=None, depth=None, parent_frame=None):
+        ...
+        # full Stick definition here
+
 
 
 def face_direction(parent_frame, face_index):
