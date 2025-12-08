@@ -1,4 +1,4 @@
-from compas.geometry import Line, Frame, Vector
+from compas.geometry import Line
 from compas.geometry import Rotation
 import math
 

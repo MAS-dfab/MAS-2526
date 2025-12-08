@@ -25,6 +25,7 @@ class Stick:
         self.corners = self._get_corners()
         self.aabb = self._get_aabb()
 
+
     def _axis_from_frame(self):
         """
         Private method to compute the stick's axis as a Line.
@@ -37,6 +38,7 @@ class Stick:
         axis = Line.from_point_direction_length(start_pt, direction, self.length)
         return axis
     
+
     def _get_axis_mid_frame(self):
         """
         Private method to compute the mid frame of the stick's axis.
@@ -48,7 +50,8 @@ class Stick:
         vector *= (self.length / 2)
         frame = self.frame.translated(vector)
         return frame
-    
+
+
     def eval_frame(self, face_index=0, t_value=.5):
         """
         Gets a frame on one of the four faces of a stick.
@@ -65,11 +68,14 @@ class Stick:
         angle = (face_index % 4) * (math.pi / 2)
         R = Rotation.from_axis_and_angle(base.xaxis, angle, base.point)
         new_stick_frame = base.transformed(R)
+
+        # Set frame point along stick axis
         new_stick_frame.point = self.axis.point_at(t_value)
         # Offset frame to be on surface of stick
         new_stick_frame.point += new_stick_frame.zaxis * (self.depth / 2)
         return new_stick_frame
     
+
     def _get_corners(self):
         """
         Private method to compute 8 corners of the stick.
@@ -88,12 +94,13 @@ class Stick:
                     corners.append(corner)
         return corners
     
+
     def _get_aabb(self):
         """
         Private method to compute the axis-aligned bounding box of the stick.
 
         Returns:
-            (min_point, max_point): tuple of two points defining the AABB
+            (min_point, max_point): tuple of two points defining the AABB.
         """
         corners = self.corners
         xs = [p[0] for p in corners]
@@ -101,7 +108,6 @@ class Stick:
         zs = [p[2] for p in corners]
         return [(min(xs), min(ys), min(zs)), (max(xs), max(ys), max(zs))]
     
-
 
     @property
     def geometry(self):

@@ -4,6 +4,31 @@ from J3RRY_SingleStick_v1 import Stick
 from J3RRY_Collision_v1 import Collision
 import math, random
 
+
+def run_multiround_aggregation(first_frames, length_pattern, angle_pattern,
+                               agg_type, seed, rounds=2, boundary_mesh=None, max_attempts=10
+                               ):
+    all_aggs = []
+    current_frames = list(first_frames)
+
+    for round in range(rounds):
+        next_frames = []
+        new_aggs = []
+
+        external_sticks = [s for agg in all_aggs for s in agg.sticks]
+
+        for i, frame in enumerate(current_frames):
+            agg = Aggregation(frame, length_pattern, angle_pattern, agg_type, seed + round*1000 + i)
+            new_aggs.append(agg)
+            agg.spawn_next_stick_random_in_boundary(boundary_mesh, max_attempts, seed + round*1000 + i)
+            
+            idx = random.randint(0, len(agg.sticks)-1)
+            next_frames.append(agg.sticks[idx].frame)
+        
+
+                               
+
+
 class Aggregation:
     def __init__(self, first_frame, length_pattern=[100], angle_pattern=[0], aggregation_type=0, global_seed=None):
         """
@@ -96,22 +121,28 @@ class Aggregation:
         return u
     
 
-    def _center_to_existing(self, candidate):
+    def _center_to_existing(self, candidate, external_sticks=None):
         """
-        Private method to find the smallest distance(not squared) between the center point of a candidate stick to all existing sticks, excluding the last stick(parent).
+        Private method to find the smallest squared distance between the center point of a candidate stick to all existing sticks, excluding the last stick(parent).
         
         Args:
             candidate: type Stick, candidate stick.
+            external_sticks: list of type Stick, from other Aggregations.
         
         Returns:
-            float: smallest distance(not squared) between candidate center to existing sticks, excluding the last stick(parent).
+            float: smallest squared distance between candidate center to existing sticks, excluding the last stick(parent).
         """
-        if not self.sticks:
+        all_sticks = self.sticks[:-1]
+        if external_sticks:
+            all_sticks += external_sticks
+
+        if not all_sticks:
             return float('inf')
         
         min_dist = float('inf')
         cx, cy, cz = candidate.midframe.point
-        for s in self.sticks[:-1]:
+
+        for s in all_sticks:
             px, py, pz = s.midframe.point
             dx = cx - px
             dy = cy - py
@@ -352,7 +383,7 @@ class Aggregation:
         return None
 
 
-    def spawn_next_stick_random_in_boundary(self, boundary=None, max_attempts=10, local_seed=None):
+    def spawn_next_stick_random_in_boundary(self, boundary=None, max_attempts=10, local_seed=None, external_sticks=None):
         """
         Spawns next stick based on random face index and t value with collision rejection sampling.
 
@@ -360,6 +391,7 @@ class Aggregation:
             boundary: type Rhino Mesh, to constrain sticks within boundary.
             max_attempts: Maximum number of attempts to find a non-colliding position.
             local_seed: Seed for random generator (overrides global seed if provided).
+            external_sticks: list of type Stick, from other Aggregations.
 
         Records:
             - collision_log: pure metadata
@@ -383,7 +415,7 @@ class Aggregation:
         params_to_t = []
 
         # Initial boundary check for the first stick
-        if boundary is not None and len(self.sticks) ==1:
+        if boundary is not None and len(self.sticks) == 1:
             if not self.is_stick_in_mesh(self.sticks[0], boundary):
                 raise ValueError("The first stick is outside the boundary mesh.")
 
@@ -442,15 +474,18 @@ class Aggregation:
                 if Collision(new_stick, other).check_collision():
                     collision_found = True
                     break
-                    
+            ### ------- Check against multiple aggregations' sticks if provided
+            if (not collision_found) and external_sticks:
+                for other in external_sticks:
+                    if Collision(new_stick, other).check_collision():
+                        collision_found = True
+                        break
+            
             if collision_found:
                 failed_candidates.append(new_stick)
             else:
                 valid_candidates.append(new_stick)
-                valid_scores.append(self._center_to_existing(new_stick))
-        self.failed_sticks.append(failed_candidates)
-        self.valid_sticks.append(valid_candidates)
-        self.scores.append(valid_scores)
+                valid_scores.append(self._center_to_existing(new_stick, external_sticks))
 
         # Select best candidate based on score
         if not valid_candidates:
@@ -459,6 +494,9 @@ class Aggregation:
         best_candidate = valid_candidates[best_idx]
 
         # SUCCESS: append and return
+        self.failed_sticks.append(failed_candidates)
+        self.valid_sticks.append(valid_candidates)
+        self.scores.append(valid_scores)
         self.sticks.append(best_candidate)
         self.axes.append(best_candidate.axis)
         self.frames.append(best_candidate.frame)
