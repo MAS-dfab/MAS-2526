@@ -33,7 +33,7 @@ from bridge import BridgingModule
 EPS = 1e-9
 
 
-class RootFrames:
+class RootFrames(object):
 
     def __init__(
         self,
@@ -127,7 +127,7 @@ class RootFrames:
         if is_curve and not is_surface:
             self._rg_curve = crv
 
-            # Rhino Domain can be property or method
+            # Rhino Domain can be property or method depending on version
             try:
                 dom = crv.Domain
                 t0, t1 = dom.Min, dom.Max
@@ -157,11 +157,13 @@ class RootFrames:
                 pts.append(p)
                 self._uv_params.append((u, v))
 
-            # optional stabilisation
+            # optional stabilisation: sort by Z
             pts.sort(key=lambda p: p.Z)
 
         else:
-            raise RuntimeError("RootFrames.sample_points: input must be Curve or Surface/Brep.")
+            raise RuntimeError(
+                "RootFrames.sample_points: input must be Curve or Surface/Brep."
+            )
 
         # convert to COMPAS Points
         self.points = [Point(p.X, p.Y, p.Z) for p in pts]
@@ -179,7 +181,6 @@ class RootFrames:
             - Surface mode
             - Fallback global frame
         """
-
         frames = []
 
         # -------------------------------------------------
@@ -189,7 +190,6 @@ class RootFrames:
             crv = self._rg_curve
 
             for pt, t in zip(self.points, self._curve_t):
-
                 ok, plane = crv.FrameAt(t)
 
                 if ok:
@@ -219,26 +219,34 @@ class RootFrames:
 
             for pt, (u, v) in zip(self.points, self._uv_params):
 
-                # 1. Surface normal
+                # 1. Surface normal from BrepFace
                 nrm = face.NormalAt(u, v)
                 z = Vector(nrm.X, nrm.Y, nrm.Z)
                 if z.length < EPS:
                     z = Vector(0, 0, 1)
                 z.unitize()
 
-                # 2. Tangent in U direction (main direction)
+                # 2. Tangent directions from underlying surface
                 try:
-                    du = srf.TangentAt(u, v)
-                    x = Vector(du.X, du.Y, du.Z)
+                    ev = srf.Evaluate(u, v, 1)  # (pt, du, dv, ...)
+                    du = ev[1]
+                    dv = ev[2]
                 except Exception:
-                    x = Vector(1, 0, 0)
+                    du = rg.Vector3d(1, 0, 0)
+                    dv = rg.Vector3d(0, 1, 0)
 
-                # orthogonalize if tangent almost parallel to normal
-                if x.length < EPS or abs(x.dot(z)) > 0.99:
+                tu = Vector(du.X, du.Y, du.Z)
+                tv = Vector(dv.X, dv.Y, dv.Z)
+
+                # pick stronger tangent for x
+                x = tu if tu.length >= tv.length else tv
+
+                # orthogonalize x vs z
+                x = x - z * x.dot(z)
+                if x.length < EPS:
                     x = Vector(1, 0, 0).cross(z)
                     if x.length < EPS:
                         x = Vector(0, 1, 0).cross(z)
-
                 x.unitize()
 
                 # 3. y = z × x
@@ -310,7 +318,7 @@ class RootFrames:
             v.unitize()
 
             # use local surface normal as z-axis
-            z = f0.zaxis.copy()
+            z = f0.zaxis
             if z.length < EPS:
                 z = Vector(0, 0, 1)
 
@@ -359,9 +367,16 @@ class RootFrames:
     # 4. BRANCHING (with optional collision-safe growth)
     # ----------------------------------------------------------------------
 
-    def grow_branching(self, steps, stick_angle, offset01,
-                       face_rule=None, angle_rule=None,
-                       collision_safe=False, collision_clearance=0.0):
+    def grow_branching(
+        self,
+        steps,
+        stick_angle,
+        offset01,
+        face_rule=None,
+        angle_rule=None,
+        collision_safe=False,
+        collision_clearance=0.0,
+    ):
 
         self.root_sticks = []
         self.branch_sticks = []
@@ -377,7 +392,7 @@ class RootFrames:
                 length=self.stick_length,
                 width=self.stick_width,
                 depth=self.stick_depth,
-                parent_frame=f
+                parent_frame=f,
             )
             s.is_root = True
             self.root_sticks.append(s)
@@ -394,7 +409,7 @@ class RootFrames:
                 width=self.stick_width,
                 depth=self.stick_depth,
                 offset01=offset01,
-                collision_clearance=collision_clearance
+                collision_clearance=collision_clearance,
             )
 
             for k in range(int(steps)):
@@ -405,7 +420,7 @@ class RootFrames:
                     face_index=fi,
                     stick_angle=ang,
                     existing_sticks=all_sticks,
-                    collision_safe=collision_safe
+                    collision_safe=collision_safe,
                 )
 
                 if child is not None:
