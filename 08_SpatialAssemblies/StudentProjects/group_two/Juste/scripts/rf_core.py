@@ -121,51 +121,97 @@ class RootFrames:
         is_curve = isinstance(crv, rg.Curve)
         is_surface = face is not None
 
-        # ------------------------
-        # CURVE MODE
-        # ------------------------
-        if is_curve and not is_surface:
-            self._rg_curve = crv
+def frames_from_geometry(self):
+    """
+    Build local COMPAS Frames at each sampled point.
+    Handles:
+        - Curve mode
+        - Surface mode
+        - Fallback global frame
+    """
 
-            # RhinoCode / RhinoCommon differences: Domain can be property or method
+    frames = []     # <-- FIXED: ensure frames list exists
+    EPS = 1e-9
+
+    # -------------------------------------------------
+    # CURVE MODE
+    # -------------------------------------------------
+    if self._rg_curve and self._curve_t:
+        crv = self._rg_curve
+
+        for pt, t in zip(self.points, self._curve_t):
+
+            ok, plane = crv.FrameAt(t)
+
+            if ok:
+                x = Vector(plane.XAxis.X, plane.XAxis.Y, plane.XAxis.Z)
+                y = Vector(plane.YAxis.X, plane.YAxis.Y, plane.YAxis.Z)
+            else:
+                # fallback tangent only
+                tan = crv.TangentAt(t)
+                x = Vector(tan.X, tan.Y, tan.Z)
+                y = Vector(0, 0, 1).cross(x)
+
+            # normalize
+            if x.length < EPS:
+                x = Vector(1, 0, 0)
+            x.unitize()
+
+            if y.length < EPS:
+                y = Vector(0, 1, 0)
+            y.unitize()
+
+            frames.append(Frame(pt, x, y))
+
+    # -------------------------------------------------
+    # SURFACE MODE
+    # -------------------------------------------------
+    elif self._rg_face and self._uv_params:
+        face = self._rg_face
+        srf  = face.UnderlyingSurface()
+
+        for pt, (u, v) in zip(self.points, self._uv_params):
+
+            # 1. Surface normal
+            nrm = face.NormalAt(u, v)
+            z = Vector(nrm.X, nrm.Y, nrm.Z)
+            if z.length < EPS:
+                z = Vector(0, 0, 1)
+            z.unitize()
+
+            # 2. Tangent in U direction (main direction)
             try:
-                dom = crv.Domain
-                t0, t1 = dom.Min, dom.Max
-            except Exception:
-                dom = crv.Domain()
-                t0, t1 = dom.Min, dom.Max
+                du = srf.TangentAt(u, v)
+                x = Vector(du.X, du.Y, du.Z)
+            except:
+                x = Vector(1, 0, 0)
 
-            for _ in range(max(1, self.point_density)):
-                t = random.uniform(t0, t1)
-                p = crv.PointAt(t)
-                pts.append(p)
-                self._curve_t.append(t)
+            # orthogonalize if tangent almost parallel to normal
+            if x.length < EPS or abs(x.dot(z)) > 0.99:
+                x = Vector(1, 0, 0).cross(z)
+                if x.length < EPS:
+                    x = Vector(0, 1, 0).cross(z)
 
-        # ------------------------
-        # SURFACE MODE
-        # ------------------------
-        elif is_surface:
-            self._rg_face = face
+            x.unitize()
 
-            udom = face.Domain(0)
-            vdom = face.Domain(1)
+            # 3. y = z × x
+            y = z.cross(x)
+            if y.length < EPS:
+                y = Vector(0, 1, 0)
+            y.unitize()
 
-            for _ in range(max(1, self.point_density)):
-                u = random.uniform(udom.Min, udom.Max)
-                v = random.uniform(vdom.Min, vdom.Max)
-                p = face.PointAt(u, v)
-                pts.append(p)
-                self._uv_params.append((u, v))
+            frames.append(Frame(pt, x, y))
 
-            # stabilise vertically (optional)
-            pts.sort(key=lambda p: p.Z)
+    # -------------------------------------------------
+    # FALLBACK MODE
+    # -------------------------------------------------
+    else:
+        for pt in self.points:
+            frames.append(Frame(pt, Vector(1, 0, 0), Vector(0, 1, 0)))
 
-        else:
-            raise RuntimeError("RootFrames.sample_points: input must be Curve or Surface/Brep.")
+    self.frames = frames
+    return frames
 
-        # convert to COMPAS Points
-        self.points = [Point(p.X, p.Y, p.Z) for p in pts]
-        return self.points
 
     # ----------------------------------------------------------------------
     # 2. FRAME GENERATION (FIXED: true surface normal, orthonormal basis)
