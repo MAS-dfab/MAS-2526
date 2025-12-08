@@ -3,7 +3,7 @@
 #
 # Pipeline:
 #   1. Sample points on curve / surface
-#   2. Build local COMPAS Frames from Rhino frames
+#   2. Build COMPAS Frames from Rhino geometry
 #   3. Build nearest-neighbour edge-frames
 #   4. Grow branching L-system
 #   5. Grow bridging (optional)
@@ -30,6 +30,9 @@ from branch import BranchingModule
 from bridge import BridgingModule
 
 
+EPS = 1e-9
+
+
 class RootFrames:
 
     def __init__(
@@ -41,8 +44,8 @@ class RootFrames:
         stick_width=None,
         stick_depth=None,
     ):
-        # geometry inputs
-        self.surface_input = surface    # BrepFace or Surface (from GH script)
+        # geometry inputs (from GH wrapper)
+        self.surface_input = surface    # Brep / BrepFace / Surface
         self.curve_input = curve        # Curve (optional)
 
         # sampling
@@ -81,6 +84,29 @@ class RootFrames:
     # 1. POINT SAMPLING
     # ----------------------------------------------------------------------
 
+    def _normalize_surface_input(self):
+        """Turn whatever we got (Brep / Face / Surface) into a BrepFace."""
+        surf = self.surface_input
+        if surf is None:
+            return None
+
+        if isinstance(surf, rg.BrepFace):
+            return surf
+
+        if isinstance(surf, rg.Brep):
+            if surf.Faces.Count > 0:
+                return surf.Faces[0]
+            return None
+
+        if isinstance(surf, rg.Surface):
+            brep = surf.ToBrep()
+            if brep and brep.Faces.Count > 0:
+                return brep.Faces[0]
+            return None
+
+        # unsupported
+        return None
+
     def sample_points(self):
         pts = []
         self._curve_t = []
@@ -88,38 +114,20 @@ class RootFrames:
         self._rg_curve = None
         self._rg_face = None
 
-        # --- Type normalization for surfaces ---
-        surf = self.surface_input
+        # NORMALIZE input types
+        face = self._normalize_surface_input()
         crv = self.curve_input
 
         is_curve = isinstance(crv, rg.Curve)
-        is_surface = False
-
-        face = None
-        if surf is not None:
-            # GH usually sends Brep; we want a BrepFace.
-            if isinstance(surf, rg.Brep):
-                if surf.Faces.Count > 0:
-                    face = surf.Faces[0]
-                    is_surface = True
-            elif isinstance(surf, rg.BrepFace):
-                face = surf
-                is_surface = True
-            elif isinstance(surf, rg.Surface):
-                brep = surf.ToBrep()
-                if brep.Faces.Count > 0:
-                    face = brep.Faces[0]
-                    is_surface = True
+        is_surface = face is not None
 
         # ------------------------
         # CURVE MODE
         # ------------------------
         if is_curve and not is_surface:
-            crv = crv
             self._rg_curve = crv
 
-            # Rhino 7/8 / RhinoCode differences:
-            # Domain may be a property or a method. Try both.
+            # RhinoCode / RhinoCommon differences: Domain can be property or method
             try:
                 dom = crv.Domain
                 t0, t1 = dom.Min, dom.Max
@@ -149,23 +157,26 @@ class RootFrames:
                 pts.append(p)
                 self._uv_params.append((u, v))
 
-            # stabilise
+            # stabilise vertically (optional)
             pts.sort(key=lambda p: p.Z)
 
         else:
             raise RuntimeError("RootFrames.sample_points: input must be Curve or Surface/Brep.")
 
+        # convert to COMPAS Points
         self.points = [Point(p.X, p.Y, p.Z) for p in pts]
         return self.points
 
     # ----------------------------------------------------------------------
-    # 2. FRAME GENERATION
+    # 2. FRAME GENERATION (FIXED: true surface normal, orthonormal basis)
     # ----------------------------------------------------------------------
 
     def frames_from_geometry(self):
         frames = []
 
+        # ------------------------
         # CURVE MODE
+        # ------------------------
         if self._rg_curve and self._curve_t:
             crv = self._rg_curve
 
@@ -180,39 +191,50 @@ class RootFrames:
                     x = Vector(tan.X, tan.Y, tan.Z)
                     y = Vector(0, 0, 1).cross(x)
 
-                if x.length < 1e-6:
+                if x.length < EPS:
                     x = Vector(1, 0, 0)
-                if y.length < 1e-6:
+                if y.length < EPS:
                     y = Vector(0, 1, 0)
 
                 x.unitize()
                 y.unitize()
                 frames.append(Frame(pt, x, y))
 
-        # SURFACE MODE
+        # ------------------------
+        # SURFACE MODE (main path you're using)
+        # ------------------------
         elif self._rg_face and self._uv_params:
             face = self._rg_face
 
             for pt, (u, v) in zip(self.points, self._uv_params):
-                ok, plane = face.FrameAt(u, v)
+                # True surface normal
+                n = face.NormalAt(u, v)
+                z = Vector(n.X, n.Y, n.Z)
+                if z.length < EPS:
+                    z = Vector(0, 0, 1)
+                z.unitize()
 
-                if ok:
-                    x = Vector(plane.XAxis.X, plane.XAxis.Y, plane.XAxis.Z)
-                    y = Vector(plane.YAxis.X, plane.YAxis.Y, plane.YAxis.Z)
-                else:
-                    x = Vector(1, 0, 0)
-                    y = Vector(0, 1, 0)
-
-                if x.length < 1e-6:
-                    x = Vector(1, 0, 0)
-                if y.length < 1e-6:
-                    y = Vector(0, 1, 0)
-
+                # Tangent in U-direction
+                tu = face.TangentAt(u, v)
+                x = Vector(tu.X, tu.Y, tu.Z)
+                if x.length < EPS or abs(x.dot(z)) > 0.99:
+                    # fallback: any stable perpendicular to z
+                    x = Vector(1, 0, 0).cross(z)
+                    if x.length < EPS:
+                        x = Vector(0, 1, 0).cross(z)
                 x.unitize()
+
+                # y = z × x
+                y = z.cross(x)
+                if y.length < EPS:
+                    y = Vector(0, 1, 0)
                 y.unitize()
+
                 frames.append(Frame(pt, x, y))
 
+        # ------------------------
         # FALLBACK
+        # ------------------------
         else:
             for pt in self.points:
                 frames.append(Frame(pt, Vector(1, 0, 0), Vector(0, 1, 0)))
@@ -238,6 +260,7 @@ class RootFrames:
 
         edges = set()
 
+        # simple NN search
         for i in range(n):
             pi = pts[i]
             best = 1e9
@@ -265,14 +288,21 @@ class RootFrames:
             p1 = self.frames[j].point
 
             v = Vector.from_start_end(p0, p1)
-            if v.length < 1e-6:
+            if v.length < EPS:
                 continue
             v.unitize()
 
-            surf_normal = f0.zaxis.copy()
-            y = surf_normal.cross(v)
-            if y.length < 1e-6:
-                y = surf_normal.cross(Vector(1, 0, 0))
+            # use local surface normal as z-axis
+            z = f0.zaxis.copy()
+            if z.length < EPS:
+                z = Vector(0, 0, 1)
+
+            y = z.cross(v)
+            if y.length < EPS:
+                # fallback if v almost parallel to z
+                y = z.cross(Vector(1, 0, 0))
+                if y.length < EPS:
+                    y = z.cross(Vector(0, 1, 0))
             y.unitize()
 
             eframes.append(Frame(p0, v, y))
@@ -281,6 +311,7 @@ class RootFrames:
         self.edge_frames = eframes
         self.edge_vectors = evectors
 
+        # debug: root frames + axes
         self.root_frames_debug = list(eframes)
         self.root_axes_debug = [
             Line(f.point, f.point + v * self.stick_length)
