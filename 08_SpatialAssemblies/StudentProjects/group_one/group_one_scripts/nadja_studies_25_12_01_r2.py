@@ -6,10 +6,11 @@ import math
 
 class ModuleConnection:
     
-    def __init__(self, stick_module, root_frame, stick_angle):
+    def __init__(self, stick_module, root_frame, stick_angle, stick_angles_z):
         self.stick_module = stick_module
         self.root_frame = root_frame
         self.stick_angle = stick_angle
+        self.stick_angles_z = stick_angles_z
         self.modules = [stick_module]
         self.angles = []
         self.module_frames = [root_frame]
@@ -46,33 +47,35 @@ class ModuleConnection:
             Newly created module
         """
         # connection type 1: grow module from stick3 face 0 of old module to stick1 face 0 of new module
-        from_face_index = 0  # always grow from face 0
-        from_stick = "stick1"  # always grow from stick3
-        face_frame_to_connect = self.get_face_frame(from_module_index, from_face_index, stick="stick3") # get the frame from base module
-        face_frame_to_grow_from = self.get_face_frame(0, 0, from_stick) # get the frame from module index to grow from
-        face_frame_to_connect.point -= face_frame_to_connect.xaxis * (25) 
+        face_frame_to_connect = self.get_face_frame(from_module_index, 0, stick="stick3") # get the frame from base module
+        face_frame_to_grow_from = self.get_face_frame(from_module_index, 0, stick="stick1") # get the frame from module index to grow from
         
-        # calculate angle between normals of the two frames
+        # offset the connect frame along stick axis to avoid intersection 
+        if self.stick_angle[from_module_index] < 0:
+            face_frame_to_connect.point += face_frame_to_connect.xaxis * 25
+        else:
+            face_frame_to_connect.point -= face_frame_to_connect.xaxis * 25
+        
+        # calculate angle between normals of the two frames 
         angle = face_frame_to_connect.zaxis.angle_signed(face_frame_to_grow_from.zaxis, face_frame_to_connect.yaxis)
-        dot = face_frame_to_connect.zaxis.dot(face_frame_to_grow_from.zaxis)
         rotation_angle = (math.pi - angle)        
       
         # translation vector of the base_frame 
         v1 = Vector.from_start_end(self.module_frames[from_module_index].point, face_frame_to_connect.point)
         v2 = Vector.from_start_end(self.module_frames[from_module_index].point, face_frame_to_grow_from.point)
         translation_vector = v1 - v2
-        new_frame = self.root_frame.translated(translation_vector)
+        new_frame = self.module_frames[from_module_index].translated(translation_vector)
         
         # rotate the frame to grow from to align with the connect frame
         R = Rotation.from_axis_and_angle(face_frame_to_connect.yaxis, angle=rotation_angle, point=face_frame_to_connect.point)
         rotated_new_plane = new_frame.transformed(R)
         
         # add rotation along x axis to create twist
-        R_twist = Rotation.from_axis_and_angle(face_frame_to_connect.zaxis, angle=math.radians(0), point=face_frame_to_connect.point)
+        R_twist = Rotation.from_axis_and_angle(face_frame_to_connect.zaxis, angle=math.radians(self.stick_angles_z[from_module_index]), point=face_frame_to_connect.point)
         twisted_new_plane = rotated_new_plane.transformed(R_twist)
         
         # create new module at the new frame
-        module = StickModuleA(twisted_new_plane, angle=self.stick_angle[from_module_index])
+        module = StickModuleA(twisted_new_plane, angle=self.stick_angle[from_module_index+1])
         new_module = module.create_module()
         modules = [module.sticks[stick] for stick in new_module]
         
@@ -83,28 +86,4 @@ class ModuleConnection:
 
         return modules
         
-        
-        
-        
-        
-        
-    
-   
-        
-    # def get_faces_indexes(self, module_index, stick="stick1"):
-        """
-        Gets all face indexes of a chosen stick within a module.
-        Args:
-            module_index: Index of the stick
-            stick: Stick object within the module
-        Returns:
-            List of face indexes as center points of the frames
-        """        
-        face_indexes = []
-        for i in range(4):
-            face_frame = self.get_face_frame(module_index, i, stick)
-            face_indexes.append((face_frame.point))
-        
-        return face_indexes
-
         

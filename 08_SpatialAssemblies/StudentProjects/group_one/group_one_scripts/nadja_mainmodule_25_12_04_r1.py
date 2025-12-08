@@ -60,21 +60,13 @@ class StickModuleA:
         
         # Stick one
         line1 = Line.from_point_and_vector(base_frame.point, base_frame.zaxis * self.length)
-        # new_line1 = line1.transformed(self.transformation) if self.transformation else line1
         stick1 = Stick(line1, base_frame)
-        
-        # new_box1 = stick1.geometry.transformed(self.transformation)
-        # new_point = new_box1.frame.point - (new_box1.frame.xaxis * (self.length / 2))
-        # new_line2 = Line.from_point_and_vector(new_point, new_box1.frame.xaxis * self.length) 
-        # stick1 = Stick(new_line2, base_frame)
-        
         self.sticks["stick1"] = stick1
         
         # Stick two
         offset_stick_two = base_frame.yaxis * Stick.WIDTH
         base_point = line1.midpoint - (base_frame.xaxis * (self.length / 2)) - offset_stick_two
         line2 = Line.from_point_and_vector(base_point, base_frame.xaxis * self.length)
-        # new_line2 = line2.transformed(self.transformation) if self.transformation else line2
         stick2 = Stick(line2, base_frame)
         self.sticks["stick2"] = stick2
         
@@ -83,7 +75,6 @@ class StickModuleA:
         line_3 = line2.rotated(math.radians(self.angle), base_frame.zaxis, line1.midpoint)    
         line_3.translate(offset_stick_three)
         line_3.translate(-base_frame.yaxis * (Stick.WIDTH / 2))
-        # new_line3 = line_3.transformed(self.transformation) if self.transformation else line_3
         stick3 = Stick(line_3, base_frame)
         self.sticks["stick3"] = stick3
         
