@@ -68,18 +68,23 @@ class RootFrames:
     # ----------------------------------------------------------------------
 
     def sample_points(self):
+        """Sample points on curve or surface input."""
+
         pts = []
         self._uv_params = []
         self._curve_t = []
         self._rg_face = None
         self._rg_curve = None
 
-        # CURVE MODE -----------------------------------------
-        if self.curve_input and not self.surface_input:
+        # ------------------------
+        # CURVE MODE
+        # ------------------------
+        if self.curve_input is not None and self.surface_input is None:
             crv = self.curve_input
             self._rg_curve = crv
 
-            dom = crv.Domain
+            # FIXED: must call Domain()
+            dom = crv.Domain()
             t0, t1 = dom.T0, dom.T1
 
             for _ in range(max(1, self.point_density)):
@@ -88,7 +93,9 @@ class RootFrames:
                 pts.append(p)
                 self._curve_t.append(t)
 
-        # SURFACE MODE ---------------------------------------
+        # ------------------------
+        # SURFACE MODE
+        # ------------------------
         else:
             surf = self.surface_input
             brep = surf.ToBrep()
@@ -105,12 +112,12 @@ class RootFrames:
                 pts.append(p)
                 self._uv_params.append((u, v))
 
-            # optional meaningful ordering
             pts.sort(key=lambda p: p.Z)
 
         # convert to COMPAS Points
         self.points = [Point(p.X, p.Y, p.Z) for p in pts]
         return self.points
+
 
     # ----------------------------------------------------------------------
     # 2. FRAME GENERATION
