@@ -3,7 +3,7 @@
 # Uses COMPAS geometry + stick_fixed + branch + bridge modules
 
 import random
-import Rhino.Geometry as rg
+import Rhino.Geometry as rg # type: ignore
 from compas.geometry import Point, Vector, Line, Frame
 
 # IMPORTANT: Stick must be imported FIRST to avoid GH namespace collision
