@@ -1,18 +1,19 @@
 # stick_fixed.py
 # Robust Stick class for RootFrames workflow.
-# Each stick stores:
+# Stores:
 #   - axis   : COMPAS Line
 #   - frame  : COMPAS Frame (orthonormal)
-#   - width/depth/length: dimensions for GH geometry
-# No COMPAS Box here; GH builds geometry from the frame.
+#   - length / width / depth
+# No geometry here; GH builds Breps from frame + dimensions.
 
 from compas.geometry import Point, Vector, Line, Frame
 
 
-def _safe_unit(v, fallback):
+def _safe_unit(vec, fallback):
+    """Return a unit copy of vec, or a unit copy of fallback if degenerate."""
+    v = vec.copy()
     if v.length < 1e-9:
-        return fallback.copy()
-    v = v.copy()
+        v = fallback.copy()
     v.unitize()
     return v
 
@@ -24,21 +25,22 @@ class Stick:
     def __init__(self, axis, length=None, width=None, depth=None, parent_frame=None):
         """
         axis : COMPAS Line or RhinoCommon Line-like.
-        parent_frame : COMPAS Frame providing orientation.
+        parent_frame : optional COMPAS Frame for orientation inheritance.
         """
 
         # ---------------------------------------------------------
-        # 1. SANITIZE AXIS → ALWAYS A COMPAS Line
+        # 1. AXIS → COMPAS Line
         # ---------------------------------------------------------
         if isinstance(axis, Line):
             line = axis
         else:
+            # Try RhinoCommon-style .From / .To
             try:
                 p0 = Point(axis.From.X, axis.From.Y, axis.From.Z)
                 p1 = Point(axis.To.X, axis.To.Y, axis.To.Z)
                 line = Line(p0, p1)
             except Exception:
-                raise ValueError("Stick(): axis argument could not be interpreted as a Line.")
+                raise ValueError("Stick(): axis is not a valid Line-like object.")
 
         self.axis = line
         self.length = float(length or Stick.DEFAULT_LEN)
@@ -46,44 +48,42 @@ class Stick:
         self.depth = float(depth or Stick.DEFAULT_SIZE)
 
         # ---------------------------------------------------------
-        # 2. BUILD LOCAL FRAME
+        # 2. LOCAL FRAME
         # ---------------------------------------------------------
         origin = line.point_at(0.5)
         xaxis = Vector.from_start_end(line.start, line.end)
         xaxis = _safe_unit(xaxis, Vector(1, 0, 0))
 
         if parent_frame is not None:
-            # Inherit orientation, override X with axis direction.
-            pf_x = parent_frame.xaxis
+            # Inherit parent orientation; project its y-axis into plane ⟂ xaxis
             pf_y = parent_frame.yaxis
-            pf_z = parent_frame.zaxis
-
-            # Maintain right-handedness around axis
-            # Compute y as projection of parent y onto plane ⟂ xaxis
             yproj = pf_y - (pf_y.dot(xaxis)) * xaxis
             yaxis = _safe_unit(yproj, Vector(0, 1, 0))
-            zaxis = xaxis.cross(yaxis)
-            zaxis = _safe_unit(zaxis, Vector(0, 0, 1))
             self.frame = Frame(origin, xaxis, yaxis)
-
         else:
-            # Independent stick — build clean frame
-            # Try using world-up only if safe
+            # Free-standing stick
             world_up = Vector(0, 0, 1)
             yaxis = world_up.cross(xaxis)
             yaxis = _safe_unit(yaxis, Vector(0, 1, 0))
-
             self.frame = Frame(origin, xaxis, yaxis)
 
+        # ---------------------------------------------------------
+        # 3. BOOKKEEPING / TAGS (for colors & debugging)
+        # ---------------------------------------------------------
         self.children = []
         self.parent_frame = self.frame
 
+        self.is_root = False      # True for root sticks
+        self.family = None        # "Y", "Z", "BRIDGE" or None
+        self.is_bridge = False
+        self.collided = False     # set in RootFrames.detect_collisions
+
     # ---------------------------------------------------------
-    # COLLISION HELPERS
+    # COLLISION HELPER
     # ---------------------------------------------------------
 
     def intersects(self, other, clearance=0.0):
-        """Capsule-like collision based on distance between axes."""
+        """Cheap capsule-like collision: distance between axes vs radii."""
         if not isinstance(other, Stick):
             return False
 
@@ -99,6 +99,6 @@ class Stick:
         return d <= R
 
     def __repr__(self):
-        return "Stick(len={:.1f}, w={:.1f}, d={:.1f})".format(
-            self.length, self.width, self.depth
+        return "Stick(len={:.1f}, w={:.1f}, d={:.1f}, fam={})".format(
+            self.length, self.width, self.depth, self.family
         )
