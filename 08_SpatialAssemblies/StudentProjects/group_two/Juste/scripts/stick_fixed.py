@@ -7,8 +7,8 @@ from compas.geometry import Point, Vector, Line, Frame
 
 
 class Stick:
-    DEFAULT_LEN = 1.0
-    DEFAULT_SIZE = 0.05
+    DEFAULT_LEN = 250.0
+    DEFAULT_SIZE = 13.0
 
     def __init__(self, axis, length=None, width=None, depth=None, parent_frame=None):
         """
