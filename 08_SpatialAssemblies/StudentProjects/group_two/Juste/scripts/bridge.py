@@ -1,101 +1,125 @@
 # bridge.py
-# r: compas>=2.14.1
+# Bridging module: connects non-coplanar sticks between Y and Z families.
 
-import math
-from compas.geometry import Line, Vector
+from compas.geometry import Line, Vector, Frame
 
 from stick_fixed import Stick
 
 
-class BridgingModule:
+class BridgingModule(object):
     """
-    Bridging module:
+    Build bridging sticks between existing branch sticks.
 
-    - Takes an existing list of branch sticks.
-    - Looks for pairs that are close enough and not nearly parallel.
-    - Builds bridge sticks between their midpoints.
-
-    Density-awareness:
-        Because we only bridge when sticks are within `max_distance`,
-        bridges naturally appear in denser regions of the field.
+    Rules:
+      - Only between sticks with generation <= max_generation.
+      - Only if their axes are non-coplanar:
+            abs(dot(x1, x2)) < angle_dot_max
+      - Only if minimum distance between axes < distance_threshold.
+      - Only if they belong to DIFFERENT families:
+            s1.family != s2.family  and each in {'Y', 'Z'}.
     """
 
     def __init__(
         self,
         stick_list,
-        stick_length=None,
-        width=None,
-        depth=None,
-        max_distance=None,
-        min_angle_deg=15.0,
+        stick_length,
+        width,
+        depth,
+        max_generation=3,
+        angle_dot_max=0.75,
+        distance_threshold=1000.0,
     ):
-        self.sticks = stick_list
-        self.stick_length = stick_length or Stick.DEFAULT_LEN
-        self.width = width or Stick.DEFAULT_SIZE
-        self.depth = depth or Stick.DEFAULT_SIZE
-        self.max_distance = float(max_distance) if max_distance is not None else None
-        self.min_angle_rad = math.radians(float(min_angle_deg))
+        self.stick_list = stick_list
+        self.stick_length = float(stick_length)
+        self.width = float(width)
+        self.depth = float(depth)
+        self.max_generation = int(max_generation)
+        self.angle_dot_max = float(angle_dot_max)
+        self.distance_threshold = float(distance_threshold)
 
-    # ------------------------------------------------------------------ #
-    # internal: tests & construction                                     #
-    # ------------------------------------------------------------------ #
-
-    def _can_bridge(self, sa, sb):
-        """Test if two sticks are eligible for bridging."""
-        # 1) distance between midpoints
-        pa = sa.axis.point_at(0.5)
-        pb = sb.axis.point_at(0.5)
-        d = pa.distance_to_point(pb)
-
-        if self.max_distance is not None and d > self.max_distance:
-            return False
-
-        # 2) not already intersecting / too close
-        if sa.intersects(sb, clearance=0.0):
-            return False
-
-        # 3) ensure they are not nearly parallel
-        xa = sa.frame.xaxis.unitized()
-        xb = sb.frame.xaxis.unitized()
-        angle = xa.angle(xb)
-        if angle < self.min_angle_rad:
-            return False
-
-        return True
-
-    def _build_bridge(self, sa, sb):
-        """Construct a single bridge stick between midpoints of sa, sb."""
-        pa = sa.axis.point_at(0.5)
-        pb = sb.axis.point_at(0.5)
-
-        axis = Line(pa, pb)
-
-        # orient bridge using first parent's frame as base
-        child = Stick(
-            axis,
-            length=self.stick_length,
-            width=self.width,
-            depth=self.depth,
-            parent_frame=sa.frame,
-        )
-        return child
-
-    # ------------------------------------------------------------------ #
-    # public: build all bridges                                          #
-    # ------------------------------------------------------------------ #
+        # optional debug
+        self.debug_pairs_accepted = []
+        self.debug_pairs_rejected = []
 
     def build(self):
         bridges = []
-        n = len(self.sticks)
+        n = len(self.stick_list)
 
         for i in range(n):
-            sa = self.sticks[i]
-            for j in range(i + 1, n):
-                sb = self.sticks[j]
+            s1 = self.stick_list[i]
+            if s1.generation > self.max_generation:
+                continue
 
-                if not self._can_bridge(sa, sb):
+            for j in range(i + 1, n):
+                s2 = self.stick_list[j]
+                if s2.generation > self.max_generation:
                     continue
 
-                bridges.append(self._build_bridge(sa, sb))
+                # families must exist and be different (Y <-> Z)
+                if s1.family not in ("Y", "Z") or s2.family not in ("Y", "Z"):
+                    self.debug_pairs_rejected.append((i, j, "no_family"))
+                    continue
+                if s1.family == s2.family:
+                    self.debug_pairs_rejected.append((i, j, "same_family"))
+                    continue
+
+                # angle between axes (non-coplanar check)
+                dot = abs(s1.frame.xaxis.dot(s2.frame.xaxis))
+                if dot >= self.angle_dot_max:
+                    self.debug_pairs_rejected.append((i, j, "coplanar"))
+                    continue
+
+                # distance between axes
+                try:
+                    d = s1.axis.distance_to_line(s2.axis)
+                except Exception:
+                    self.debug_pairs_rejected.append((i, j, "distance_fail"))
+                    continue
+
+                if d > self.distance_threshold:
+                    self.debug_pairs_rejected.append((i, j, "too_far"))
+                    continue
+
+                # build bridge axis between midpoints
+                p1 = s1.axis.point_at(0.5)
+                p2 = s2.axis.point_at(0.5)
+                axis = Line(p1, p2)
+
+                # direction along connection vector
+                xdir = Vector.from_start_end(p1, p2)
+                if xdir.length < 1e-6:
+                    self.debug_pairs_rejected.append((i, j, "degenerate_dir"))
+                    continue
+                xdir.unitize()
+
+                # frame: xdir, y as stable perp, z = x × y
+                up_hint = s1.frame.yaxis
+                if abs(up_hint.dot(xdir)) > 0.9:
+                    up_hint = s1.frame.zaxis
+                zaxis = xdir.cross(up_hint)
+                if zaxis.length < 1e-6:
+                    zaxis = Vector(0, 0, 1)
+                zaxis.unitize()
+                yaxis = zaxis.cross(xdir)
+                if yaxis.length < 1e-6:
+                    yaxis = Vector(0, 1, 0)
+                yaxis.unitize()
+
+                mid = axis.point_at(0.5)
+                frame = Frame(mid, xdir, yaxis)
+
+                bridge = Stick(
+                    axis,
+                    length=self.stick_length,
+                    width=self.width,
+                    depth=self.depth,
+                    parent_frame=frame,
+                    generation=max(s1.generation, s2.generation) + 1,
+                    kind="bridge",
+                    family=None,  # bridge is cross-family connector
+                )
+
+                bridges.append(bridge)
+                self.debug_pairs_accepted.append((i, j))
 
         return bridges
