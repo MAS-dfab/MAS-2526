@@ -11,6 +11,8 @@ class ModuleConnection:
         self.root_frame = root_frame
         self.stick_angle = stick_angle
         self.modules = [stick_module]
+        self.angles = []
+        self.module_frames = [root_frame]
 
     def get_face_frame(self, module_index, face_index, stick="stick1"):
         """
@@ -51,30 +53,33 @@ class ModuleConnection:
         face_frame_to_connect.point -= face_frame_to_connect.xaxis * (25) 
         
         # calculate angle between normals of the two frames
-        angle = abs(face_frame_to_connect.zaxis.angle(face_frame_to_grow_from.zaxis))
+        angle = face_frame_to_connect.zaxis.angle_signed(face_frame_to_grow_from.zaxis, face_frame_to_connect.yaxis)
         dot = face_frame_to_connect.zaxis.dot(face_frame_to_grow_from.zaxis)
-       
-        angle = (math.pi - angle)
+        rotation_angle = (math.pi - angle)        
       
-      
-            
         # translation vector of the base_frame 
-        v1 = Vector.from_start_end(self.root_frame.point, face_frame_to_connect.point)
-        v2 = Vector.from_start_end(self.root_frame.point, face_frame_to_grow_from.point)
+        v1 = Vector.from_start_end(self.module_frames[from_module_index].point, face_frame_to_connect.point)
+        v2 = Vector.from_start_end(self.module_frames[from_module_index].point, face_frame_to_grow_from.point)
         translation_vector = v1 - v2
         new_frame = self.root_frame.translated(translation_vector)
         
         # rotate the frame to grow from to align with the connect frame
-        R = Rotation.from_axis_and_angle(face_frame_to_connect.yaxis, angle=angle, point=face_frame_to_connect.point)
-        new_frame.transform(R)
+        R = Rotation.from_axis_and_angle(face_frame_to_connect.yaxis, angle=rotation_angle, point=face_frame_to_connect.point)
+        rotated_new_plane = new_frame.transformed(R)
+        
+        # add rotation along x axis to create twist
+        R_twist = Rotation.from_axis_and_angle(face_frame_to_connect.zaxis, angle=math.radians(0), point=face_frame_to_connect.point)
+        twisted_new_plane = rotated_new_plane.transformed(R_twist)
         
         # create new module at the new frame
-        module = StickModuleA(new_frame, angle=self.stick_angle)
+        module = StickModuleA(twisted_new_plane, angle=self.stick_angle[from_module_index])
         new_module = module.create_module()
         modules = [module.sticks[stick] for stick in new_module]
         
         # append to the list of modules 
         self.modules.append(new_module)
+        self.angles.append(math.degrees(angle))
+        self.module_frames.append(twisted_new_plane)
 
         return modules
         
