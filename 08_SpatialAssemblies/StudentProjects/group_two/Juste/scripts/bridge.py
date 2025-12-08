@@ -9,15 +9,15 @@ from stick_fixed import Stick
 
 class BridgingModule:
     """
-    Bridging engine for RootFrames.
+    Bridging module:
 
-    Takes an existing list of sticks (typically RF.branch_sticks)
-    and creates "bridge" sticks between pairs that:
+    - Takes an existing list of branch sticks.
+    - Looks for pairs that are close enough and not nearly parallel.
+    - Builds bridge sticks between their midpoints.
 
-      - are within a maximum distance
-      - are not almost parallel (angle > angle_threshold_deg)
-
-    Geometry is entirely COMPAS-based (no Rhino types).
+    Density-awareness:
+        Because we only bridge when sticks are within `max_distance`,
+        bridges naturally appear in denser regions of the field.
     """
 
     def __init__(
@@ -27,119 +27,66 @@ class BridgingModule:
         width=None,
         depth=None,
         max_distance=None,
-        angle_threshold_deg=30.0,
+        min_angle_deg=15.0,
     ):
-        """
-        Parameters
-        ----------
-        stick_list : list[Stick]
-            Input sticks to consider for bridging (usually branch_sticks).
-        stick_length : float, optional
-            Length of each bridge stick. Defaults to Stick.DEFAULT_LEN
-            if not provided.
-        width : float, optional
-        depth : float, optional
-        max_distance : float, optional
-            Maximum distance between midpoints of two sticks for them
-            to be considered. Defaults to 3 * stick_length.
-        angle_threshold_deg : float, optional
-            Minimum angle (in degrees) between stick directions for a
-            bridge to be created. Pairs that are too parallel are ignored.
-        """
-        self.sticks = list(stick_list) or []
+        self.sticks = stick_list
+        self.stick_length = stick_length or Stick.DEFAULT_LEN
+        self.width = width or Stick.DEFAULT_SIZE
+        self.depth = depth or Stick.DEFAULT_SIZE
+        self.max_distance = float(max_distance) if max_distance is not None else None
+        self.min_angle_rad = math.radians(float(min_angle_deg))
 
-        self.stick_length = float(stick_length or Stick.DEFAULT_LEN)
-        self.width = float(width or Stick.DEFAULT_SIZE)
-        self.depth = float(depth or Stick.DEFAULT_SIZE)
-
-        self.max_distance = (
-            float(max_distance) if max_distance is not None
-            else 3.0 * self.stick_length
-        )
-        self.angle_threshold_deg = float(angle_threshold_deg)
-
-    # ------------------------------------------------------------------
-    # internal helpers
-    # ------------------------------------------------------------------
-
-    def _midpoint(self, axis):
-        return axis.point_at(0.5)
-
-    def _direction(self, stick):
-        """Return unit direction vector along the stick (its local xaxis)."""
-        d = Vector(
-            stick.frame.xaxis.x,
-            stick.frame.xaxis.y,
-            stick.frame.xaxis.z,
-        )
-        if d.length < 1e-6:
-            # fallback from axis
-            d = Vector.from_start_end(stick.axis.start, stick.axis.end)
-        if d.length < 1e-6:
-            d = Vector(1, 0, 0)
-        d.unitize()
-        return d
+    # ------------------------------------------------------------------ #
+    # internal: tests & construction                                     #
+    # ------------------------------------------------------------------ #
 
     def _can_bridge(self, sa, sb):
-        """Check distance + angular criteria."""
-        pa = self._midpoint(sa.axis)
-        pb = self._midpoint(sb.axis)
+        """Test if two sticks are eligible for bridging."""
+        # 1) distance between midpoints
+        pa = sa.axis.point_at(0.5)
+        pb = sb.axis.point_at(0.5)
+        d = pa.distance_to_point(pb)
 
-        # distance filter
-        dist = pa.distance_to_point(pb)
-        if dist > self.max_distance:
+        if self.max_distance is not None and d > self.max_distance:
             return False
 
-        # angular filter (reject near-parallel)
-        da = self._direction(sa)
-        db = self._direction(sb)
+        # 2) not already intersecting / too close
+        if sa.intersects(sb, clearance=0.0):
+            return False
 
-        dot = max(-1.0, min(1.0, da.dot(db)))
-        angle_rad = math.acos(dot)
-        angle_deg = math.degrees(angle_rad)
-
-        if angle_deg < self.angle_threshold_deg:
+        # 3) ensure they are not nearly parallel
+        xa = sa.frame.xaxis.unitized()
+        xb = sb.frame.xaxis.unitized()
+        angle = xa.angle(xb)
+        if angle < self.min_angle_rad:
             return False
 
         return True
 
     def _build_bridge(self, sa, sb):
-        """
-        Construct a single bridge stick between two input sticks.
-
-        For now we simply connect the midpoints of the two axes.
-        """
-        pa = self._midpoint(sa.axis)
-        pb = self._midpoint(sb.axis)
+        """Construct a single bridge stick between midpoints of sa, sb."""
+        pa = sa.axis.point_at(0.5)
+        pb = sb.axis.point_at(0.5)
 
         axis = Line(pa, pb)
 
-        # Use axis-based frame (parent_frame=None) so the stick builds
-        # a stable orientation from the connection line.
-        bridge = Stick(
+        # orient bridge using first parent's frame as base
+        child = Stick(
             axis,
             length=self.stick_length,
             width=self.width,
             depth=self.depth,
-            parent_frame=None,
+            parent_frame=sa.frame,
         )
-        return bridge
+        return child
 
-    # ------------------------------------------------------------------
-    # public API
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------ #
+    # public: build all bridges                                          #
+    # ------------------------------------------------------------------ #
 
     def build(self):
-        """
-        Compute all bridges and return a list[Stick].
-
-        This is called from RootFrames.grow_bridging().
-        """
-        n = len(self.sticks)
         bridges = []
-
-        if n < 2:
-            return bridges
+        n = len(self.sticks)
 
         for i in range(n):
             sa = self.sticks[i]
@@ -149,11 +96,6 @@ class BridgingModule:
                 if not self._can_bridge(sa, sb):
                     continue
 
-                try:
-                    bridge = self._build_bridge(sa, sb)
-                    bridges.append(bridge)
-                except Exception:
-                    # keep robust: skip bad pairs silently
-                    continue
+                bridges.append(self._build_bridge(sa, sb))
 
         return bridges
