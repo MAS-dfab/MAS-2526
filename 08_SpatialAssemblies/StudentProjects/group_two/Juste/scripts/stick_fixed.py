@@ -38,8 +38,8 @@ def build_frame_from_axis(axis: Line) -> Frame:
 # Main Stick Class
 # ------------------------------------------------------------
 class Stick:
-    DEFAULT_LEN  = 1.0
-    DEFAULT_SIZE = 0.2
+    LENGTH  = 250.0
+    SIZE = 13
 
     def __init__(
         self,
@@ -53,9 +53,9 @@ class Stick:
             raise TypeError("Stick requires axis = compas.geometry.Line")
 
         self.axis   = axis
-        self.length = float(length or Stick.DEFAULT_LEN)
-        self.width  = float(width  or Stick.DEFAULT_SIZE)
-        self.depth  = float(depth  or Stick.DEFAULT_SIZE)
+        self.length = float(length or Stick.LENGTH)
+        self.width  = float(width  or Stick.SIZE)
+        self.depth  = float(depth  or Stick.SIZE)
 
         # --------------------------------------------------------
         # Frame selection (Option A – default COMPAS: Frame(x, y))
