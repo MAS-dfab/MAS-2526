@@ -8,7 +8,7 @@
 # No world-XYZ except for degenerate fallbacks.
 
 from compas.geometry import Vector, Line
-from stick_fixed import Stick
+
 
 EPS = 1e-9
 
