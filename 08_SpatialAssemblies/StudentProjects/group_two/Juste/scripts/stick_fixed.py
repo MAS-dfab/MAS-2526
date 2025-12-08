@@ -1,112 +1,119 @@
 # stick_fixed.py
-# Minimal, robust Stick object for RootFrames / Branching / Bridging.
-# Geometry (Brep) is built in GH from:
-#   - self.axis  (compas Line)
-#   - self.frame (compas Frame)
-#   - self.length, self.width, self.depth
-
-from compas.geometry import Point, Vector, Line, Frame, distance_line_line
+from compas.geometry import Point, Vector, Line, Frame
 
 EPS = 1e-9
 
-
-def _safe_unit(vec, fallback):
-    """Return a unit copy of vec; if degenerate, use fallback."""
-    v = vec.copy()
+def _unit(v, fallback=None):
     if v.length < EPS:
-        v = fallback.copy()
-    v.unitize()
-    return v
+        return fallback.copy() if fallback else v
+    u = v.copy()
+    u.unitize()
+    return u
 
 
 class Stick:
+    """
+    A 3D stick defined ONLY by:
+      - an axis (compas Line)
+      - width/depth
+      - a parent frame (for child orientation logic)
+
+    No world-XYZ assumptions. No overrides.
+    """
+
     DEFAULT_LEN = 250.0
     DEFAULT_SIZE = 13.0
 
     def __init__(self, axis, length=None, width=None, depth=None, parent_frame=None):
-        """
-        axis          : COMPAS Line or RhinoCommon Line-like
-        length/width/depth : dimensions along local x/y/z
-        parent_frame  : optional COMPAS Frame (for orientation continuity)
-        """
+        self.axis = axis
+        self.length = length or self.DEFAULT_LEN
+        self.width = width or self.DEFAULT_SIZE
+        self.depth = depth or self.DEFAULT_SIZE
 
-        # -------------------------------------------------
-        # 1. Sanitize axis → COMPAS Line
-        # -------------------------------------------------
-        if isinstance(axis, Line):
-            line = axis
-        else:
-            # RhinoCommon Line-like
-            try:
-                p0 = Point(axis.From.X, axis.From.Y, axis.From.Z)
-                p1 = Point(axis.To.X, axis.To.Y, axis.To.Z)
-                line = Line(p0, p1)
-            except Exception:
-                raise ValueError("Stick(): axis is not a valid Line-like object.")
-
-        self.axis = line
-        self.length = float(length or Stick.DEFAULT_LEN)
-        self.width = float(width or Stick.DEFAULT_SIZE)
-        self.depth = float(depth or Stick.DEFAULT_SIZE)
-
+        # parent relationship
         self.parent = None
         self.children = []
-        self.family = None        # "Y", "Z", "BRIDGE"
+        self.family = None   # "Y", "Z", or "BRIDGE"
         self.is_root = False
         self.is_bridge = False
         self.collided = False
 
-        # -------------------------------------------------
-        # 2. Robust frame construction
-        # -------------------------------------------------
-        # Origin at axis MIDPOINT (better for offsets)
-        origin = line.point_at(0.5)
+        # ===============================
+        # BUILD THIS STICK'S LOCAL FRAME
+        # ===============================
+        x = Vector.from_start_end(axis.start, axis.end)
+        x = _unit(x, Vector(1,0,0))
 
-        # Local x-axis = axis direction
-        x = Vector.from_start_end(line.start, line.end)
-        x = _safe_unit(x, Vector(1, 0, 0))
+        # derive y and z from parent frame **without** world-axis re-projection
+        if parent_frame:
+            # preserve parent orientation
+            # but ensure orthogonality
+            y = parent_frame.yaxis - x * parent_frame.yaxis.dot(x)
+            if y.length < EPS:
+                # fallback: rotate parent's z instead
+                y = parent_frame.zaxis - x * parent_frame.zaxis.dot(x)
+            y = _unit(y, Vector(0,1,0))
 
-        # We want to inherit parent orientation if present,
-        # but keep the frame orthonormal and 3D.
-        if parent_frame is not None:
-            # Use parent's y-axis, but make it perpendicular to x
-            py = parent_frame.yaxis
-            py_proj = py - x * py.dot(x)
-            y = _safe_unit(py_proj, Vector(0, 0, 1))
-
-            # z = x × y
             z = x.cross(y)
-            z = _safe_unit(z, Vector(0, 0, 1))
+            if z.length < EPS:
+                z = Vector(0,0,1)
+            z.unitize()
+
         else:
-            # No parent → pick any stable perpendicular basis
-            trial = Vector(0, 0, 1)
-            if abs(trial.dot(x)) > 0.99:
-                trial = Vector(0, 1, 0)
-            y = _safe_unit(trial.cross(x), Vector(0, 1, 0))
+            # ROOT STICK INITIALIZATION
+            # fallback stable coordinate system
+            fallback_y = Vector(0,0,1) if abs(x.dot(Vector(0,0,1))) < 0.9 else Vector(0,1,0)
+            y = x.cross(fallback_y)
+            y = _unit(y, Vector(0,1,0))
             z = x.cross(y)
-            z = _safe_unit(z, Vector(0, 0, 1))
+            z.unitize()
 
-        self.frame = Frame(origin, x, y)
-        # keep z for debugging if needed
-        self._zaxis = z
+        self.frame = Frame(axis.start, x, y)
+        self.frame._zaxis = z   # compas stores z internally, expose it anyway
 
-    # ---------------------------------------------------------
-    # Collision helper — approximate capsule/cylinder distance
-    # ---------------------------------------------------------
-
+    # --------------------------------------------------------
+    # COLLISION CHECK
+    # --------------------------------------------------------
     def intersects(self, other, clearance=0.0):
-        if not isinstance(other, Stick):
-            return False
+        """
+        True if cylindrical approximation intersects.
+        Uses line-line distance.
+        """
 
-        # use distance between line segments
-        d = distance_line_line((self.axis.start, self.axis.end),
-                               (other.axis.start, other.axis.end))
+        p0 = self.axis.start
+        p1 = self.axis.end
+        p2 = other.axis.start
+        p3 = other.axis.end
 
-        r1 = 0.5 * max(self.width, self.depth)
-        r2 = 0.5 * max(other.width, other.depth)
-        return d <= (r1 + r2 + clearance)
+        u = Vector.from_start_end(p0, p1)
+        v = Vector.from_start_end(p2, p3)
+        w0 = Vector.from_start_end(p2, p0)
 
-    def __repr__(self):
-        return "Stick(len={:.3f}, w={:.3f}, d={:.3f}, fam={})".format(
-            self.length, self.width, self.depth, self.family
-        )
+        a = u.dot(u)
+        b = u.dot(v)
+        c = v.dot(v)
+        d = u.dot(w0)
+        e = v.dot(w0)
+
+        denom = a * c - b * b
+        sc = 0.0
+        tc = 0.0
+
+        if denom < EPS:
+            # nearly parallel
+            sc = 0.0
+            tc = (b > c and e/b) or (e/c)
+        else:
+            sc = (b * e - c * d) / denom
+            tc = (a * e - b * d) / denom
+
+        sc = max(0, min(1, sc))
+        tc = max(0, min(1, tc))
+
+        psc = p0 + u * sc
+        ptc = p2 + v * tc
+
+        dist = psc.distance_to_point(ptc)
+        threshold = (self.width + other.width) * 0.5 + clearance
+
+        return dist < threshold
