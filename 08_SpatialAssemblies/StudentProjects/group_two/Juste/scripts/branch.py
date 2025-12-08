@@ -1,37 +1,35 @@
-# ============================================================
-# branch.py — Final L-system branching module
-# ============================================================
+# branch.py
+# Stable L-system branching module for RootFrames.
+# Produces consistent 3D growth aligned to parent stick frames.
 
-from compas.geometry import Point, Vector, Line, Frame
+from compas.geometry import Point, Vector, Line
 from stick_fixed import Stick
 
-# Face → direction mapping (local to parent frame)
-# 2,3 = Y-family
-# 4,5 = Z-family
-FAMILY_MAP = {
-    2: "Y",
-    3: "Y",
-    4: "Z",
-    5: "Z",
-}
+# Family mapping (Y and Z based on parent frame axes)
+FAMILY_MAP = {2: "Y", 3: "Y", 4: "Z", 5: "Z"}
 
 
 def face_direction(parent_frame, face_index):
-    """Returns direction + offset normal based on face index."""
+    """
+    Return (normal_vector, family_code).
+    normal_vector is guaranteed to be a *copy* and safe for mutation.
+    """
 
-    if face_index in (2, 3):  # Y-family
-        normal = parent_frame.yaxis
+    if face_index in (2, 3):         # Y-family
+        normal = parent_frame.yaxis.copy()
         fam = "Y"
-    elif face_index in (4, 5):  # Z-family
-        normal = parent_frame.zaxis
+
+    elif face_index in (4, 5):       # Z-family
+        # parent z-axis = cross(x,y). Always valid in our patched system.
+        zaxis = parent_frame.zaxis if hasattr(parent_frame, "zaxis") else parent_frame.xaxis.cross(parent_frame.yaxis)
+        normal = zaxis.copy()
         fam = "Z"
+
     else:
-        # invalid face = ignore
         return None, None
 
-    # reverse if odd face index to alternate direction
     if face_index % 2 == 1:
-        normal = -normal
+        normal *= -1.0
 
     return normal, fam
 
@@ -45,60 +43,64 @@ class BranchingModule:
         self.depth = depth
         self.offset01 = offset01
 
-        # collect all sticks grown from this root
         self.sticks = [root_stick]
 
+    # ---------------------------------------------------------
+    # CHILD AXIS GENERATION
+    # ---------------------------------------------------------
 
-    # ----------------------------------------------------------------------
     def _axis_for_child(self, parent_stick, normal_vec, angle_deg):
-        """Builds a new axis using:
-
-        axis_dir = blend( parent.xaxis , normal ) rotated by angle.
+        """
+        Produces a new axis direction based on:
+        - parent frame x-axis (main direction)
+        - blend with local normal (Y or Z)
+        - rotation around local x-axis
         """
 
         pf = parent_stick.frame
         x = pf.xaxis.copy()
         n = normal_vec.copy()
 
-        # blend weight from slider
+        # Blend
         t = self.offset01
         dir_vec = (1 - t) * x + t * n
-        if dir_vec.length < 1e-6:
-            dir_vec = n.copy()
+        if dir_vec.length < 1e-9:
+            dir_vec = n
         dir_vec.unitize()
 
-        # rotate around parent's X-axis
-        ang = angle_deg * 3.1415926 / 180.0
-        dir_vec.rotate(ang, x)
+        # Rotate in parent stick coordinates
+        ang = angle_deg * 3.14159265359 / 180.0
+        rotated = dir_vec.rotated(ang, x)
 
         start = pf.point
-        end = start + dir_vec * self.stick_length
+        end = start + rotated * self.stick_length
         return Line(start, end)
 
+    # ---------------------------------------------------------
+    # BRANCHING STEP
+    # ---------------------------------------------------------
 
-    # ----------------------------------------------------------------------
     def grow_once(self, face_index, stick_angle):
-        """One L-system expansion step."""
 
         parent = self.sticks[-1]
         normal, fam = face_direction(parent.frame, face_index)
 
         if normal is None:
-            return None  # invalid face
+            return None
 
-        # determine full offset distance
+        # Compute offset distance
         offset_dist = self.width if fam == "Y" else self.depth
 
-        # offset start point
+        # Offset starting point along local Y/Z family direction
         start = parent.frame.point + normal * offset_dist
 
-        # compute axis using tangent+normal blending
+        # Compute axis direction
         axis = self._axis_for_child(parent, normal, stick_angle)
 
-        # shift axis origin
+        # Move axis to offset start
         axis = Line(start, start + (axis.end - axis.start))
 
-        # create new stick
+        # Create new stick
         child = Stick(
             axis,
             length=self.stick_length,
@@ -107,7 +109,9 @@ class BranchingModule:
             parent_frame=parent.frame
         )
 
-        child.family = fam  # store family on new stick
+        child.family = fam
+        child.parent = parent
+        parent.children.append(child)
 
         self.sticks.append(child)
         return child

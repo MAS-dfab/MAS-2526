@@ -1,9 +1,20 @@
 # stick_fixed.py
-# Minimal, robust Stick object for RootFrames / Branching / Bridging.
-# No COMPAS Box anymore – only axis, frame, and dimensions.
-# Geometry (Brep) will be built in the GH script from these properties.
+# Robust Stick class for RootFrames workflow.
+# Each stick stores:
+#   - axis   : COMPAS Line
+#   - frame  : COMPAS Frame (orthonormal)
+#   - width/depth/length: dimensions for GH geometry
+# No COMPAS Box here; GH builds geometry from the frame.
 
 from compas.geometry import Point, Vector, Line, Frame
+
+
+def _safe_unit(v, fallback):
+    if v.length < 1e-9:
+        return fallback.copy()
+    v = v.copy()
+    v.unitize()
+    return v
 
 
 class Stick:
@@ -13,23 +24,21 @@ class Stick:
     def __init__(self, axis, length=None, width=None, depth=None, parent_frame=None):
         """
         axis : COMPAS Line or RhinoCommon Line-like.
-        length/width/depth : float dimensions along frame x/y/z.
-        parent_frame : optional COMPAS Frame; if given, we inherit orientation.
+        parent_frame : COMPAS Frame providing orientation.
         """
 
         # ---------------------------------------------------------
-        # 1. SANITIZE AXIS → COMPAS Line
+        # 1. SANITIZE AXIS → ALWAYS A COMPAS Line
         # ---------------------------------------------------------
         if isinstance(axis, Line):
             line = axis
         else:
-            # Try to interpret RhinoCommon Line-like object
             try:
                 p0 = Point(axis.From.X, axis.From.Y, axis.From.Z)
                 p1 = Point(axis.To.X, axis.To.Y, axis.To.Z)
                 line = Line(p0, p1)
             except Exception:
-                raise ValueError("Stick(): axis is not a valid Line-like object.")
+                raise ValueError("Stick(): axis argument could not be interpreted as a Line.")
 
         self.axis = line
         self.length = float(length or Stick.DEFAULT_LEN)
@@ -37,63 +46,44 @@ class Stick:
         self.depth = float(depth or Stick.DEFAULT_SIZE)
 
         # ---------------------------------------------------------
-        # 2. BUILD A STABLE COMPAS FRAME
+        # 2. BUILD LOCAL FRAME
         # ---------------------------------------------------------
-
-        # Origin at axis midpoint (nicer visually & for offsets)
         origin = line.point_at(0.5)
+        xaxis = Vector.from_start_end(line.start, line.end)
+        xaxis = _safe_unit(xaxis, Vector(1, 0, 0))
 
         if parent_frame is not None:
-            # Inherit parent orientation but move origin to our axis
-            xaxis = Vector(
-                parent_frame.xaxis.x,
-                parent_frame.xaxis.y,
-                parent_frame.xaxis.z,
-            )
-            yaxis = Vector(
-                parent_frame.yaxis.x,
-                parent_frame.yaxis.y,
-                parent_frame.yaxis.z,
-            )
-            if xaxis.length < 1e-6:
-                xaxis = Vector.from_start_end(line.start, line.end)
-            xaxis.unitize()
-            if yaxis.length < 1e-6:
-                yaxis = Vector(0, 1, 0)
-            yaxis.unitize()
-            self.frame = Frame(origin, xaxis, yaxis)
-        else:
-            # Derive orientation from axis itself
-            xaxis = Vector.from_start_end(line.start, line.end)
-            if xaxis.length < 1e-6:
-                xaxis = Vector(1, 0, 0)
-            xaxis.unitize()
+            # Inherit orientation, override X with axis direction.
+            pf_x = parent_frame.xaxis
+            pf_y = parent_frame.yaxis
+            pf_z = parent_frame.zaxis
 
+            # Maintain right-handedness around axis
+            # Compute y as projection of parent y onto plane ⟂ xaxis
+            yproj = pf_y - (pf_y.dot(xaxis)) * xaxis
+            yaxis = _safe_unit(yproj, Vector(0, 1, 0))
+            zaxis = xaxis.cross(yaxis)
+            zaxis = _safe_unit(zaxis, Vector(0, 0, 1))
+            self.frame = Frame(origin, xaxis, yaxis)
+
+        else:
+            # Independent stick — build clean frame
+            # Try using world-up only if safe
             world_up = Vector(0, 0, 1)
             yaxis = world_up.cross(xaxis)
-            if yaxis.length < 1e-6:
-                yaxis = Vector(0, 1, 0)
-            yaxis.unitize()
+            yaxis = _safe_unit(yaxis, Vector(0, 1, 0))
 
             self.frame = Frame(origin, xaxis, yaxis)
 
-        # ---------------------------------------------------------
-        # 3. NO COMPAS Box HERE
-        # ---------------------------------------------------------
-        # Geometry is built later in GH from:
-        #   - self.frame
-        #   - self.length, self.width, self.depth
-        self.geometry = None
-
-        # Optional bookkeeping
         self.children = []
         self.parent_frame = self.frame
 
     # ---------------------------------------------------------
-    # COLLISION HELPERS (AABB-like via axis + radius)
+    # COLLISION HELPERS
     # ---------------------------------------------------------
+
     def intersects(self, other, clearance=0.0):
-        """Cheap capsule-like collision: distance between axes vs radii."""
+        """Capsule-like collision based on distance between axes."""
         if not isinstance(other, Stick):
             return False
 
@@ -109,6 +99,6 @@ class Stick:
         return d <= R
 
     def __repr__(self):
-        return "Stick(len={:.3f}, w={:.3f}, d={:.3f})".format(
+        return "Stick(len={:.1f}, w={:.1f}, d={:.1f})".format(
             self.length, self.width, self.depth
         )
