@@ -8,7 +8,7 @@ class RootModule:
     def __init__(self, branches, segment_index, stick_length=None, width=None, depth=None):
         """
         Constructor for Root module.
-        
+        ß
         Args:
             branches: list of frames from existing tree
             segment_index = index of frame for new root
