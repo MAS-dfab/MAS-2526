@@ -1,202 +1,113 @@
-# branch.py
-# L-system branching module with family-locked faces.
+# ============================================================
+# branch.py — Final L-system branching module
+# ============================================================
 
-import math
-from compas.geometry import Line, Vector, Frame
-
+from compas.geometry import Point, Vector, Line, Frame
 from stick_fixed import Stick
 
+# Face → direction mapping (local to parent frame)
+# 2,3 = Y-family
+# 4,5 = Z-family
+FAMILY_MAP = {
+    2: "Y",
+    3: "Y",
+    4: "Z",
+    5: "Z",
+}
 
-class BranchingModule(object):
-    """
-    Simple branching L-system around a single root stick.
 
-    Face indices (local box model):
+def face_direction(parent_frame, face_index):
+    """Returns direction + offset normal based on face index."""
 
-        0 -> +X (unused)
-        1 -> -X (unused)
-        2 -> +Y
-        3 -> -Y
-        4 -> +Z
-        5 -> -Z
+    if face_index in (2, 3):  # Y-family
+        normal = parent_frame.yaxis
+        fam = "Y"
+    elif face_index in (4, 5):  # Z-family
+        normal = parent_frame.zaxis
+        fam = "Z"
+    else:
+        # invalid face = ignore
+        return None, None
 
-    Family rules (OPTION B with your refinement):
+    # reverse if odd face index to alternate direction
+    if face_index % 2 == 1:
+        normal = -normal
 
-      - 'Y' family:
-            branches ONLY on faces 2 and 3 (±Y)
-      - 'Z' family:
-            branches ONLY on faces 4 and 5 (±Z)
+    return normal, fam
 
-      - faces 0,1 (±X) are NEVER used.
 
-    All descendants of a root stay in the same family.
-    """
+class BranchingModule:
 
-    def __init__(
-        self,
-        root_stick,
-        stick_length=None,
-        width=None,
-        depth=None,
-        offset01=0.5,
-        family="Y",
-    ):
-        """
-        Parameters
-        ----------
-        root_stick : Stick
-            First stick of the chain (generation 0).
-        stick_length : float, optional
-        width, depth : float, optional
-        offset01 : float in [0, 1]
-            Parameter along the parent axis where the branch root sits.
-        family : 'Y' or 'Z'
-            Constrains allowed faces for branching.
-        """
+    def __init__(self, root_stick, stick_length, width, depth, offset01=0.5):
+        self.root = root_stick
+        self.stick_length = stick_length
+        self.width = width
+        self.depth = depth
+        self.offset01 = offset01
+
+        # collect all sticks grown from this root
         self.sticks = [root_stick]
-        self.stick_length = stick_length or Stick.DEFAULT_LEN
-        self.width = width or Stick.DEFAULT_SIZE
-        self.depth = depth or Stick.DEFAULT_SIZE
-        self.offset01 = float(offset01)
-        self.family = family if family in ("Y", "Z") else "Y"
 
-        if self.family == "Y":
-            self.allowed_faces = (2, 3)
-        else:
-            self.allowed_faces = (4, 5)
 
-    # ------------------------------------------------------------------ #
-    # internal: face helpers                                             #
-    # ------------------------------------------------------------------ #
+    # ----------------------------------------------------------------------
+    def _axis_for_child(self, parent_stick, normal_vec, angle_deg):
+        """Builds a new axis using:
 
-    def _face_normal_and_halfthick(self, frame, face_index):
+        axis_dir = blend( parent.xaxis , normal ) rotated by angle.
         """
-        Return (normal, half_thickness) for a given face index.
-        Uses local frame axes:
 
-            0 -> +X
-            1 -> -X
-            2 -> +Y
-            3 -> -Y
-            4 -> +Z
-            5 -> -Z
-        """
-        fi = int(face_index) % 6
+        pf = parent_stick.frame
+        x = pf.xaxis.copy()
+        n = normal_vec.copy()
 
-        if fi == 0:
-            n = frame.xaxis.unitized()
-            half = 0.5 * self.stick_length
-        elif fi == 1:
-            n = (-frame.xaxis).unitized()
-            half = 0.5 * self.stick_length
-        elif fi == 2:
-            n = frame.yaxis.unitized()
-            half = 0.5 * self.width
-        elif fi == 3:
-            n = (-frame.yaxis).unitized()
-            half = 0.5 * self.width
-        elif fi == 4:
-            n = frame.zaxis.unitized()
-            half = 0.5 * self.depth
-        else:  # fi == 5
-            n = (-frame.zaxis).unitized()
-            half = 0.5 * self.depth
+        # blend weight from slider
+        t = self.offset01
+        dir_vec = (1 - t) * x + t * n
+        if dir_vec.length < 1e-6:
+            dir_vec = n.copy()
+        dir_vec.unitize()
 
-        return n, half
+        # rotate around parent's X-axis
+        ang = angle_deg * 3.1415926 / 180.0
+        dir_vec.rotate(ang, x)
 
-    def _clamp_face_to_family(self, face_index):
-        """
-        Enforce family rule:
-          - 'Y' => {2,3}
-          - 'Z' => {4,5}
-        """
-        fi = int(face_index) % 6
-        if self.family == "Y":
-            return 2 if fi in (0, 1, 2, 4) else 3
-        else:  # 'Z'
-            return 4 if fi in (0, 1, 4, 2) else 5
+        start = pf.point
+        end = start + dir_vec * self.stick_length
+        return Line(start, end)
 
-    def _build_child_from_face(self, parent, face_index, stick_angle):
-        """
-        Construct a single child Stick from a parent Stick.
 
-        - Only faces 2/3 or 4/5 are used (family-locked).
-        - Child direction blends parent tangent and face normal.
-        - Offsets use width/depth so boxes meet at faces.
-        """
-        fi = self._clamp_face_to_family(face_index)
-        f = parent.frame
+    # ----------------------------------------------------------------------
+    def grow_once(self, face_index, stick_angle):
+        """One L-system expansion step."""
 
-        # 1) position along parent axis
-        t_param = max(0.0, min(1.0, self.offset01))
-        axis_pt = parent.axis.point_at(t_param)
+        parent = self.sticks[-1]
+        normal, fam = face_direction(parent.frame, face_index)
 
-        # 2) parent face normal & thickness
-        n_parent, half_parent = self._face_normal_and_halfthick(f, fi)
+        if normal is None:
+            return None  # invalid face
 
-        # child uses same cross-section thickness in that direction
-        n_child, half_child = self._face_normal_and_halfthick(f, fi)
+        # determine full offset distance
+        offset_dist = self.width if fam == "Y" else self.depth
 
-        # from axis → parent far face → child near face
-        face_center = axis_pt + n_parent * half_parent
-        child_center = face_center + n_child * half_child
+        # offset start point
+        start = parent.frame.point + normal * offset_dist
 
-        # 3) parent tangent (local x-axis)
-        tangent = f.xaxis.unitized()
+        # compute axis using tangent+normal blending
+        axis = self._axis_for_child(parent, normal, stick_angle)
 
-        # blend tangent & face normal
-        theta = math.radians(float(stick_angle))
-        d = tangent * math.cos(theta) + n_parent * math.sin(theta)
-        if d.length < 1e-6:
-            d = tangent
-        d.unitize()
+        # shift axis origin
+        axis = Line(start, start + (axis.end - axis.start))
 
-        # 4) build child axis centered at child_center
-        half_len = 0.5 * self.stick_length
-        start = child_center - d * half_len
-        end = child_center + d * half_len
-        axis = Line(start, end)
-
-        # 5) build child frame: x = d, y as stable perp, z = x × y
-        up_hint = f.yaxis
-        if abs(up_hint.dot(d)) > 0.9:
-            up_hint = f.zaxis
-        zaxis = d.cross(up_hint)
-        if zaxis.length < 1e-6:
-            zaxis = Vector(0, 0, 1)
-        zaxis.unitize()
-        yaxis = zaxis.cross(d)
-        if yaxis.length < 1e-6:
-            yaxis = Vector(0, 1, 0)
-        yaxis.unitize()
-
-        child_frame = Frame(child_center, d, yaxis)
-
+        # create new stick
         child = Stick(
             axis,
             length=self.stick_length,
             width=self.width,
             depth=self.depth,
-            parent_frame=child_frame,
-            generation=parent.generation + 1,
-            kind="branch",
-            family=self.family,
+            parent_frame=parent.frame
         )
-        return child
 
-    # ------------------------------------------------------------------ #
-    # public: grow                                                        #
-    # ------------------------------------------------------------------ #
+        child.family = fam  # store family on new stick
 
-    def grow_once(self, face_index=2, stick_angle=0.0):
-        """
-        Grow one new child from the last stick in the chain.
-        """
-        parent = self.sticks[-1]
-        child = self._build_child_from_face(parent, face_index, stick_angle)
         self.sticks.append(child)
-
-    def grow_chain(self, steps=1, face_index=2, stick_angle=0.0):
-        steps = max(1, int(steps))
-        for _ in range(steps):
-            self.grow_once(face_index=face_index, stick_angle=stick_angle)
+        return child
