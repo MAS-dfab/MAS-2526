@@ -1,8 +1,10 @@
-# ============================================================
-# bridge.py — Cross-family bridging
-# ============================================================
+# bridge.py
+# Cross-family bridging module.
+#
+# Builds bridges ONLY between Y-family and Z-family sticks
+# that are close enough in 3D space and within generation limits.
 
-from compas.geometry import Point, Vector, Line
+from compas.geometry import Line
 from stick_fixed import Stick
 
 
@@ -19,12 +21,10 @@ class BridgingModule:
         self.threshold = bridge_threshold
         self.max_gen = max_generations
 
-
     # ----------------------------------------------------------
     def _are_cross_family(self, A, B):
         """Bridges only between Y-family and Z-family sticks."""
         return hasattr(A, "family") and hasattr(B, "family") and A.family != B.family
-
 
     # ----------------------------------------------------------
     def _gen_level(self, stick):
@@ -35,7 +35,6 @@ class BridgingModule:
             level += 1
             parent = getattr(parent, "parent", None)
         return level
-
 
     # ----------------------------------------------------------
     def build(self):
@@ -57,21 +56,20 @@ class BridgingModule:
                 if not self._are_cross_family(A, B):
                     continue
 
-                # generation limit
+                # generation limits
                 if self._gen_level(A) > self.max_gen:
                     continue
                 if self._gen_level(B) > self.max_gen:
                     continue
 
-                # spatial threshold (normalized)
+                # spatial threshold
                 dist = A.axis.distance_to_line(B.axis)
                 if dist > self.threshold:
                     continue
 
-                # build bridging axis
+                # build bridging axis between frame origins
                 start = A.frame.point
-                end   = B.frame.point
-
+                end = B.frame.point
                 axis = Line(start, end)
 
                 bridge = Stick(
@@ -79,9 +77,11 @@ class BridgingModule:
                     length=self.stick_length,
                     width=self.width,
                     depth=self.depth,
-                    parent_frame=A.frame
+                    parent_frame=A.frame,   # inherit orientation from A
                 )
                 bridge.family = "BRIDGE"
+                bridge.is_bridge = True
+                bridge.parent = A
 
                 bridges.append(bridge)
 

@@ -1,19 +1,28 @@
 # rf_core.py
-# Clean RootFrames engine for Grasshopper integration.
+# RootFrames engine for Grasshopper integration.
 #
-# Responsibilities:
-#   1. Sample points on curve or surface
-#   2. Build COMPAS Frames from Rhino local frames
-#   3. Build nearest-neighbour edge frames
-#   4. Grow branching L-system (with optional collision-safe mode)
-#   5. Grow bridging sticks (optional)
+# Pipeline:
+#   1. Sample points on curve / surface
+#   2. Build local COMPAS Frames from Rhino frames
+#   3. Build nearest-neighbour edge-frames
+#   4. Grow branching L-system
+#   5. Grow bridging (optional)
 #   6. Detect collisions (optional)
-#   7. Provide debug channels + color-coded sticks
+#
+# Debug channels (for GH):
+#   self.points
+#   self.frames
+#   self.root_sticks
+#   self.branch_sticks
+#   self.bridge_sticks
+#   self.collision_flags
+#   self.root_frames_debug
+#   self.root_axes_debug
+#   self.branch_axes_debug
+#   self.bridge_axes_debug
 
 import random
 import Rhino.Geometry as rg  # type: ignore
-import System.Drawing as sd  # type: ignore # for GH colors
-
 from compas.geometry import Point, Vector, Line, Frame
 
 from stick_fixed import Stick
@@ -32,38 +41,37 @@ class RootFrames:
         stick_width=None,
         stick_depth=None,
     ):
-        # Geometry inputs
-        self.surface_input = surface
-        self.curve_input = curve
+        # geometry inputs
+        self.surface_input = surface    # BrepFace or Surface (from GH script)
+        self.curve_input = curve        # Curve (optional)
 
-        # Sampling
+        # sampling
         self.point_density = int(point_density)
 
-        # Stick geometry
+        # stick geometry
         self.stick_length = stick_length or Stick.DEFAULT_LEN
         self.stick_width = stick_width or Stick.DEFAULT_SIZE
         self.stick_depth = stick_depth or Stick.DEFAULT_SIZE
 
-        # Storage
-        self.points = []          # sampled COMPAS Points
-        self.frames = []          # root sample Frames
-        self.edge_frames = []     # Frames along nearest-neighbour edges
-        self.edge_vectors = []    # edge directions
+        # data stores
+        self.points = []
+        self.frames = []
+        self.edge_frames = []
+        self.edge_vectors = []
         self.edges = []
 
         self.root_sticks = []
         self.branch_sticks = []
         self.bridge_sticks = []
         self.collision_flags = []
-        self.colors = []          # parallel to (branch + bridge) sticks
 
-        # Debug geometry (packed into existing GH debug outputs)
-        self.dbg_root_frames = []   # Frames at samples (same as self.frames)
-        self.dbg_root_axes = []     # Lines along edge vectors (roots)
-        self.dbg_branch_geos = []   # Lines for branch sticks
-        self.dbg_bridge_geos = []   # Lines for bridge sticks
+        # debug geometry
+        self.root_frames_debug = []
+        self.root_axes_debug = []
+        self.branch_axes_debug = []
+        self.bridge_axes_debug = []
 
-        # Internals for sampling
+        # internals for sampling
         self._rg_curve = None
         self._curve_t = []
         self._rg_face = None
@@ -80,16 +88,44 @@ class RootFrames:
         self._rg_curve = None
         self._rg_face = None
 
+        # --- Type normalization for surfaces ---
+        surf = self.surface_input
+        crv = self.curve_input
+
+        is_curve = isinstance(crv, rg.Curve)
+        is_surface = False
+
+        face = None
+        if surf is not None:
+            # GH usually sends Brep; we want a BrepFace.
+            if isinstance(surf, rg.Brep):
+                if surf.Faces.Count > 0:
+                    face = surf.Faces[0]
+                    is_surface = True
+            elif isinstance(surf, rg.BrepFace):
+                face = surf
+                is_surface = True
+            elif isinstance(surf, rg.Surface):
+                brep = surf.ToBrep()
+                if brep.Faces.Count > 0:
+                    face = brep.Faces[0]
+                    is_surface = True
+
         # ------------------------
         # CURVE MODE
         # ------------------------
-        if self.curve_input is not None and self.surface_input is None:
-            crv = self.curve_input
+        if is_curve and not is_surface:
+            crv = crv
             self._rg_curve = crv
 
-            # FIXED: Domain is a method in RhinoCode
-            dom = crv.Domain()
-            t0, t1 = dom.Min, dom.Max
+            # Rhino 7/8 / RhinoCode differences:
+            # Domain may be a property or a method. Try both.
+            try:
+                dom = crv.Domain
+                t0, t1 = dom.Min, dom.Max
+            except Exception:
+                dom = crv.Domain()
+                t0, t1 = dom.Min, dom.Max
 
             for _ in range(max(1, self.point_density)):
                 t = random.uniform(t0, t1)
@@ -100,10 +136,7 @@ class RootFrames:
         # ------------------------
         # SURFACE MODE
         # ------------------------
-        else:
-            surf = self.surface_input
-            brep = surf.ToBrep()
-            face = brep.Faces[0]
+        elif is_surface:
             self._rg_face = face
 
             udom = face.Domain(0)
@@ -116,15 +149,17 @@ class RootFrames:
                 pts.append(p)
                 self._uv_params.append((u, v))
 
+            # stabilise
             pts.sort(key=lambda p: p.Z)
 
-        # convert to COMPAS Points
+        else:
+            raise RuntimeError("RootFrames.sample_points: input must be Curve or Surface/Brep.")
+
         self.points = [Point(p.X, p.Y, p.Z) for p in pts]
         return self.points
 
-
     # ----------------------------------------------------------------------
-    # 2. FRAME GENERATION (root frames at sample points)
+    # 2. FRAME GENERATION
     # ----------------------------------------------------------------------
 
     def frames_from_geometry(self):
@@ -152,7 +187,6 @@ class RootFrames:
 
                 x.unitize()
                 y.unitize()
-
                 frames.append(Frame(pt, x, y))
 
         # SURFACE MODE
@@ -176,7 +210,6 @@ class RootFrames:
 
                 x.unitize()
                 y.unitize()
-
                 frames.append(Frame(pt, x, y))
 
         # FALLBACK
@@ -185,11 +218,10 @@ class RootFrames:
                 frames.append(Frame(pt, Vector(1, 0, 0), Vector(0, 1, 0)))
 
         self.frames = frames
-        self.dbg_root_frames = frames[:]  # debug alias
         return frames
 
     # ----------------------------------------------------------------------
-    # 3. NEAREST NEIGHBOUR EDGE-FRAMES
+    # 3. NEAREST NEIGHBOUR EDGE-FRAMES (3D-preserving)
     # ----------------------------------------------------------------------
 
     def frames_to_edges(self):
@@ -200,12 +232,12 @@ class RootFrames:
             self.edges = []
             self.edge_frames = []
             self.edge_vectors = []
-            self.dbg_root_axes = []
+            self.root_frames_debug = []
+            self.root_axes_debug = []
             return [], []
 
         edges = set()
 
-        # NN search
         for i in range(n):
             pi = pts[i]
             best = 1e9
@@ -226,7 +258,6 @@ class RootFrames:
 
         eframes = []
         evectors = []
-        dbg_axes = []
 
         for i, j in edges:
             f0 = self.frames[i]
@@ -236,11 +267,9 @@ class RootFrames:
             v = Vector.from_start_end(p0, p1)
             if v.length < 1e-6:
                 continue
-
             v.unitize()
 
-            # Use surface normal to keep frames 3D
-            surf_normal = f0.zaxis
+            surf_normal = f0.zaxis.copy()
             y = surf_normal.cross(v)
             if y.length < 1e-6:
                 y = surf_normal.cross(Vector(1, 0, 0))
@@ -249,17 +278,19 @@ class RootFrames:
             eframes.append(Frame(p0, v, y))
             evectors.append(v)
 
-            # Debug axis line
-            dbg_axes.append(Line(p0, p0 + v * self.stick_length))
-
         self.edge_frames = eframes
         self.edge_vectors = evectors
-        self.dbg_root_axes = dbg_axes
+
+        self.root_frames_debug = list(eframes)
+        self.root_axes_debug = [
+            Line(f.point, f.point + v * self.stick_length)
+            for f, v in zip(eframes, evectors)
+        ]
 
         return eframes, evectors
 
     # ----------------------------------------------------------------------
-    # Utility: parse rule strings
+    # Utility
     # ----------------------------------------------------------------------
 
     def _parse_rule(self, rule_str):
@@ -272,30 +303,27 @@ class RootFrames:
                 continue
             try:
                 vals.append(float(tok))
-            except:
+            except Exception:
                 pass
         return vals
 
     # ----------------------------------------------------------------------
-    # 4. BRANCHING
+    # 4. BRANCHING (with optional collision-safe growth)
     # ----------------------------------------------------------------------
 
-    def grow_branching(self,
-                       steps,
-                       stick_angle,
-                       offset01,
-                       face_rule=None,
-                       angle_rule=None,
-                       collision_safe=True):
+    def grow_branching(self, steps, stick_angle, offset01,
+                       face_rule=None, angle_rule=None,
+                       collision_safe=False, collision_clearance=0.0):
 
         self.root_sticks = []
         self.branch_sticks = []
-        self.dbg_branch_geos = []
+        self.branch_axes_debug = []
 
-        # Build root sticks from edge-frames
+        all_sticks = []
+
+        # root sticks from edge frames
         for f, v in zip(self.edge_frames, self.edge_vectors):
             axis = Line(f.point, f.point + v * self.stick_length)
-
             s = Stick(
                 axis,
                 length=self.stick_length,
@@ -303,49 +331,40 @@ class RootFrames:
                 depth=self.stick_depth,
                 parent_frame=f
             )
-            s.family = None  # explicit
+            s.is_root = True
             self.root_sticks.append(s)
             self.branch_sticks.append(s)
+            all_sticks.append(s)
 
         face_seq = self._parse_rule(face_rule)
         angle_seq = self._parse_rule(angle_rule)
 
-        # L-system
         for root in self.root_sticks:
-
             B = BranchingModule(
                 root_stick=root,
                 stick_length=self.stick_length,
                 width=self.stick_width,
                 depth=self.stick_depth,
                 offset01=offset01,
-                collision_safe=collision_safe,
+                collision_clearance=collision_clearance
             )
 
             for k in range(int(steps)):
+                fi = int(face_seq[k % len(face_seq)]) if face_seq else 0
+                ang = float(angle_seq[k % len(angle_seq)]) if angle_seq else stick_angle
 
-                if face_seq:
-                    fi = int(face_seq[k % len(face_seq)])
-                else:
-                    fi = 0
+                child = B.grow_once(
+                    face_index=fi,
+                    stick_angle=ang,
+                    existing_sticks=all_sticks,
+                    collision_safe=collision_safe
+                )
 
-                if angle_seq:
-                    ang = float(angle_seq[k % len(angle_seq)])
-                else:
-                    ang = stick_angle
+                if child is not None:
+                    self.branch_sticks.append(child)
+                    all_sticks.append(child)
+                    self.branch_axes_debug.append(child.axis)
 
-                child = B.grow_once(face_index=fi, stick_angle=ang)
-
-                # If branch died (collision or invalid face), stop expanding
-                if child is None:
-                    break
-
-            # Skip duplicate root
-            new_sticks = B.sticks[1:]
-            self.branch_sticks.extend(new_sticks)
-
-        # Debug branch axes
-        self.dbg_branch_geos = [stick.axis for stick in self.branch_sticks]
         return self.branch_sticks
 
     # ----------------------------------------------------------------------
@@ -355,7 +374,7 @@ class RootFrames:
     def grow_bridging(self):
         if not self.branch_sticks:
             self.bridge_sticks = []
-            self.dbg_bridge_geos = []
+            self.bridge_axes_debug = []
             return []
 
         BM = BridgingModule(
@@ -365,9 +384,14 @@ class RootFrames:
             depth=self.stick_depth,
         )
 
-        self.bridge_sticks = BM.build()
-        self.dbg_bridge_geos = [stick.axis for stick in self.bridge_sticks]
-        return self.bridge_sticks
+        bridges = BM.build()
+        for br in bridges:
+            br.is_bridge = True
+            br.family = "BRIDGE"
+
+        self.bridge_sticks = bridges
+        self.bridge_axes_debug = [b.axis for b in bridges]
+        return bridges
 
     # ----------------------------------------------------------------------
     # 6. COLLISION DETECTION
@@ -384,57 +408,14 @@ class RootFrames:
                     flags[i] = True
                     flags[j] = True
 
+        for flag, s in zip(flags, sticks):
+            s.collided = flag
+
         self.collision_flags = flags
         return flags
 
     # ----------------------------------------------------------------------
-    # 7. COLOR ASSIGNMENT
-    # ----------------------------------------------------------------------
-
-    def assign_colors(self):
-        """
-        Build color list parallel to (branch_sticks + bridge_sticks).
-
-        Color scheme:
-            Collision-flagged : Red
-            Root sticks       : Yellow
-            Y-family          : Light Pink
-            Z-family          : Light Green
-            Bridges           : Beige
-        """
-        sticks = self.branch_sticks + self.bridge_sticks
-        n = len(sticks)
-        flags = self.collision_flags or [False] * n
-
-        colors = []
-
-        for i, s in enumerate(sticks):
-            if i < len(flags) and flags[i]:
-                c = sd.Color.Red
-            elif s in self.root_sticks:
-                c = sd.Color.Yellow
-            else:
-                fam = getattr(s, "family", None)
-                if fam == "Y":
-                    # light pink
-                    c = sd.Color.FromArgb(255, 255, 182, 193)
-                elif fam == "Z":
-                    # light green
-                    c = sd.Color.FromArgb(255, 144, 238, 144)
-                elif fam == "BRIDGE":
-                    # beige
-                    c = sd.Color.FromArgb(255, 245, 245, 220)
-                else:
-                    # default non-root
-                    c = sd.Color.Yellow
-
-            colors.append(c)
-
-        self.colors = colors
-        return colors
-
-    # ----------------------------------------------------------------------
-    # 8. RUN PIPELINE
+    # 7. RUN PIPELINE
     # ----------------------------------------------------------------------
 
     def run(
@@ -446,7 +427,8 @@ class RootFrames:
         do_bridging=False,
         face_rule=None,
         angle_rule=None,
-        collision_safe=True,
+        debug=False,
+        collision_clearance=0.0,
     ):
 
         self.sample_points()
@@ -459,22 +441,22 @@ class RootFrames:
             offset01=offset01,
             face_rule=face_rule,
             angle_rule=angle_rule,
-            collision_safe=collision_safe,
+            collision_safe=detect_collisions,
+            collision_clearance=collision_clearance,
         )
 
         if do_bridging:
             self.grow_bridging()
         else:
             self.bridge_sticks = []
-            self.dbg_bridge_geos = []
-
-        sticks_all = self.branch_sticks + self.bridge_sticks
+            self.bridge_axes_debug = []
 
         if detect_collisions:
-            self.detect_collisions(clearance=0.0)
+            self.detect_collisions(clearance=collision_clearance)
         else:
-            self.collision_flags = [False] * len(sticks_all)
+            sticks = self.branch_sticks + self.bridge_sticks
+            self.collision_flags = [False] * len(sticks)
+            for s in sticks:
+                s.collided = False
 
-        self.assign_colors()
-
-        return sticks_all
+        return self.branch_sticks + self.bridge_sticks
