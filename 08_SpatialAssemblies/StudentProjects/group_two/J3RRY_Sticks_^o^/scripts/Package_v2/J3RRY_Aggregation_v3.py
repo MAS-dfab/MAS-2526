@@ -12,7 +12,7 @@ def run_multiround_aggregation(first_frames, length_pattern, angle_pattern,
     all_rounds = []
     global_sticks = []
     # ------- Round 0 -------
-    current_aggs = []
+    current_round_aggs = []
     for i, frame in enumerate(first_frames):
         agg = Aggregation(frame, length_pattern, angle_pattern, agg_type, seed+i*100, init=True)
         for j in range(agg_count):
@@ -22,31 +22,33 @@ def run_multiround_aggregation(first_frames, length_pattern, angle_pattern,
             if new_stick is not None:
                 global_sticks.append(new_stick)
 
-        current_aggs.append(agg)
-    all_rounds.append(current_aggs)
+        current_round_aggs.append(agg)
+    all_rounds.append(current_round_aggs)
 
     # -------Subsequent Rounds -------
     for r in range(1, agg_round):
         next_aggs = []
-        for idx, parent_agg in enumerate(current_aggs):
+        for idx, parent_agg in enumerate(current_round_aggs):
+            if not parent_agg.sticks:
+                continue
             parent_last_stick = parent_agg.sticks[-1]
             branch_frame = parent_last_stick.frame
-
             for b in range(branch_count):
                 child_seed = r*1000 + idx*branch_count + b
                 child_agg = Aggregation(branch_frame, length_pattern, angle_pattern, agg_type, child_seed,
-                                        init=False, parent_stick=parent_last_stick)
+                                        init=False, parent_stick=parent_last_stick
+                                        )
                 for j in range(agg_count):
                     new_stick = child_agg.spawn_next_stick_random_in_boundary(
                                 boundary_mesh, max_attempts, child_seed + j, global_sticks
                                 )
                     if new_stick is not None:
                         global_sticks.append(new_stick)
-                next_aggs.append(child_agg)
 
+                next_aggs.append(child_agg)
         all_rounds.append(next_aggs)
-        current_aggs = next_aggs
-        if not current_aggs:
+        current_round_aggs = next_aggs
+        if not current_round_aggs:
             break
     return all_rounds
 
