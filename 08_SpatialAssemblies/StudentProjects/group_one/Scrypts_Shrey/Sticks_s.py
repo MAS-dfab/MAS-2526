@@ -30,7 +30,7 @@ def _calculate_z_vector_from_centerline(centerline_vector):
 class Stick:
     """Legacy stick class - uses axis-based definition."""
     
-    SIZE = 13.0
+    SIZE = 10.0
     WIDTH = SIZE
     DEPTH = SIZE
 
