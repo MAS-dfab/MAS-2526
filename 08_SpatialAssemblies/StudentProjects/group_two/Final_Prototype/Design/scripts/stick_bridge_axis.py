@@ -6,7 +6,7 @@ from compas.geometry import Rotation
 from compas.geometry import closest_point_on_line
 import math
 
-from single_stick import Stick
+from stick_axis import Stick
 
 def compare_angles(frame_0, frame_1):
         #calculate angle between the normals of root frame and target frame
@@ -19,39 +19,66 @@ def get_plane_from_frame(frame):
         plane.normal = frame.yaxis
         return plane
 
-class GrowTowards:
-    def __init__(self, root_frame, target_frame, offset_root_child=0.0, offset_target_child=0.0, stick_length=None, width=None, depth=None):
+class BridgeIndex:
+    def __init__(self, frames_list, xaxis_list, root_index, target_index, 
+                root_offset=0.0, target_offset=0.0, root_child_offset=0.0, target_child_offset=0.0, 
+                stick_length=None, width=None, depth=None,
+                solution=True, mirror_root=True, mirror_target = True
+                ):
         """
-        Constructor for GrowTowards module
+        Constructor for BridgeIndex module
         
         Args:
-            root_frame: starting frame derived from RootModule
-            target_frame: destination frame input
+            branches: input, list of existing branches ('sticks')
+
+            root_index: the index of the stick within the list of 'branches' to become the 'root' stick
+            target_index: the index of the stick within the list of 'branches' to become the 'target' stick
+
+            root_offset: the offset of the 'dummy root stick' along the root stick's xaxis
+            target_offset: the offset of the 'dummy target stick' along the target stick's xaxis
+
+            root_child_offset: the offset of the 'root child stick' along its own xaxis
+            target_child_offset: the offset of the 'target child stick' along its own xaxis
+
+            solution: toggle between 2 solutions
+            mirror_root: toggle between the location of root_child_stick between 2 opposite faces on root_stick
+            mirror_target: toggle between the location of target_child_stick between 2 opposite faces on target_stick
 
             stick_length: Length of each stick
             width: Width of sticks (defaults to Stick.WIDTH)
             depth: Depth of sticks (defaults to Stick.DEPTH)
         """
 
+        self.root_index = root_index
+        self.target_index = target_index
+
         self.stick_length = stick_length
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
 
+        #lists containers
+        self.frames_list = [f.copy() for f in frames_list]
+
+        #convert xaxis_list into vector list
+        
+        self.xaxis_list = [x.copy() for x in xaxis_list]
         self.sticks = []
 
-        self.root_frame = root_frame
-        self.root_frame_axis = root_frame.xaxis * self.stick_length
-        self.target_frame = target_frame
-        self.target_frame_axis = target_frame.xaxis * self.stick_length
+        #identify root and target frame from specified indexes
+        self.root_frame = self.frames_list[self.root_index].copy()
+        self.root_frame_axis = self.xaxis_list[self.root_index].copy()
 
-        self.offset_root_child = offset_root_child
-        self.offset_target_child = offset_target_child
+        self.target_frame = self.frames_list[self.target_index].copy()
+        self.target_frame_axis = self.xaxis_list[self.target_index].copy()
+
+        self.offset_root_child = root_child_offset
+        self.offset_target_child = target_child_offset
 
         """secondary properties"""
         #angle between root_frame and target_frame
         self.normal_deviation = self.compare_angles(self.root_frame, self.target_frame)
 
-        #align target_frame to the 'orientation' of root frame
+        #algine target_frame to the 'orientation' of root frame
         self.rotated_target_frame = self.rotate_target_frame(self.target_frame)
 
         #child (secondary) frame of root and target frame
@@ -65,7 +92,7 @@ class GrowTowards:
         #create bridging sticks
         self.root_child_stick = self.get_root_child_stick(self.root_child_frame, self.frame_intersection)
         self.target_child_stick = self.get_target_child_stick(self.target_child_frame, self.frame_intersection)
-
+    
     def compare_angles(self, frame_0, frame_1):
         #calculate angle between the normals of root frame and target frame
         normal_deviation = math.degrees(*
@@ -98,10 +125,10 @@ class GrowTowards:
 
         #choose face index 1 or 3
         if flip == False:
-             face_index = 1
+             face_index = 0
         
         elif flip == True:
-             face_index = 3
+             face_index = 2
 
         #rotate frame and translate to face
         angle = face_index * math.pi/2
@@ -122,10 +149,10 @@ class GrowTowards:
 
         #choose face index 0 or 2
         if flip == False:
-             face_index = 1
+             face_index = 0
         
         elif flip == True:
-             face_index = 3
+             face_index = 2
 
         #rotate frame and translate to face
         angle = face_index * math.pi/2
