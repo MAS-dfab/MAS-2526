@@ -39,7 +39,7 @@ class RootFrames(object):
         self,
         surface=None,
         curve=None,
-        point_density=10,
+        point_density=None,
         stick_length=None,
         stick_width=None,
         stick_depth=None,
