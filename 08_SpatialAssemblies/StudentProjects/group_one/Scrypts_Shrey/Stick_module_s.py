@@ -1,6 +1,6 @@
 from compas.geometry import Line, Frame, Vector, Rotation, Box, Point
 import math
-from Sticks import Stick
+from Sticks_s import Stick
 
 class OStickModule:
     def __init__(self, pt, stick_length, stick_width, stick_depth, offset=None):
