@@ -6,7 +6,7 @@ from compas.geometry import Rotation
 from compas.geometry import closest_point_on_line
 import math
 
-from Sticks import Stick
+from single_stick import Stick
 
 def compare_angles(frame_0, frame_1):
         #calculate angle between the normals of root frame and target frame
@@ -19,14 +19,23 @@ def get_plane_from_frame(frame):
         plane.normal = frame.yaxis
         return plane
 
-class GrowTowards:
-    def __init__(self, root_frame, target_frame, offset_root_child=0.0, offset_target_child=0.0, stick_length=None, width=None, depth=None):
+class BridgeIndex:
+    def __init__(self, branches, segment_index_a, face_index_a, segment_index_b, face_index_b, bridge_a_offset=0.0, bridge_b_offset=0.0, stick_length=None, width=None, depth=None):
         """
-        Constructor for GrowTowards module
+        Constructor for BridgeIndex module
         
         Args:
-            root_frame: starting frame derived from RootModule
-            target_frame: destination frame input
+            branches: input, list of existing branches ('sticks')
+
+            segment_index_a: index of the branch segment A
+            face_index_a: face index on branch A
+            bridge_a_offset: offset of bridge_a stick along its xaxis
+
+            segment_index_b: index of the branch segment B
+            face_index_b: face index on branch B
+
+            bridge_a_offset: offset of bridge_a stick along its xaxis (defaults to 0.0)
+            bridge_b_offset: offset of bridge_b stick along its xaxis (defaults to 0.0)
 
             stick_length: Length of each stick
             width: Width of sticks (defaults to Stick.WIDTH)
@@ -39,19 +48,19 @@ class GrowTowards:
 
         self.sticks = []
 
-        self.root_frame = root_frame
-        self.root_frame_axis = root_frame.xaxis * self.stick_length
-        self.target_frame = target_frame
-        self.target_frame_axis = target_frame.xaxis * self.stick_length
+        # self.root_frame = root_frame
+        # self.root_frame_axis = root_frame.xaxis * self.stick_length
+        # self.target_frame = target_frame
+        # self.target_frame_axis = target_frame.xaxis * self.stick_length
 
-        self.offset_root_child = offset_root_child
-        self.offset_target_child = offset_target_child
+        # self.offset_root_child = offset_root_child
+        # self.offset_target_child = offset_target_child
 
         """secondary properties"""
         #angle between root_frame and target_frame
         self.normal_deviation = self.compare_angles(self.root_frame, self.target_frame)
 
-        #align target_frame to the 'orientation' of root frame
+        #algine target_frame to the 'orientation' of root frame
         self.rotated_target_frame = self.rotate_target_frame(self.target_frame)
 
         #child (secondary) frame of root and target frame

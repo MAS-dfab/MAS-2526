@@ -6,7 +6,7 @@ from compas.geometry import Rotation
 from compas.geometry import closest_point_on_line
 import math
 
-from Sticks import Stick
+from single_stick import Stick
 
 def compare_angles(frame_0, frame_1):
         #calculate angle between the normals of root frame and target frame
