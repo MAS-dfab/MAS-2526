@@ -30,7 +30,7 @@ def _calculate_z_vector_from_centerline(centerline_vector):
 class Stick:
     """Legacy stick class - uses axis-based definition."""
     
-    SIZE = 13.0
+    SIZE = 10.0
     WIDTH = SIZE
     DEPTH = SIZE
 
@@ -40,6 +40,7 @@ class Stick:
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
         self.frame = self._get_stick_frame()
+        self.length = axis.length  # Add length property
     
     def _get_stick_frame(self):
         normal = _calculate_z_vector_from_centerline(self.axis.direction)
@@ -53,12 +54,90 @@ class Stick:
         box = Box(self.axis.length, self.width, self.depth, self.frame)
         return box
     
+    def get_face_frame(self, face_idx):
+        """
+        Get frame at a face of the stick.
+        Face indexing: 0-3 are the four side faces around the stick.
+        """
+        # Get center frame
+        if not hasattr(self, 'center_frame'):
+            add_center_frame_to_stick(self)
+        
+        center = self.center_frame.point
+        
+        # Face offsets (perpendicular to stick axis)
+        if face_idx == 0:
+            offset = self.center_frame.yaxis * (self.width / 2)
+        elif face_idx == 1:
+            offset = -self.center_frame.yaxis * (self.width / 2)
+        elif face_idx == 2:
+            offset = self.center_frame.zaxis * (self.depth / 2)
+        elif face_idx == 3:
+            offset = -self.center_frame.zaxis * (self.depth / 2)
+        else:
+            raise ValueError(f"Face index must be 0-3, got {face_idx}")
+        
+        face_point = center + offset
+        
+        # Face frame: xaxis along stick, zaxis = outward normal
+        if face_idx == 0:
+            face_frame = Frame(face_point, self.center_frame.xaxis, self.center_frame.yaxis)
+        elif face_idx == 1:
+            face_frame = Frame(face_point, self.center_frame.xaxis, -self.center_frame.yaxis)
+        elif face_idx == 2:
+            face_frame = Frame(face_point, self.center_frame.xaxis, self.center_frame.zaxis)
+        else:  # face_idx == 3
+            face_frame = Frame(face_point, self.center_frame.xaxis, -self.center_frame.zaxis)
+        
+        return face_frame
+    
+    def get_face_frame_at(self, face_idx, t):
+        """
+        Get frame at a face at position t along the stick (0 to 1).
+        
+        Args:
+            face_idx: Face index (0-3)
+            t: Position along stick (0.0 = start, 1.0 = end)
+        """
+        # Get center frame
+        if not hasattr(self, 'center_frame'):
+            add_center_frame_to_stick(self)
+        
+        # Calculate point at position t along the stick
+        point_on_axis = self.axis.start + (self.axis.end - self.axis.start) * t
+        
+        # Face offsets
+        if face_idx == 0:
+            offset = self.center_frame.yaxis * (self.width / 2)
+            normal = self.center_frame.yaxis
+        elif face_idx == 1:
+            offset = -self.center_frame.yaxis * (self.width / 2)
+            normal = -self.center_frame.yaxis
+        elif face_idx == 2:
+            offset = self.center_frame.zaxis * (self.depth / 2)
+            normal = self.center_frame.zaxis
+        elif face_idx == 3:
+            offset = -self.center_frame.zaxis * (self.depth / 2)
+            normal = -self.center_frame.zaxis
+        else:
+            raise ValueError(f"Face index must be 0-3, got {face_idx}")
+        
+        face_point = point_on_axis + offset
+        
+        # Create frame: xaxis along stick, zaxis = outward normal
+        face_frame = Frame(face_point, self.center_frame.xaxis, normal)
+        
+        return face_frame
+    
     def rotate_stick(self, angle, rotation_axis=None, pt=None):
         if not rotation_axis:
             rotation_axis = self.axis.direction
         R = Rotation.from_axis_and_angle(rotation_axis, math.radians(angle), pt or self.axis.midpoint)
         self.frame.transform(R)
         self.axis.transform(R)
+        # Update center_frame if it exists
+        if hasattr(self, 'center_frame'):
+            self.center_frame.transform(R)
     
     def rotate_stick_random(self, min_angle=0, max_angle=360, rotation_axis=None, pt=None, seed=None):
         """Rotate the stick around its frame normal by a random angle."""
@@ -75,10 +154,43 @@ class Stick:
         R = Rotation.from_axis_and_angle(rotation_axis, math.radians(random_angle), pt or self.axis.midpoint)
         self.frame.transform(R)
         self.axis.transform(R)
+        # Update center_frame if it exists
+        if hasattr(self, 'center_frame'):
+            self.center_frame.transform(R)
         
         return random_angle, seed_used
 
 
+# Add this function OUTSIDE the Stick class
+def add_center_frame_to_stick(old_stick):
+    """Add center_frame attribute to old-style Stick objects"""
+    if not hasattr(old_stick, 'center_frame'):
+        # Calculate center point
+        center_point = Point(
+            (old_stick.axis.start.x + old_stick.axis.end.x) / 2,
+            (old_stick.axis.start.y + old_stick.axis.end.y) / 2,
+            (old_stick.axis.start.z + old_stick.axis.end.z) / 2
+        )
+        
+        # Get stick direction (xaxis)
+        stick_direction = Vector.from_start_end(old_stick.axis.start, old_stick.axis.end).unitized()
+        
+        # Create frame (using existing frame's yaxis and zaxis if available)
+        if hasattr(old_stick, 'frame'):
+            center_frame = Frame(center_point, stick_direction, old_stick.frame.yaxis)
+        else:
+            # Create default frame
+            if abs(stick_direction.dot(Vector(0, 0, 1))) < 0.9:
+                zaxis = Vector(0, 0, 1)
+            else:
+                zaxis = Vector(1, 0, 0)
+            yaxis = zaxis.cross(stick_direction).unitized()
+            zaxis = stick_direction.cross(yaxis).unitized()
+            center_frame = Frame(center_point, stick_direction, yaxis)
+        
+        old_stick.center_frame = center_frame
+    
+    return old_stick
 # ============================================================================
 # LEGACY BRIDGING FUNCTIONS (Simple geometry-based)
 # ============================================================================
@@ -898,7 +1010,7 @@ def extract_euler_angles_all_sequences(frame_0, frame_1):
     return sequences
 
 
-def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, depth=None, angle_tolerance=0.01, sequence='ZYX'):
+def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, depth=None, angle_tolerance=0.01, sequence='ZYX', bridge_A_start=0.5):
     """
     Create bridges using Euler angle decomposition for robotic assembly
     
@@ -906,12 +1018,18 @@ def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, 
     -----------
     sequence : str
         Euler angle sequence to use: 'XYZ', 'XZY', 'YXZ', 'YZX', 'ZXY', or 'ZYX'
+    bridge_A_start : float
+        Where Bridge A attaches on stick_0: 0.1 (near start), 0.5 (middle), 0.9 (near end)
     """
     
     if width is None:
         width = 13.0
     if depth is None:
         depth = 13.0
+    
+    # Validate bridge_A_start
+    if bridge_A_start not in [0.1, 0.5, 0.9]:
+        print(f"WARNING: bridge_A_start should be 0.1, 0.5, or 0.9. Using {bridge_A_start} anyway.")
     
     frame_0 = stick_0.center_frame
     frame_1 = stick_1.center_frame
@@ -933,9 +1051,10 @@ def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, 
     
     angle_1, angle_2, angle_3 = all_sequences[sequence]
     print(f"USING SEQUENCE: {sequence}")
+    print(f"Bridge A starts at position: {bridge_A_start}")
     print(f"Angles: {math.degrees(angle_1):.1f}°, {math.degrees(angle_2):.1f}°, {math.degrees(angle_3):.1f}°")
     
-     # Map to our bridge variables based on sequence
+    # Map to our bridge variables based on sequence
     if sequence == 'ZYX':
         z_angle, y_angle, x_angle = angle_1, angle_2, angle_3
     elif sequence == 'ZXY':
@@ -949,17 +1068,17 @@ def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, 
     elif sequence == 'XYZ':
         x_angle, y_angle, z_angle = angle_1, angle_2, angle_3
     elif sequence == 'XYX':
-        x_angle, y_angle, x_angle = angle_1, angle_2, angle_3  # Note: X repeats
+        x_angle, y_angle, x_angle = angle_1, angle_2, angle_3
     elif sequence == 'XZX':
-        x_angle, z_angle, x_angle = angle_1, angle_2, angle_3  # Note: X repeats
+        x_angle, z_angle, x_angle = angle_1, angle_2, angle_3
     elif sequence == 'YXY':
-        y_angle, x_angle, y_angle = angle_1, angle_2, angle_3  # Note: Y repeats
+        y_angle, x_angle, y_angle = angle_1, angle_2, angle_3
     elif sequence == 'YZY':
-        y_angle, z_angle, y_angle = angle_1, angle_2, angle_3  # Note: Y repeats
+        y_angle, z_angle, y_angle = angle_1, angle_2, angle_3
     elif sequence == 'ZXZ':
-        z_angle, x_angle, z_angle = angle_1, angle_2, angle_3  # Note: Z repeats
+        z_angle, x_angle, z_angle = angle_1, angle_2, angle_3
     elif sequence == 'ZYZ':
-        z_angle, y_angle, z_angle = angle_1, angle_2, angle_3  # Note: Z repeats
+        z_angle, y_angle, z_angle = angle_1, angle_2, angle_3
     
     # Calculate Z-height difference
     z_diff = abs(frame_1.point.z - frame_0.point.z)
@@ -976,16 +1095,17 @@ def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, 
     current_stick = stick_0
     best_face_idx = 0
     
-    # CREATE INFO DICTIONARY EARLY
+    # CREATE INFO DICTIONARY
     info = {
-        'method': 'ZYX_decomposed',
+        'method': 'Euler_decomposed',
         'z_angle_deg': math.degrees(z_angle),
         'y_angle_deg': math.degrees(y_angle),
         'x_angle_deg': math.degrees(x_angle),
         'z_height_diff': z_diff,
         'xy_distance': xy_distance,
         'bridge_length': bridge_length,
-        'solution_used': sequence
+        'sequence_used': sequence,
+        'bridge_A_start': bridge_A_start
     }
     
     # Find face most parallel to XY (world) plane on stick_0
@@ -1001,7 +1121,11 @@ def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, 
     
     # Bridge A: Created if Z-rotation is NOT zero OR XY-distance is NOT zero
     if abs(z_angle) > angle_tolerance or xy_distance > 1.0:
-        face_frame = stick_0.get_face_frame(best_face_idx)
+        # Get face at specified start position
+        face_frame = stick_0.get_face_frame_at(best_face_idx, bridge_A_start)
+        
+        print(f"DEBUG Bridge A: Attaching at position {bridge_A_start} on stick_0")
+        print(f"  Face frame point: {face_frame.point}")
         
         # Rotate the bridge direction by Z-angle
         R = Rotation.from_axis_and_angle(face_frame.zaxis, z_angle, face_frame.point)
@@ -1014,31 +1138,45 @@ def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, 
         # Slide amount
         x_slide = xy_distance / 2.0
         
+        print(f"  XY distance to target: {xy_distance:.1f}mm")
+        print(f"  Slide amount needed: {x_slide:.1f}mm")
+        
         # Calculate anchor position using geometric distance check
         if x_slide > bridge_length:
             anchor_A = 0.1
+            print(f"  Slide > bridge length, using anchor = 0.1")
         else:
             # Check which end of bridge A is closer to stick_1's projection
-            bridge_A_start = bridge_A_temp.axis.start
-            bridge_A_end = bridge_A_temp.axis.end
+            bridge_A_start_pt = bridge_A_temp.axis.start
+            bridge_A_end_pt = bridge_A_temp.axis.end
             
-            dist_start = distance_point_point(bridge_A_start, stick_1_xy_projection)
-            dist_end = distance_point_point(bridge_A_end, stick_1_xy_projection)
+            dist_start = distance_point_point(bridge_A_start_pt, stick_1_xy_projection)
+            dist_end = distance_point_point(bridge_A_end_pt, stick_1_xy_projection)
+            
+            print(f"  Distance from bridge start to target: {dist_start:.1f}mm")
+            print(f"  Distance from bridge end to target: {dist_end:.1f}mm")
             
             if dist_end < dist_start:
                 # End is closer - bridge extends toward stick_1
                 anchor_A = 0.5 - (x_slide / bridge_length)
+                print(f"  End closer, anchor = 0.5 - {x_slide:.1f}/{bridge_length:.1f} = {anchor_A:.3f}")
             else:
                 # Start is closer - bridge extends away from stick_1
                 anchor_A = 0.5 + (x_slide / bridge_length)
+                print(f"  Start closer, anchor = 0.5 + {x_slide:.1f}/{bridge_length:.1f} = {anchor_A:.3f}")
             
             anchor_A = max(0.0, min(1.0, anchor_A))
+            print(f"  Final anchor (after clamp): {anchor_A:.3f}")
         
         # Create bridge A
         bridge_A = stick_from_face_frame(rotated_face, "side", bridge_length, width, depth, anchor_position=anchor_A)
+        print(f"  Bridge A created: axis from {bridge_A.axis.start} to {bridge_A.axis.end}")
+        
         bridges.append(bridge_A)
         sequence.append(('A', z_angle, anchor_A))
         current_stick = bridge_A
+    
+
     
     # Bridge B: Created if X-rotation is NOT zero OR Z-difference is NOT zero
     if abs(x_angle) > angle_tolerance or z_diff > 1.0:
@@ -1459,3 +1597,202 @@ def bridge_sticks_euler_decomposed(stick_0, stick_1, bridge_length, width=None, 
     
     return bridges, info
     
+
+
+def bridge_sticks_geometric(stick_0, stick_1, bridge_length, width=None, depth=None):
+    """
+    Create bridges using pure geometric/vector approach (no Euler angles)
+    
+    Strategy:
+    1. Bridge A: Point toward stick_1's XY projection (horizontal aiming)
+    2. Bridge B: Connect to stick_1's actual position (vertical/spatial connection)
+    3. Bridge C: Match stick_1's orientation (final alignment)
+    
+    Simplified version: No collision avoidance, bridges start from axis ends
+    """
+    
+    if width is None:
+        width = 13.0
+    if depth is None:
+        depth = 13.0
+    
+    frame_0 = stick_0.center_frame
+    frame_1 = stick_1.center_frame
+    
+    bridges = []
+    current_stick = stick_0
+    
+    print("=" * 60)
+    print("GEOMETRIC BRIDGING APPROACH")
+    print("=" * 60)
+    
+    # ========== STEP 1: BRIDGE A - HORIZONTAL AIMING ==========
+    # Goal: Point toward stick_1's XY projection
+    
+    # Project stick_1 onto stick_0's XY plane
+    stick_1_xy_projection = Point(frame_1.point.x, frame_1.point.y, frame_0.point.z)
+    
+    # Vector from stick_0 to projected stick_1
+    direction_to_target_xy = Vector.from_start_end(frame_0.point, stick_1_xy_projection)
+    xy_distance = direction_to_target_xy.length
+    
+    print(f"Step 1: Bridge A (Horizontal)")
+    print(f"  XY distance to target: {xy_distance:.1f}mm")
+    
+    if xy_distance > 1.0:  # Need horizontal bridge
+        # Find best horizontal face on stick_0
+        world_z = Vector(0, 0, 1)
+        best_face_idx = 0
+        best_alignment = 0
+        
+        for face_idx in range(4):
+            face_frame = stick_0.get_face_frame(face_idx)
+            alignment = abs(face_frame.zaxis.dot(world_z))
+            if alignment > best_alignment:
+                best_alignment = alignment
+                best_face_idx = face_idx
+        
+        # Get face at the END of stick_0 (position = 1.0)
+        face_frame_A = stick_0.get_face_frame_at(best_face_idx, 1.0)
+        
+        # Calculate angle to rotate face to point toward target
+        # Current face direction
+        current_direction = face_frame_A.xaxis
+        
+        # Project both vectors onto XY plane
+        current_xy = Vector(current_direction.x, current_direction.y, 0).unitized()
+        target_xy = Vector(direction_to_target_xy.x, direction_to_target_xy.y, 0).unitized()
+        
+        # Calculate rotation angle around Z-axis (face normal)
+        # Using atan2 for signed angle
+        angle_A = math.atan2(
+            current_xy.cross(target_xy).z,  # Cross product gives Z component
+            current_xy.dot(target_xy)       # Dot product gives cosine
+        )
+        
+        print(f"  Attachment: face {best_face_idx} at position 1.0 (end of stick)")
+        print(f"  Rotation needed: {math.degrees(angle_A):.1f}°")
+        
+        # Rotate face frame
+        R_A = Rotation.from_axis_and_angle(face_frame_A.zaxis, angle_A, face_frame_A.point)
+        rotated_face_A = face_frame_A.copy()
+        rotated_face_A.transform(R_A)
+        
+        # Create Bridge A from the END, extending fully forward (anchor = 0)
+        bridge_A = stick_from_face_frame(rotated_face_A, "side", bridge_length, width, depth, anchor_position=0.0)
+        bridges.append(bridge_A)
+        current_stick = bridge_A
+        
+        print(f"  Bridge A created: {bridge_length}mm long")
+    else:
+        print(f"  No horizontal bridge needed (XY distance < 1mm)")
+    
+    # ========== STEP 2: BRIDGE B - SPATIAL CONNECTION ==========
+    # Goal: Connect from current position to stick_1's actual 3D location
+    
+    # Current end position (end of Bridge A or stick_0)
+    current_end = current_stick.axis.end
+    
+    # Vector from current position to stick_1
+    direction_to_target_3d = Vector.from_start_end(current_end, frame_1.point)
+    spatial_distance = direction_to_target_3d.length
+    
+    print(f"\nStep 2: Bridge B (Spatial Connection)")
+    print(f"  3D distance to target: {spatial_distance:.1f}mm")
+    print(f"  Current position: {current_end}")
+    print(f"  Target position: {frame_1.point}")
+    
+    if spatial_distance > 1.0:  # Need spatial bridge
+        # Find best face on current stick (at the END)
+        # Choose face most aligned with direction to target
+        
+        best_face_B = 0
+        best_alignment_B = -1
+        
+        for face_idx in range(4):
+            face_frame = current_stick.get_face_frame_at(face_idx, 1.0)  # End of stick
+            # How well does this face point toward target?
+            alignment = face_frame.xaxis.dot(direction_to_target_3d.unitized())
+            
+            if alignment > best_alignment_B:
+                best_alignment_B = alignment
+                best_face_B = face_idx
+        
+        print(f"  Attachment: face {best_face_B} at position 1.0 (end of stick)")
+        print(f"  Face alignment with target: {best_alignment_B:.3f}")
+        
+        # Get face frame
+        face_frame_B = current_stick.get_face_frame_at(best_face_B, 1.0)
+        
+        # Calculate rotation to point face toward target
+        current_direction_B = face_frame_B.xaxis
+        target_direction = direction_to_target_3d.unitized()
+        
+        # Calculate rotation axis (perpendicular to both vectors)
+        rotation_axis = current_direction_B.cross(target_direction)
+        
+        if rotation_axis.length > 0.001:  # Vectors not parallel
+            rotation_axis = rotation_axis.unitized()
+            
+            # Calculate rotation angle
+            cos_angle = current_direction_B.dot(target_direction)
+            angle_B = math.acos(max(-1, min(1, cos_angle)))
+            
+            print(f"  Rotation needed: {math.degrees(angle_B):.1f}°")
+            print(f"  Rotation axis: {rotation_axis}")
+            
+            # Rotate face frame
+            R_B = Rotation.from_axis_and_angle(rotation_axis, angle_B, face_frame_B.point)
+            rotated_face_B = face_frame_B.copy()
+            rotated_face_B.transform(R_B)
+            face_frame_B = rotated_face_B
+        else:
+            print(f"  Already aligned with target (no rotation needed)")
+        
+        # Create Bridge B from the END, extending fully forward (anchor = 0)
+        bridge_B = stick_from_face_frame(face_frame_B, "side", bridge_length, width, depth, anchor_position=0.0)
+        bridges.append(bridge_B)
+        current_stick = bridge_B
+        
+        print(f"  Bridge B created: {bridge_length}mm long")
+    else:
+        print(f"  No spatial bridge needed (3D distance < 1mm)")
+    
+    # ========== STEP 3: BRIDGE C - ORIENTATION MATCHING ==========
+    # Goal: Match stick_1's orientation
+    
+    # Check if current stick's orientation matches stick_1
+    current_end_frame = current_stick.get_face_frame_at(0, 1.0)  # Any face at end
+    current_orientation = current_stick.center_frame.zaxis  # Stick axis direction
+    target_orientation = stick_1.center_frame.zaxis
+    
+    orientation_difference = current_orientation.dot(target_orientation)
+    
+    print(f"\nStep 3: Bridge C (Orientation Matching)")
+    print(f"  Orientation alignment: {orientation_difference:.3f}")
+    print(f"  (1.0 = perfect match, -1.0 = opposite)")
+    
+    if abs(orientation_difference - 1.0) > 0.01:  # Not aligned
+        print(f"  Orientation matching needed (not implemented yet)")
+        # TODO: Create bridge C to match orientation
+    else:
+        print(f"  Already aligned with target orientation")
+    
+    # ========== SUMMARY ==========
+    print("\n" + "=" * 60)
+    print(f"RESULT: {len(bridges)} bridges created")
+    print("=" * 60)
+    
+    info = {
+        'method': 'geometric',
+        'num_bridges': len(bridges),
+        'xy_distance': xy_distance,
+        'spatial_distance': spatial_distance if spatial_distance > 0 else 0,
+        'bridges_created': len(bridges)
+    }
+    
+    return bridges, info
+
+
+
+
