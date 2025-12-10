@@ -156,22 +156,22 @@ class BranchStickModules:
         my_module.create_module_c() 
         self.modules.append(my_module)
     
-    def get_face_frame(self, module_index, stick_index, face_index):
+    def get_face_frame(self, module_index, stick_index, face_index, move=1):
         module = self.modules[module_index]
 
         stick_frame = module.sticks[stick_index].frame
 
         angle = face_index*math.pi/2 # research, 0, 1, 2,3 is 90 degree steps
-        R = Rotation.from_axis_and_angle(stick_frame.yaxis, angle = angle, point = stick_frame.point)
+        R = Rotation.from_axis_and_angle(stick_frame.xaxis, angle = angle, point = stick_frame.point)
         new_frame = stick_frame.transformed(R)
 
         new_frame.point = module.sticks[stick_index].axis.end
 
-        new_frame.point += new_frame.yaxis * self.depth/2
-        
+        new_frame.point += new_frame.yaxis * -self.depth*move  #adjust Frame outputposition here 
+        new_frame.point += new_frame.xaxis*-self.width*0.5 #adjust Stick overlapping
         return new_frame #where does it return to/ where is it used next
     
-    def grow_module(self,  offset_axis, offset_axis_b, from_module_index=-1, from_stick_index=-1, face_index=0, angle=0.0):
+    def grow_module(self,  offset_xxis, offset_yxis, offset_zxis, from_module_index=-1, from_stick_index=-1, face_index=0, angle=0.0, move = 1):
         """
         Grows a new module from an existing module's stick.
 
@@ -183,24 +183,27 @@ class BranchStickModules:
         """
         
         # Get position on original stick from specific module
-        position = self.get_face_frame(from_module_index, from_stick_index, face_index).copy()
+        position = self.get_face_frame(from_module_index, from_stick_index, face_index, move).copy()
         
         # rotation_center = position.point.copy()
         
-        position.point += position.yaxis * self.depth/2 * offset_axis_b - position.xaxis*self.width/2
-        position.point += position.xaxis * offset_axis
+        position.point += position.yaxis * self.depth * offset_yxis # is okay
+        # position.point += position.xaxis * self.width * offset_axis
+        position.point += position.zaxis *self.depth 
+        position.point += position.zaxis * self.depth * offset_zxis
 
         # Rotate along face frame
         R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point=position.point)  #point=rotation_center
         position.transform(R)
 
         # Offset along stick axis (x, length)
-        position.point += position.xaxis * offset_axis
-
+        position.point += position.xaxis * self.depth*  offset_xxis
+        # position.point += position.xaxis 
         # Create new module at this position
         new_module = StickModuleC(position, self.width, self.depth, self.stick_length)
         new_module.create_module_c()
         self.modules.append(new_module)
+    
     
     def visualize(self):
         """
