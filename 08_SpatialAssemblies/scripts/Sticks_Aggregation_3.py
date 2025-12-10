@@ -197,11 +197,56 @@ class ModuleAggregation:
 
             self.my_modules.append(new_stick)
 
-
-
-    
     def visualize(self):
         geos = []
         for stick in self.my_modules:
             geos.append(stick.geometry)
         return geos
+
+class ModuleAggregationIteration:
+    def __init__(self, first_module):
+        self.modules = []       # 每一層一個 module（module = 4 sticks）
+        self.modules.append(first_module)
+
+    def orient_next_module(self, new_module):
+        """
+        將 new_module(4 sticks) orient 到上一個 module(4 sticks)
+        上一個 module = self.modules[-1]
+        """
+        prev_module = self.modules[-1]   # 取上一層模矩
+        oriented_sticks = []
+
+        for i in range(4):
+
+            base_stick = prev_module[i]      # 上一層第 i 根 stick
+            stick      = new_module[i]       # 當前層第 i 根 stick
+
+            # 取 base stick 和 new stick 的基準 frame（通常用 stick.frame）
+            from_frame = stick.frame.copy()
+            to_frame   = base_stick.frame.copy()
+
+            # 建立 transformation，使 new stick 對齊到 base stick
+            T = Transformation.from_frame_to_frame(from_frame, to_frame)
+
+            # 產生新的 stick（完全轉好）
+            new_frame = stick.frame.transformed(T)
+            oriented_stick = Stick(new_frame, length=stick.length)
+
+            oriented_sticks.append(oriented_stick)
+
+        # 加入 modules
+        self.modules.append(oriented_sticks)
+
+    def get_all_sticks(self):
+        # 展平成全模型的所有 sticks
+        all_s = []
+        for m in self.modules:
+            all_s.extend(m)
+        return all_s
+
+    def visualize(self):
+        geos = []
+        for stick in self.my_modules:
+            geos.append(stick.geometry)
+        return geos
+    
