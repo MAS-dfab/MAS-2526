@@ -57,14 +57,12 @@ class BranchingModule_x_type:
 
     def grow_stick(
         self,
-        from_stick_index = -1,
-        face_index = 0,
-        angle = 0,
-        distance_from_end = 0,
-        align_center_with = None,
-        align_distance = None,
-        offset_normal = 0,
-        offset_along_self = 0
+        from_stick_index=-1,
+        face_index=0,
+        angle=0.0,
+        distance_from_end=0.0,
+        align_center_with=None,
+        offset_normal=0.0
     ):
 
         if from_stick_index == -1:
@@ -84,24 +82,17 @@ class BranchingModule_x_type:
 
         # 4. small offset along new stick direction
         position.point += position.xaxis * -10.0
-        position.point += position.xaxis * -offset_along_self
 
         # 5. construct centerline
         dir_vec = position.xaxis  # Frame axes are unit vectors in compas
 
-        # # align_center_with
         if align_center_with is not None:
-            target_center = self.sticks[align_center_with].axis
-
-            if align_distance is not None:
-                d = max(0, min(align_distance, target_center.length))
-                target_point = target_center.start + target_center.direction.unitized() * d
-            else:
-                target_point = target_center.midpoint
-
+            # We want the midpoint of this new stick to match the midpoint
+            # of another stick (e.g. stick 0, the root stick).
+            target_center = self.sticks[align_center_with].axis.midpoint
             half_len_vec = dir_vec * (self.stick_length / 2)
 
-            start_point = target_point - half_len_vec
+            start_point = target_center - half_len_vec
             centerline = Line.from_point_and_vector(start_point, dir_vec * self.stick_length)
 
         else:
@@ -111,8 +102,6 @@ class BranchingModule_x_type:
         # 6. create stick and store
         zvector = position.yaxis
         new_stick = Stick(centerline, zvector, self.width, self.depth)
-
-        
 
 
         if offset_normal != 0.0:            # Move stick along its normal (y axis)
