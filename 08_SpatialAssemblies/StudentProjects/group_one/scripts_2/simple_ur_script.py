@@ -11,7 +11,7 @@ import compas.geometry as cg
 MAX_ACCEL = 3
 MAX_VELOCITY = 4
 
-def move_l(plane_to, accel, vel, units = "m"):
+def move_l(plane_to, accel, vel, units = "mm"):
     """
     Function that returns UR script for linear movement in tool-space.
 
@@ -46,7 +46,7 @@ def move_l(plane_to, accel, vel, units = "m"):
     return script
 
 
-def move_l_blend(plane_to, accel, vel, blend_radius=0, units = "m"):
+def move_l_blend(plane_to, accel, vel, blend_radius=0, units = "mm"):
     """
     Function that returns UR script for linear movement in tool-space.
 
@@ -84,7 +84,7 @@ def move_l_blend(plane_to, accel, vel, blend_radius=0, units = "m"):
     return script
 
 
-def move_j(joints, accel, vel, radius=0, units = "m"):
+def move_j(joints, accel, vel, radius=0, units = "mm"):
     """
     Function that returns UR script for linear movement in joint space.
 
@@ -139,7 +139,7 @@ def set_tcp_by_plane(x_offset, y_offset, z_offset, ref_plane=cg.Frame.worldXY(),
     script = "set_tcp(%s)\n" % (_pose_fmt)
     return script
 
-def set_tcp_by_frame(tcp_frame, units="m"):
+def set_tcp_by_frame(tcp_frame, units="mm"):
     """
     Function that returns UR script for setting tool center point using a frame.
 
