@@ -254,13 +254,13 @@ class StickModuleC:
     
     def create_module_c(self):
         # move stick in x
-        offsetpt_xa = (self.frame.point - self.frame.xaxis*self.width*3.5 - self.frame.yaxis*self.width)
-        offsetpt_xb = (self.frame.point - self.frame.xaxis*self.width*3.5 + self.frame.yaxis*self.width)
+        offsetpt_xa = (self.frame.point - self.frame.xaxis*self.width*1.5 - self.frame.yaxis*self.width)
+        offsetpt_xb = (self.frame.point - self.frame.xaxis*self.width*1.5 + self.frame.yaxis*self.width)
         
-        offsetpt_ya = (self.frame.point - self.frame.yaxis*self.width*4.5-self.frame.zaxis*self.depth)
-        offsetpt_yb = (self.frame.point - self.frame.yaxis*self.width*4.5+self.frame.zaxis*self.depth)
+        offsetpt_ya = (self.frame.point - self.frame.yaxis*self.width*2.5-self.frame.zaxis*self.depth)
+        offsetpt_yb = (self.frame.point - self.frame.yaxis*self.width*2.5+self.frame.zaxis*self.depth)
      
-        offsetpt_z = (self.frame.point + self.frame.xaxis*self.length-self.frame.xaxis*self.width*7 - self.frame.zaxis*self.width*3.5)
+        offsetpt_z = (self.frame.point + self.frame.xaxis*self.length-self.frame.xaxis*self.width*3 - self.frame.zaxis*self.width*1.5)
         
         stick_xa = Stick(Line(offsetpt_xa, offsetpt_xa+self.frame.xaxis*self.length), width = self.width, depth = self.depth)
         self.sticks.append(stick_xa)
