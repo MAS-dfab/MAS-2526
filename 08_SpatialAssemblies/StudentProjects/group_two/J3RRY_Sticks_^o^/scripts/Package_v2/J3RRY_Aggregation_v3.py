@@ -7,7 +7,14 @@ import math, random
 
 class AggregationManager:
     def __init__(self):
-        
+        """
+        Constructor for Aggregation Manager to handle multiple aggregations.
+
+        graph example:
+        [0, 0]; round = 0, root = 0
+        [1, 0, 1]; round = 1, root = 0, branch = [1]
+        [2, 1, 0, 2]; round = 2 root = 1, branch = [0,2]
+        """
         self.graph = []  # {round, root, branch, sub-branch, ...}
         self.aggs = [] # all aggregations
 

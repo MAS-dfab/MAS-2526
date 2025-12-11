@@ -34,9 +34,18 @@ class Fabrication:
         return joint_frames
     
 
-    def add_adjacent_sticks(self):
+    def add_adjacent_sticks(self, both=False):
         """
-        Add adjacent sticks to the top or bottom of the branch in order to mark the overlap areas.
+        Add adjacent sticks (child = upper, parent = lower) to each module,
+        in order to mark the overlap areas.
+
+        if both = True, add both upper and lower adjacent sticks.
+        if both = False, only add upper adjacent sticks.
+
+        graph example:
+        [0, 0]; round = 0, root = 0
+        [1, 0, 1]; round = 1, root = 0, branch = [1]
+        [2, 1, 0, 2]; round = 2 root = 1, branch = [0,2]
         """ 
         self._init_sticks()
 
@@ -44,17 +53,19 @@ class Fabrication:
         modules = self.modules
         max_round = max(g[0] for g in graph)  # Get the maximum round number
         
+        # Create a dictionary to find indices by round number.
+        # e.g. round = 0: [0, 1, 2]; round = 1: [3,4,5,6,8,...]
         round_to_indices = {}
         for idx, g in enumerate(graph):
             round = g[0]
             round_to_indices.setdefault(round, []).append(idx)
-            
+        
+        # Add upper adjacent sticks
         for idx, g in enumerate(graph):
-            round = g[0]
+            round = g[0]  
             root = g[1]
             parent_branch = g[2:]
 
-            current_module = modules[idx]
             # Find upper adjacent sticks
             if round < max_round:
                 child_round = round + 1
@@ -70,17 +81,13 @@ class Fabrication:
                     child_first_stick = child_module.sticks[0]
                     self.sticks[idx].append(child_first_stick)
 
-            """
-            if g[0] == 0:  # Module in first round only have upper adjacent stick
+        # Add lower adjacent sticks
+        if both:
+            for idx, g in enumerate(graph):
+                round = g[0]
+                root = g[1]
+                parent_branch = g[2:]
 
-                pass
-            elif g[0] == max_round:  # Module in last round only have bottom adjacent stick
-                # do sth
-                pass
-            else:  # Module in middle round have both top and bottom ajjacent stick
-                # do sth
-                pass
-            """
 
     def erect_modules(self):
         """
