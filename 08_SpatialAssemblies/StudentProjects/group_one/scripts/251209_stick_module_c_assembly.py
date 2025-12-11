@@ -149,6 +149,7 @@ class BranchStickModules:
         self.width = width or  Stick.WIDTH
         self.depth = depth or Stick.DEPTH
         self._init_first_module(root_frame)
+        self.frames = [root_frame]
     
     def _init_first_module(self, frame):
         pt = frame.point
@@ -204,6 +205,7 @@ class BranchStickModules:
         new_module = StickModuleC(position, self.width, self.depth, self.stick_length)
         new_module.create_module_c()
         self.modules.append(new_module)
+        self.frames.append(position)
     
     def visualize(self):
         """
