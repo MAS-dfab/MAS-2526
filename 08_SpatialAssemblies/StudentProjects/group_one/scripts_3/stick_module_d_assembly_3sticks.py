@@ -1,6 +1,6 @@
 from compas.geometry import Line, Frame, Vector
 
-from group_one_sticks import Stick
+from Sticks import Stick
 import math
 
 from compas.geometry import Rotation
@@ -131,6 +131,7 @@ class BranchingModule:
         new_stick = Stick(centerline, zvector)
         self.sticks.append(new_stick)
 
+
     def visualize(self):
         """
         Returns all stick geometries.
@@ -152,8 +153,8 @@ class BranchStickModules:
     def _init_first_module(self, frame):
         pt = frame.point
         # my_module = StickModuleC(pt, stick_width, stick_depth, stick_length)
-        my_module = StickModuleC(frame, self.width, self.depth, self.stick_length)
-        my_module.create_module_c() 
+        my_module = StickModuleD(frame, self.width, self.depth, self.stick_length)
+        my_module.create_module_d() 
         self.modules.append(my_module)
     
     def get_face_frame(self, module_index, stick_index, face_index, move=1):
@@ -162,7 +163,7 @@ class BranchStickModules:
         stick_frame = module.sticks[stick_index].frame
 
         angle = face_index*math.pi/2 # research, 0, 1, 2,3 is 90 degree steps
-        R = Rotation.from_axis_and_angle(stick_frame.xaxis, angle = angle, point = stick_frame.point)
+        R = Rotation.from_axis_and_angle(stick_frame.yaxis, angle = angle, point = stick_frame.point)
         new_frame = stick_frame.transformed(R)
 
         new_frame.point = module.sticks[stick_index].axis.end
@@ -171,7 +172,7 @@ class BranchStickModules:
         new_frame.point += new_frame.xaxis*-self.width*0.5 #adjust Stick overlapping
         return new_frame #where does it return to/ where is it used next
     
-    def grow_module(self,  offset_xxis, offset_yxis, offset_zxis, from_module_index=-1, from_stick_index=-1, face_index=0, angle=0.0, move = 1):
+    def grow_module(self, offset_xxis, offset_yxis, offset_zxis, from_module_index=-1, from_stick_index=-1, face_index=0, angle=0.0, move= 1):
         """
         Grows a new module from an existing module's stick.
 
@@ -189,7 +190,7 @@ class BranchStickModules:
         
         position.point += position.yaxis * self.depth * offset_yxis # is okay
         # position.point += position.xaxis * self.width * offset_axis
-        position.point += position.zaxis *self.depth 
+        position.point += position.zaxis *self.depth * 0.5
         position.point += position.zaxis * self.depth * offset_zxis
 
         # Rotate along face frame
@@ -197,13 +198,12 @@ class BranchStickModules:
         position.transform(R)
 
         # Offset along stick axis (x, length)
-        position.point += position.xaxis * self.depth*  offset_xxis
-        # position.point += position.xaxis 
+        position.point += position.xaxis * offset_xxis 
+
         # Create new module at this position
-        new_module = StickModuleC(position, self.width, self.depth, self.stick_length)
-        new_module.create_module_c()
+        new_module = StickModuleD(position, self.width, self.depth, self.stick_length)
+        new_module.create_module_d()
         self.modules.append(new_module)
-    
     
     def visualize(self):
         """
@@ -243,7 +243,7 @@ class StickModuleB:
         stick_yb = Stick(Line(offsetpt_yb, offsetpt_yb+Vector( 0, self.length, 0)), width = self.width, depth = self.depth)
         self.sticks.append(stick_yb)
 
-class StickModuleC:
+class StickModuleD:
     def __init__(self, frame, stick_width, stick_depth, stick_length):
         self.frame = frame
         self.width = stick_width
@@ -252,27 +252,27 @@ class StickModuleC:
 
         self.sticks = []
     
-    def create_module_c(self):
+    def create_module_d(self):
         # move stick in x
         offsetpt_xa = (self.frame.point - self.frame.xaxis*self.width*3.5 - self.frame.yaxis*self.width)
-        offsetpt_xb = (self.frame.point - self.frame.xaxis*self.width*3.5 + self.frame.yaxis*self.width)
+        # offsetpt_xb = (self.frame.point - self.frame.xaxis*self.width*3.5 + self.frame.yaxis*self.width)
         
         offsetpt_ya = (self.frame.point - self.frame.yaxis*self.width*4.5-self.frame.zaxis*self.depth)
-        offsetpt_yb = (self.frame.point - self.frame.yaxis*self.width*4.5+self.frame.zaxis*self.depth)
+        # offsetpt_yb = (self.frame.point - self.frame.yaxis*self.width*4.5+self.frame.zaxis*self.depth)
      
         offsetpt_z = (self.frame.point + self.frame.xaxis*self.length-self.frame.xaxis*self.width*7 - self.frame.zaxis*self.width*3.5)
         
         stick_xa = Stick(Line(offsetpt_xa, offsetpt_xa+self.frame.xaxis*self.length), width = self.width, depth = self.depth)
         self.sticks.append(stick_xa)
         
-        stick_xb = Stick(Line(offsetpt_xb, offsetpt_xb+self.frame.xaxis*self.length), width = self.width, depth = self.depth)
-        self.sticks.append(stick_xb)
+        # stick_xb = Stick(Line(offsetpt_xb, offsetpt_xb+self.frame.xaxis*self.length), width = self.width, depth = self.depth)
+        # self.sticks.append(stick_xb)
         
         stick_ya = Stick(Line(offsetpt_ya, offsetpt_ya + self.frame.yaxis*self.length), width = self.width, depth = self.depth)
         self.sticks.append(stick_ya)
 
-        stick_yb = Stick(Line(offsetpt_yb, offsetpt_yb+self.frame.yaxis*self.length), width = self.width, depth = self.depth)
-        self.sticks.append(stick_yb)
+        # stick_yb = Stick(Line(offsetpt_yb, offsetpt_yb+self.frame.yaxis*self.length), width = self.width, depth = self.depth)
+        # self.sticks.append(stick_yb)
 
         stick_z = Stick(Line(offsetpt_z, offsetpt_z+self.frame.zaxis*self.length), width = self.width, depth = self.depth)
         self.sticks.append(stick_z)
