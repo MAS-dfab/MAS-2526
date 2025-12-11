@@ -41,16 +41,10 @@ class BranchStickModulesUpdates:
 
         # Get position on original stick from specific module
         position = self.get_face_frame(from_module_index, from_stick_index, face_index).copy()
-                
-        # position.point += position.yaxis * self.depth/2 * offset_axis_b - position.xaxis*self.width/2
-        # position.point += position.xaxis * offset_axis
-
-        
         
         position.point += position.xaxis * (-self.stick_length /2 - self.depth * 2)
         position.point += position.yaxis * (-self.stick_length /2)
         position.point += position.zaxis * self.depth * 2
-        # position.point += position.yaxis * self.depth/2 - position.xaxis*self.width/2
 
         # Rotate along face frame
         R = Rotation.from_axis_and_angle(position.zaxis, math.radians(angle), point=position.point)  #point=rotation_center
