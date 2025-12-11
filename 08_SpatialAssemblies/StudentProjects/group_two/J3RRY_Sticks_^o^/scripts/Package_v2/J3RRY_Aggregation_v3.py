@@ -16,7 +16,7 @@ class AggregationManager:
         [2, 1, 0, 2]; round = 2 root = 1, branch = [0,2]
         """
         self.graph = []  # {round, root, branch, sub-branch, ...}
-        self.aggs = [] # all aggregations
+        self.aggs = [] # all aggregations, [[sticks], [sticks], [sticks],...[sticks]]
 
 
     def run_multiround_aggregation(self, first_frames, length_pattern, angle_pattern,

@@ -34,7 +34,7 @@ class Fabrication:
         return joint_frames
     
 
-    def add_adjacent_sticks(self, both=False):
+    def add_adjacent_sticks(self, both=False):  #  both=True script has not been constructed yet
         """
         Add adjacent sticks (child = upper, parent = lower) to each module,
         in order to mark the overlap areas.
@@ -60,13 +60,12 @@ class Fabrication:
             round = g[0]
             round_to_indices.setdefault(round, []).append(idx)
         
-        # Add upper adjacent sticks
         for idx, g in enumerate(graph):
             round = g[0]  
             root = g[1]
-            parent_branch = g[2:]
-
-            # Find upper adjacent sticks
+            parent_branch = g[2:]  # Branch path for current module
+    
+            # ----Find chlid (upper) adjacent sticks----
             if round < max_round:
                 child_round = round + 1
                 for j in round_to_indices.get(child_round, []):
@@ -81,12 +80,11 @@ class Fabrication:
                     child_first_stick = child_module.sticks[0]
                     self.sticks[idx].append(child_first_stick)
 
-        # Add lower adjacent sticks
-        if both:
-            for idx, g in enumerate(graph):
-                round = g[0]
-                root = g[1]
-                parent_branch = g[2:]
+            # ----Find parent (lower) adjacent sticks----
+            if both and round > 0:
+                parent_round = round - 1
+                for j in round_to_indices.get(parent_round, []):
+                    pass  # do this later
 
 
     def erect_modules(self):
@@ -114,3 +112,30 @@ class Fabrication:
                 branch_sticks.append(ori_stick)
             erected_modules.append(branch_sticks)
         return erected_modules
+    
+
+    def erect_stick(self, frames):
+        """
+        Conversion for any types of sticks using type Frame.
+        Michael can follow the section "erect_modules" above as the guidance.
+        """
+        # frame to orient from
+
+        # from to orient to
+
+        # Create Orientation
+
+        # Return type ???
+        pass
+
+
+    def plot_modules(self):
+        pass
+
+
+    def send_modules_to_place_frames(self):
+        pass
+
+
+    def eval_pick_frame(self):
+        pass
