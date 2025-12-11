@@ -523,7 +523,7 @@ class Aggregation:
             next_frame.point += dir_vec * (current_stick.depth / 2)
             
             # Define which face of new stick attaches to previous stick
-            which_face = to_index * -90  # should be -90
+            which_face = to_index * 90  # should be -90
             next_frame.rotate(math.radians(which_face), next_frame.xaxis, next_frame.point)
             # Rotate next_frame around normal
             if angle != 0:

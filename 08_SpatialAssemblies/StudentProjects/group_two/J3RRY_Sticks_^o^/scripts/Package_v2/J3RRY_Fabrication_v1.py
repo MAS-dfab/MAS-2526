@@ -5,24 +5,32 @@ import math
 
 class Fabrication:
     def __init__(self, aggregation_manager):
+        """
+        Constructor for Fabrication process.
+        
+        Args:
+            aggregation_manager: type AggregationManager, manager containing all aggregations.
+        """
 
         self.aggregation_manager = aggregation_manager
         self.aggs = aggregation_manager.aggs
         self.graph = aggregation_manager.graph
 
         self.original_modules = [agg.sticks for agg in self.aggs]
-        self.modules = [list(branch) for branch in self.original_modules]  # copy of original modules
         self.agg_indices = []
         self.stick_indices = []
 
-        self.erected_sticks = []
-        self.sticks_with_adjacent = []
+        self.erected_modules = []
+        self.modules_with_adjacent = []
 
         
     def _round_to_indices(self):
         """
         Create a dictionary to find indices by round number.
         e.g. round = 0: [0, 1, 2]; round = 1: [3,4,5,6,8,...]
+
+        Returns:
+            mapping: dict, {round: [indices]}
         """
         mapping = {}
         for idx, g in enumerate(self.graph):
@@ -32,6 +40,17 @@ class Fabrication:
     
 
     def get_face_t(self, agg_idx, stick_idx):
+        """
+        Get face index and t value for a specified stick in an aggregation.
+
+        Args:
+            agg_idx: int, index of which aggregation.
+            stick_idx: int, index of which stick in the aggregation.
+        
+        Returns:
+            face_index: int, face index on the stick (0-3).
+            t_value: float, t value along the stick's length (0.0-1.0).
+        """
         agg = self.aggs[agg_idx]
         face_indices = agg.face_indices
         t_values = agg.t_values
@@ -42,9 +61,13 @@ class Fabrication:
         """
         Get joint frames which belong to the spawned sticks in the module.
         
+        Args:
+            modules: optional, list of modules to use (e.g. erected_modules), instead of the original ones.
+        
         Returns:
-            joint_frames: list of type Frame, frames belonging to spawned sticks.
+            joint_frames: list of type Frame, belong to spawned sticks.
         """
+        # If no modules provided, use original modules
         if modules is None:
             joint_frames = []
             for agg in self.aggs:
@@ -57,6 +80,7 @@ class Fabrication:
             return joint_frames
 
 
+        # If modules provided, use provided modules (basically for erected modules)
         if not self.agg_indices or not self.stick_indices:
             raise ValueError("Please run 'add_adjacent_sticks' method first to populate agg_indices and stick_indices.")
 
@@ -80,9 +104,9 @@ class Fabrication:
         Add adjacent sticks (child = upper, parent = lower) to each module,
         in order to mark the overlap areas.
 
-        if both = True, add both upper and lower adjacent sticks.
         if both = False, only add upper adjacent sticks.
-    
+        if both = True, add both upper and lower adjacent sticks.
+        
         graph example:
         [0, 0]; round = 0, root = 0
         [1, 0, 1]; round = 1, root = 0, branch = [1]
@@ -90,15 +114,18 @@ class Fabrication:
 
         Args:
             both (bool): Whether to include both upper and lower adjacent sticks.
-            modules (list): Optional list of modules to use instead of the original ones.
+        
+        Returns:
+            modules_with_adjacent: list of type Stick, list of sticks with adjacent sticks added.
+            agg_indices: list of int, aggregation indices corresponding to each stick in modules_with_adjacent.
+            stick_indices: list of int, stick indices within their aggregations corresponding to each stick in modules_with_adjacent.
         """ 
         graph = self.graph
         max_round = max(g[0] for g in graph)  # Get the maximum round number
         
-
         base_modules = self.original_modules
+        self.modules_with_adjacent = [list(branch) for branch in base_modules]  # Copy base modules
 
-        self.sticks_with_adjacent = [list(branch) for branch in base_modules]  # Copy base modules
         self.agg_indices = []
         self.stick_indices = []
         for agg_idx, agg in enumerate(self.aggs):
@@ -128,7 +155,7 @@ class Fabrication:
                         continue
 
                     child_first_stick = child_sticks[0]
-                    self.sticks_with_adjacent[idx].append(child_first_stick)
+                    self.modules_with_adjacent[idx].append(child_first_stick)
 
                     agg_idx = j
                     stick_idx = 0  # first stick of the child module
@@ -141,13 +168,16 @@ class Fabrication:
                 for j in mapping.get(parent_round, []):
                     pass  # do this later
 
-        return self.sticks_with_adjacent, self.agg_indices, self.stick_indices
+        return self.modules_with_adjacent, self.agg_indices, self.stick_indices
 
 
     def erect_modules(self, modules=None):
         """
         Erect modules to vertical position for fabrication.
         The first stick of each module will be aligned to global Z axis.
+
+        Args:
+            modules: optional, list of type Stick to erect (basically for modules with adjacent sticks).
 
         Returns:
             erected_modules: list of type Stick, list of sticks in erected position.
@@ -172,9 +202,9 @@ class Fabrication:
                 ori_stick = Stick(new_frame, stick.length)
                 branch_sticks.append(ori_stick)
             new_modules.append(branch_sticks)
-        self.modules = new_modules
 
-        return self.modules
+        self.erected_modules = new_modules
+        return self.erected_modules
         
 
     def erect_stick(self, frames):
@@ -193,6 +223,19 @@ class Fabrication:
 
 
     def plot_modules(self, modules=None, origin=(0,0,0), x_size=400, y_size=240):
+        """
+        Create a plot layout for all modules.
+        
+        Args:
+            modules: optional, list of type Stick to plot (basically for erected modules).
+            origin: type Point, origin point of the layout.
+            x_size: float, size in X direction between modules.
+            y_size: float, size in Y direction between modules.
+        
+        Returns:
+            plotted_modules: list of type Stick in plotted position.
+            recs: list of type Polyline, border rectangles for each module.
+        """
         # Create plotting points
         cols, rows = [], []
         for idx, g in enumerate(self.graph):
@@ -221,7 +264,7 @@ class Fabrication:
             rec = Polyline([p0, p1, p2, p3, p0])
             recs.append(rec)
 
-        new_modules = []
+        plotted_modules = []
         if modules is None:
             current_modules = self.original_modules
         else: 
@@ -237,9 +280,9 @@ class Fabrication:
                 new_frame.transform(translation)
                 ori_stick = Stick(new_frame, stick.length)
                 branch_sticks.append(ori_stick)
-            new_modules.append(branch_sticks)
+            plotted_modules.append(branch_sticks)
 
-        return new_modules, recs
+        return plotted_modules, recs
 
 
     def send_modules_to_place_frame(self, frame):
@@ -251,11 +294,11 @@ class Fabrication:
         Compute default pick frames for each module.
 
         Args:
-            modules: list of type Stick, modules to compute pick frames for.
-            robot_position: type Point, will choose the face which closest to the robot position base on the center of the faces.
+            modules: list of type Stick to compute pick frames for.
+            robot_position: type Point, will choose the face which closest to the robot position base on the center of four faces.
             
         Returns:
-            pick_frames: list of type Frame, first pick frames to try.    
+            pick_frames: list of type Frame, first pick frames to try generating robot motions.
         """
         pick_frames = []
         for module_idx, branch in enumerate(modules):
