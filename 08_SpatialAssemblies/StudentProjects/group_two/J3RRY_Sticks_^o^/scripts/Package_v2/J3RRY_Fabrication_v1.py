@@ -228,9 +228,9 @@ class Fabrication:
         
         Args:
             modules: optional, list of type Stick to plot (basically for erected modules).
-            origin: type Point, origin point of the layout.
-            x_size: float, size in X direction between modules.
-            y_size: float, size in Y direction between modules.
+            origin: optional, type Point, origin point of the layout.
+            x_size: optional, float, size in X direction between modules.
+            y_size: optional, float, size in Y direction between modules.
         
         Returns:
             plotted_modules: list of type Stick in plotted position.
@@ -264,6 +264,7 @@ class Fabrication:
             rec = Polyline([p0, p1, p2, p3, p0])
             recs.append(rec)
 
+        # Orient modules to plotting frames
         plotted_modules = []
         if modules is None:
             current_modules = self.original_modules
@@ -285,25 +286,25 @@ class Fabrication:
         return plotted_modules, recs
 
 
-    def send_modules_to_place_frame(self, frame):
+    def send_modules_to_placing_frame(self, frame):
         pass
 
 
-    def eval_pick_frames(self, modules, robot_position=Point(0,0,0)):
+    def eval_target_frames(self, modules, robot_position=Point(0,0,0)):
         """
-        Compute default pick frames for each module.
+        Compute default target frames for each module.
 
         Args:
-            modules: list of type Stick to compute pick frames for.
+            modules: list of type Stick to compute target frames for.
             robot_position: type Point, will choose the face which closest to the robot position base on the center of four faces.
             
         Returns:
-            pick_frames: list of type Frame, first pick frames to try generating robot motions.
+            target_frames: list of type Frame, first target frames to try generating robot motions.
         """
-        pick_frames = []
+        target_frames = []
         for module_idx, branch in enumerate(modules):
 
-            pick_branch = []
+            target_branch = []
             agg_idx_list = self.agg_indices[module_idx]
             stick_idx_list = self.stick_indices[module_idx]
             
@@ -321,6 +322,6 @@ class Fabrication:
 
                     frame = stick.eval_frame(new_face_idx, new_t)
                     frame.rotate(math.pi, stick.frame.xaxis, frame.point)
-                    pick_branch.append(frame)
-            pick_frames.append(pick_branch)
-        return pick_frames
+                    target_branch.append(frame)
+            target_frames.append(target_branch)
+        return target_frames
