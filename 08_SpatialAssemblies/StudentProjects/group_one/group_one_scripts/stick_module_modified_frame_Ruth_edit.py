@@ -17,8 +17,8 @@ class BranchStickModulesUpdates:
     def _init_first_module(self, frame):
         my_module = StickModule(frame, self.width, self.depth, self.stick_length, rot_angle=self.rot_angle)
 
-        my_module.create_module_a() 
-        # my_module.create_module_c()
+        # my_module.create_module_a() 
+        my_module.create_module_c()
         self.modules.append(my_module)
     
     def get_face_frame(self, module_index, stick_index, face_index):
