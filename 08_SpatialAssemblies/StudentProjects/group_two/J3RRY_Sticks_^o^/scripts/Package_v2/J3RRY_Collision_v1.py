@@ -37,7 +37,7 @@ class Collision:
         """
         Private method to compute the shortest distance between the infinite axes of two sticks.
         Using for rounded pipe-like sticks.
-        
+
         Returns:
             float: shortest distance between two infinite axes.
         """
