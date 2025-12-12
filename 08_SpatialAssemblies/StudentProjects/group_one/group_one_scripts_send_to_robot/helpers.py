@@ -61,7 +61,7 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
     approach_pick_frame.translate(
-        APPROACH_DISTANCE * -approach_pick_frame.zaxis
+        APPROACH_DISTANCE * approach_pick_frame.zaxis
     )
 
     # Generate cartesian trajectory from pick to approach pick frame
