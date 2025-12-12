@@ -56,8 +56,8 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     Calculate the pick trajectory for a given pick frame.
     """
     pick_frame = pickup_frame.copy()
-    pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
-    pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
+    # pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR ???????
+    # pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR ???????
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
     approach_pick_frame.translate(
