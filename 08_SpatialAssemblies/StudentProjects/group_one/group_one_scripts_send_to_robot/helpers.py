@@ -49,7 +49,7 @@ def generate_default_tolerances(joints):
     return [DEFAULT_TOLERANCE_METERS if j.is_scalable() else DEFAULT_TOLERANCE_RADIANS for j in joints]
 
 
-APPROACH_DISTANCE = 0.1  # 10 cm
+APPROACH_DISTANCE = 0.2  # 10 cm
     
 def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipulator"):
     """
@@ -61,7 +61,7 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
     approach_pick_frame.translate(
-        APPROACH_DISTANCE * approach_pick_frame.zaxis
+        APPROACH_DISTANCE * approach_pick_frame.yaxis
     )
 
     # Generate cartesian trajectory from pick to approach pick frame
