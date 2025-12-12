@@ -164,6 +164,6 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
             )
         )
     
-    joined_exit_trajectory = exit_trajectory.copy()
-    joined_exit_trajectory.points.extend(return_trajectory.points)
+    joined_exit_trajectory = return_trajectory #exit_trajectory.copy()
+    # joined_exit_trajectory.points.extend(return_trajectory.points)
     return place_trajectory, joined_exit_trajectory
