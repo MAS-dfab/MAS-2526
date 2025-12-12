@@ -286,10 +286,6 @@ class Fabrication:
         return plotted_modules, recs
 
 
-    def send_modules_to_placing_frame(self, frame):
-        pass
-
-
     def eval_target_frames(self, modules, robot_position=Point(0,0,0)):
         """
         Compute default target frames for each module.
@@ -302,9 +298,13 @@ class Fabrication:
             target_frames: list of type Frame, first target frames to try generating robot motions.
         """
         target_frames = []
+        new_face_indices = []
+        new_t_values = []
         for module_idx, branch in enumerate(modules):
 
             target_branch = []
+            face_branch = []
+            t_branch = []
             agg_idx_list = self.agg_indices[module_idx]
             stick_idx_list = self.stick_indices[module_idx]
             
@@ -323,5 +323,9 @@ class Fabrication:
                     frame = stick.eval_frame(new_face_idx, new_t)
                     frame.rotate(math.pi, stick.frame.xaxis, frame.point)
                     target_branch.append(frame)
+                    face_branch.append(new_face_idx)
+                    t_branch.append(new_t)
             target_frames.append(target_branch)
-        return target_frames
+            new_face_indices.append(face_branch)
+            new_t_values.append(t_branch)
+        return target_frames, new_face_indices, new_t_values
