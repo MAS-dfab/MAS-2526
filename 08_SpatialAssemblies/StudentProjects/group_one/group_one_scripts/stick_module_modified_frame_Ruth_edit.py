@@ -17,7 +17,8 @@ class BranchStickModulesUpdates:
     def _init_first_module(self, frame):
         my_module = StickModule(frame, self.width, self.depth, self.stick_length, rot_angle=self.rot_angle)
 
-        my_module.create_module_c() 
+        my_module.create_module_a() 
+        # my_module.create_module_c()
         self.modules.append(my_module)
     
     def get_face_frame(self, module_index, stick_index, face_index):
@@ -193,6 +194,35 @@ class StickModule:
         stick_yb = Stick(stick_yb_axis, self.frame, width=self.width, depth=self.depth)
         
         self.sticks.append(stick_yb)
+
+        # Stick Z #
+        offsetpt_yb = (self.frame.point
+                      + x_direction * (self.length - (self.depth * 4))
+                      + y_direction * (self.depth * 1)
+                      - z_direction * (self.depth * 4))
+         
+        stick_yb_axis = Line(offsetpt_yb, offsetpt_yb + z_direction * self.length)
+        stick_yb = Stick(stick_yb_axis, self.frame, width=self.width, depth=self.depth)
+        
+        self.sticks.append(stick_yb)
+
+
+    def create_module_a(self, rot_angle=None):
+        x_direction = self.frame.xaxis 
+        y_direction = self.frame.yaxis 
+        z_direction = self.frame.zaxis 
+
+        # Stick XA #
+        offsetpt_xa = (self.frame.point
+                      + x_direction * (self.depth * 0)
+                      + y_direction * (self.depth * 0)
+                      + z_direction * (self.depth * 0))
+         
+        stick_xa_axis = Line(offsetpt_xa, offsetpt_xa + x_direction * self.length)
+        stick_xa = Stick(stick_xa_axis, self.frame, width=self.width, depth=self.depth)
+        
+        self.sticks.append(stick_xa)
+        
 
         # Stick Z #
         offsetpt_yb = (self.frame.point
