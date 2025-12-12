@@ -49,15 +49,15 @@ def generate_default_tolerances(joints):
     return [DEFAULT_TOLERANCE_METERS if j.is_scalable() else DEFAULT_TOLERANCE_RADIANS for j in joints]
 
 
-APPROACH_DISTANCE = 0.1  # 10 cm
+APPROACH_DISTANCE = 0.2  # 10 cm
     
 def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipulator"):
     """
     Calculate the pick trajectory for a given pick frame.
     """
     pick_frame = pickup_frame.copy()
-    pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
-    pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
+    # pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
+    # pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
     approach_pick_frame.translate(
@@ -124,6 +124,8 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
         group=group or robot.main_group_name,
         options=dict(
             max_step=0.01,
+            avoid_collisions=True,
+            
         ),  
     )
     print("Planned safe trajectory.")

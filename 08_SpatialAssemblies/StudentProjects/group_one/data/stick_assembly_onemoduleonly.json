@@ -47,7 +47,7 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "86b09d35-7f4b-4dde-b23e-b6eb48bc56f8"
+                                    "guid": "9390fb8d-d249-4b67-a5ce-6da335cec93e"
                                 }
                             },
                             "features": [],
@@ -71,7 +71,7 @@
                             "key": 0
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "9d134852-d293-4cd4-bcba-7cd517098af4",
+                        "guid": "c1dc7906-47ca-4798-af42-5b7eec60d5e4",
                         "inheritance": []
                     }
                 },
@@ -104,7 +104,7 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "9e28af17-9874-47a6-bb03-4cf113c6fcab"
+                                    "guid": "17083566-866b-4a64-9b94-9dc65db82fd2"
                                 }
                             },
                             "features": [],
@@ -128,7 +128,7 @@
                             "key": 1
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "7410ceff-07bc-48ba-9b84-955809019d80",
+                        "guid": "0a7e8f9e-965c-4f22-84f8-39f89b2675c3",
                         "inheritance": []
                     }
                 },
@@ -161,7 +161,7 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "4c72dce0-e803-4220-bc96-defe0c0b0168"
+                                    "guid": "7132eafc-bdb5-441f-93c7-51ac6592b78f"
                                 }
                             },
                             "features": [],
@@ -185,7 +185,7 @@
                             "key": 2
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "f19cf672-58dd-431d-970f-b40d5e3149cb",
+                        "guid": "e9099f61-02f1-4dbf-bf1f-81b76b66e943",
                         "inheritance": []
                     }
                 },
@@ -218,7 +218,7 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "5a389a94-46bf-4853-be3d-fba43d9ed75c"
+                                    "guid": "bfdb4f79-b96a-4f9f-952d-f1aca4fd5220"
                                 }
                             },
                             "features": [],
@@ -242,7 +242,7 @@
                             "key": 3
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "4fabea0a-3a10-4842-8120-04455fe2484b",
+                        "guid": "52f136f6-0092-4147-a644-ad1b5d40af2b",
                         "inheritance": []
                     }
                 },
@@ -275,7 +275,7 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "0032437c-8656-44cb-b5d2-df423e2e27d9"
+                                    "guid": "1831c800-9543-47a4-ab16-19d4e0065767"
                                 }
                             },
                             "features": [],
@@ -299,7 +299,7 @@
                             "key": 4
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "5f40fce8-5b53-434f-ad0e-d42eca68b334",
+                        "guid": "4e1b0a93-6148-44b8-8a7f-2010cd0c527c",
                         "inheritance": []
                     }
                 }
@@ -307,6 +307,6 @@
         }
     },
     "dtype": "compas.datastructures/Assembly",
-    "guid": "8d933063-5274-4b0d-a1cc-f048a369e9a2",
+    "guid": "76b716c3-f526-477e-b612-51962eb6b98b",
     "inheritance": []
 }
