@@ -32,12 +32,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick0",
+                                "name": "stick000",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -443.32206086938254,
+                                                212.84908543648123,
                                                 5.793225900681655e-07,
                                                 100.00000002696797
                                             ],
@@ -57,13 +57,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "6f353b02-a5ce-4fb3-ae8c-8e24bb1eebc1"
+                                    "guid": "cfdf36f8-7b9a-4bf9-abeb-e38b2b1685e3"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -443.32206086938254,
+                                    212.84908543648123,
                                     5.793225900681655e-07,
                                     100.00000002696797
                                 ],
@@ -81,7 +81,7 @@
                             "key": 0
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "f866f4a1-9d86-41d5-8a00-e8b47f9dd515",
+                        "guid": "815beddb-a141-4ed0-9011-bce88f252056",
                         "inheritance": []
                     }
                 },
@@ -89,12 +89,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick1",
+                                "name": "stick001",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -617.3220608693825,
+                                                38.84908543648123,
                                                 174.0000005793226,
                                                 100.00000002696797
                                             ],
@@ -114,13 +114,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "0bae1fc5-25f9-4ecc-8559-f70949e826ba"
+                                    "guid": "07d2c7aa-5934-4555-b282-c423fa11939c"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -617.3220608693825,
+                                    38.84908543648123,
                                     174.0000005793226,
                                     100.00000002696797
                                 ],
@@ -138,7 +138,7 @@
                             "key": 1
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "055e4e47-bde8-4b76-9465-2a7a28a84b3c",
+                        "guid": "9f1215cd-467f-4a1d-8311-48059674cc55",
                         "inheritance": []
                     }
                 },
@@ -146,12 +146,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick10",
+                                "name": "stick010",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -536.8220608693825,
+                                                119.34908543648123,
                                                 161.00000057932257,
                                                 45.50000002696797
                                             ],
@@ -171,13 +171,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "7e081f0a-f7f9-4020-bf38-108c417dd05b"
+                                    "guid": "b91f2df2-ee68-4667-9dd3-32d2c8904bfc"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -536.8220608693825,
+                                    119.34908543648123,
                                     161.00000057932257,
                                     45.50000002696797
                                 ],
@@ -195,7 +195,7 @@
                             "key": 10
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "4b8ff471-6009-4fae-b753-ea2af7994427",
+                        "guid": "77a2fb77-835a-47ee-86b0-96bd496f909a",
                         "inheritance": []
                     }
                 },
@@ -203,12 +203,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick11",
+                                "name": "stick011",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -523.8220608693825,
+                                                132.34908543648123,
                                                 161.0000005793226,
                                                 180.50000002696794
                                             ],
@@ -228,13 +228,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "afcbfbf0-5a58-4446-8b18-71202457f79e"
+                                    "guid": "1096412b-49fb-4a57-bd7f-71bb3838ef49"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -523.8220608693825,
+                                    132.34908543648123,
                                     161.0000005793226,
                                     180.50000002696794
                                 ],
@@ -252,7 +252,7 @@
                             "key": 11
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "e293350d-9304-4880-a0fa-a59f1e2dc06f",
+                        "guid": "b90cfdb5-4faf-4fda-951b-1d821b593752",
                         "inheritance": []
                     }
                 },
@@ -260,23 +260,23 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick12",
+                                "name": "stick012",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -604.3220608693825,
+                                                51.849085436481204,
                                                 241.5000005793226,
                                                 193.50000002696794
                                             ],
                                             "xaxis": [
-                                                6.123233995736766e-17,
+                                                -1.6081226496766366e-16,
                                                 1.0,
                                                 -1.4210854715202002e-16
                                             ],
                                             "yaxis": [
                                                 1.0,
-                                                -6.123233995736765e-17,
+                                                1.6081226496766368e-16,
                                                 1.2246467991473532e-16
                                             ]
                                         },
@@ -285,31 +285,31 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "c0fe5aab-509e-4e63-ac4b-d44225219dcc"
+                                    "guid": "94a8bdb6-a93b-44b5-85c3-9d846819a581"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -604.3220608693825,
+                                    51.849085436481204,
                                     241.5000005793226,
                                     193.50000002696794
                                 ],
                                 "xaxis": [
-                                    6.123233995736766e-17,
+                                    -1.6081226496766366e-16,
                                     1.0,
                                     -1.4210854715202002e-16
                                 ],
                                 "yaxis": [
                                     1.0,
-                                    -6.123233995736765e-17,
+                                    1.6081226496766368e-16,
                                     1.2246467991473532e-16
                                 ]
                             },
                             "key": 12
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "0ae01424-a566-4dae-83e2-959c085c501a",
+                        "guid": "a4f30677-151d-4244-8c3b-bd0570dccbdf",
                         "inheritance": []
                     }
                 },
@@ -317,23 +317,23 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick13",
+                                "name": "stick013",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -578.3220608693825,
+                                                77.8490854364812,
                                                 241.5000005793226,
-                                                193.50000002696794
+                                                193.50000002696797
                                             ],
                                             "xaxis": [
-                                                6.123233995736766e-17,
+                                                -1.6081226496766366e-16,
                                                 1.0,
-                                                -1.4210854715202002e-16
+                                                -1.4210854715202e-16
                                             ],
                                             "yaxis": [
                                                 1.0,
-                                                -6.123233995736765e-17,
+                                                1.6081226496766368e-16,
                                                 1.2246467991473532e-16
                                             ]
                                         },
@@ -342,31 +342,31 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "eea8a933-972d-4756-a27a-ede98828b0de"
+                                    "guid": "9c79626f-8095-477f-99d0-ef85688504da"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -578.3220608693825,
+                                    77.8490854364812,
                                     241.5000005793226,
-                                    193.50000002696794
+                                    193.50000002696797
                                 ],
                                 "xaxis": [
-                                    6.123233995736766e-17,
+                                    -1.6081226496766366e-16,
                                     1.0,
-                                    -1.4210854715202002e-16
+                                    -1.4210854715202e-16
                                 ],
                                 "yaxis": [
                                     1.0,
-                                    -6.123233995736765e-17,
+                                    1.6081226496766368e-16,
                                     1.2246467991473532e-16
                                 ]
                             },
                             "key": 13
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "d2061d15-aa43-4669-9384-cc0742b3f850",
+                        "guid": "05b0f7e6-efc0-4f6c-8177-cbaf0556aff2",
                         "inheritance": []
                     }
                 },
@@ -374,12 +374,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick14",
+                                "name": "stick014",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -523.8220608693825,
+                                                132.34908543648123,
                                                 161.0000005793226,
                                                 206.50000002696794
                                             ],
@@ -399,13 +399,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "82c4d25a-047f-4b4b-b824-d90fa077e5d6"
+                                    "guid": "2f1e30da-e219-4fcc-9bd2-23a9e45beecf"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -523.8220608693825,
+                                    132.34908543648123,
                                     161.0000005793226,
                                     206.50000002696794
                                 ],
@@ -423,7 +423,7 @@
                             "key": 14
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "3b7e2f73-d60b-4f7d-903e-672f0fde47e6",
+                        "guid": "ac49f6f1-299b-4d65-ba18-51686568e515",
                         "inheritance": []
                     }
                 },
@@ -431,12 +431,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick2",
+                                "name": "stick002",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -617.3220608693825,
+                                                38.84908543648123,
                                                 148.0000005793226,
                                                 100.00000002696797
                                             ],
@@ -456,13 +456,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "4abf783e-08ac-4b69-9088-f5d33916ebee"
+                                    "guid": "ca45bbd3-4ff3-42ef-9b6f-be0dccdd5e01"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -617.3220608693825,
+                                    38.84908543648123,
                                     148.0000005793226,
                                     100.00000002696797
                                 ],
@@ -480,7 +480,7 @@
                             "key": 2
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "8a90983a-908c-41f6-8f4f-12100597292d",
+                        "guid": "de646b9e-2e8a-437e-9e84-8d3f08147cfe",
                         "inheritance": []
                     }
                 },
@@ -488,14 +488,14 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick3",
+                                "name": "stick003",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -604.3220608693825,
+                                                51.84908543648123,
                                                 67.50000057932259,
-                                                6.500000026967996
+                                                6.500000026967967
                                             ],
                                             "xaxis": [
                                                 6.123233995736766e-17,
@@ -513,15 +513,15 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "60036191-d61f-4819-93db-8a29e2105ee6"
+                                    "guid": "170f1efa-d29b-4791-9294-d79aea3b4140"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -604.3220608693825,
+                                    51.84908543648123,
                                     67.50000057932259,
-                                    6.500000026967996
+                                    6.500000026967967
                                 ],
                                 "xaxis": [
                                     6.123233995736766e-17,
@@ -537,7 +537,7 @@
                             "key": 3
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "602fa99a-9d0f-436e-8f6b-dd0b68845696",
+                        "guid": "5d13b4c1-68d6-4e77-bd4e-cb69b56a0fb2",
                         "inheritance": []
                     }
                 },
@@ -545,12 +545,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick4",
+                                "name": "stick004",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -591.3220608693825,
+                                                64.84908543648118,
                                                 322.00000057932255,
                                                 113.00000002696794
                                             ],
@@ -570,13 +570,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "4bd18d87-bf85-4a86-836b-ce63bff6ba20"
+                                    "guid": "f10e7215-6ff8-4016-9f5a-9e6e9e775696"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -591.3220608693825,
+                                    64.84908543648118,
                                     322.00000057932255,
                                     113.00000002696794
                                 ],
@@ -594,7 +594,7 @@
                             "key": 4
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "b50bcfdf-6829-411f-961f-bdc8fc929802",
+                        "guid": "5b7d884d-23e5-44f7-8fb4-ca5768eb6bd8",
                         "inheritance": []
                     }
                 },
@@ -602,12 +602,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick5",
+                                "name": "stick005",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -523.8220608693825,
+                                                132.34908543648123,
                                                 -12.99999942067741,
                                                 19.500000026967964
                                             ],
@@ -627,13 +627,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "1971cbf3-7edc-4991-9b74-0ca179f70a28"
+                                    "guid": "dded0f4e-ed5c-4fab-b13f-ebe7c8ce86b6"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -523.8220608693825,
+                                    132.34908543648123,
                                     -12.99999942067741,
                                     19.500000026967964
                                 ],
@@ -651,7 +651,7 @@
                             "key": 5
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "644de7be-6937-467e-a6c3-e82dec7aedc0",
+                        "guid": "7f54327b-b301-4a81-afd4-3429e7762505",
                         "inheritance": []
                     }
                 },
@@ -659,12 +659,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick6",
+                                "name": "stick006",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -523.8220608693825,
+                                                132.34908543648123,
                                                 13.000000579322592,
                                                 19.500000026967964
                                             ],
@@ -684,13 +684,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "d50f9819-795e-45a7-9dbe-2df3cc44778d"
+                                    "guid": "7f26a794-6a8e-4f9b-919f-715c02034d5d"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -523.8220608693825,
+                                    132.34908543648123,
                                     13.000000579322592,
                                     19.500000026967964
                                 ],
@@ -708,7 +708,7 @@
                             "key": 6
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "bb4da09d-8928-4466-a521-1c6610aea5d1",
+                        "guid": "670bd1b8-0505-47b9-a90e-b3280fa1bb67",
                         "inheritance": []
                     }
                 },
@@ -716,13 +716,13 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick7",
+                                "name": "stick007",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -536.8220608693825,
-                                                161.0000005793226,
+                                                119.34908543648123,
+                                                161.00000057932257,
                                                 19.500000026967967
                                             ],
                                             "xaxis": [
@@ -741,14 +741,14 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "c6aa70f6-bff7-44a5-b3df-d6ef800cf37a"
+                                    "guid": "f153118c-c003-45e7-960b-d0be2c8a2b4c"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -536.8220608693825,
-                                    161.0000005793226,
+                                    119.34908543648123,
+                                    161.00000057932257,
                                     19.500000026967967
                                 ],
                                 "xaxis": [
@@ -765,7 +765,7 @@
                             "key": 7
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "6dfe5c64-75af-4eb2-9927-0c6d297a0838",
+                        "guid": "d6fd00c8-dacf-439e-bf7a-0c0eecaad9af",
                         "inheritance": []
                     }
                 },
@@ -773,14 +773,14 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick8",
+                                "name": "stick008",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -604.3220608693825,
+                                                51.84908543648123,
                                                 67.50000057932259,
-                                                32.500000026967996
+                                                32.50000002696797
                                             ],
                                             "xaxis": [
                                                 6.123233995736766e-17,
@@ -798,15 +798,15 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "1dfe3741-d9ae-4cb6-b417-e73f928bb8a6"
+                                    "guid": "c236aec9-2148-4d85-8e17-d2d7fe5e693b"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -604.3220608693825,
+                                    51.84908543648123,
                                     67.50000057932259,
-                                    32.500000026967996
+                                    32.50000002696797
                                 ],
                                 "xaxis": [
                                     6.123233995736766e-17,
@@ -822,7 +822,7 @@
                             "key": 8
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "2a7f8882-c582-4a82-b5ff-3b4cbf8a38c8",
+                        "guid": "f46cabd6-ef04-493c-94e9-caddf9b66398",
                         "inheritance": []
                     }
                 },
@@ -830,12 +830,12 @@
                     "part": {
                         "data": {
                             "attributes": {
-                                "name": "stick9",
+                                "name": "stick009",
                                 "shape": {
                                     "data": {
                                         "frame": {
                                             "point": [
-                                                -456.32206086938254,
+                                                199.8490854364812,
                                                 80.50000057932255,
                                                 32.500000026967996
                                             ],
@@ -855,13 +855,13 @@
                                         "zsize": 13.0
                                     },
                                     "dtype": "compas.geometry/Box",
-                                    "guid": "f980bb7b-2edc-41f0-89f1-5f8e9e6590b8"
+                                    "guid": "6f313a17-5ed7-4ae2-94b4-3c143b6ee80c"
                                 }
                             },
                             "features": [],
                             "frame": {
                                 "point": [
-                                    -456.32206086938254,
+                                    199.8490854364812,
                                     80.50000057932255,
                                     32.500000026967996
                                 ],
@@ -879,7 +879,7 @@
                             "key": 9
                         },
                         "dtype": "compas.datastructures/Part",
-                        "guid": "e7a19719-3ac3-46e6-940d-39ac632ffb11",
+                        "guid": "cfc355b0-4abc-48d7-9cd5-523b1107424c",
                         "inheritance": []
                     }
                 }
@@ -887,6 +887,6 @@
         }
     },
     "dtype": "compas.datastructures/Assembly",
-    "guid": "d4dbe175-080e-4ec2-95dd-454de32308ff",
+    "guid": "fad6ed66-4aa8-491f-94a6-b79da3ccbaab",
     "inheritance": []
 }
