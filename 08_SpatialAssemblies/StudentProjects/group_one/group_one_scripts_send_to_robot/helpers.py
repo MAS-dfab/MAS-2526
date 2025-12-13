@@ -43,8 +43,8 @@ def scale_and_move_to_point(assembly, center):
 
 
 def generate_default_tolerances(joints):
-    DEFAULT_TOLERANCE_METERS = 0.001
-    DEFAULT_TOLERANCE_RADIANS = math.radians(0.1)
+    DEFAULT_TOLERANCE_METERS = 0.01 ### Nadja - changed from 0.001 to 0.01
+    DEFAULT_TOLERANCE_RADIANS = math.radians(.1) ### Nadja - changed from 0.01 to 0.1 deg
 
     return [DEFAULT_TOLERANCE_METERS if j.is_scalable() else DEFAULT_TOLERANCE_RADIANS for j in joints]
 
@@ -58,9 +58,19 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     pick_frame = pickup_frame.copy()
     pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
     pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
+<<<<<<< HEAD
     planar_frame = Frame(pick_frame.point, [1,0,0], [0,1,0])
     R = Rotation.from_axis_and_angle(planar_frame.zaxis, -math.pi, pick_frame.point)
     pick_frame.transform(R)
+=======
+    
+    ### Nadja - if the pickup plane is not flat for UR, rotate it 180 deg around Z axis
+    planar_plane = Frame(pick_frame.point, [1,0,0], [0,1,0])
+    R = Rotation.from_axis_and_angle(planar_plane.zaxis, -math.radians(180), pick_frame.point)
+    pick_frame.transform(R)
+    ### End Nadja
+    
+>>>>>>> 56b1f0b3bcd62379d6ba287f96bb4d17bfab8d1b
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
     approach_pick_frame.translate(
