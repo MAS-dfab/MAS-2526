@@ -1,6 +1,6 @@
 from compas.geometry import Line, Frame, Vector, Rotation, Polyline, Plane, Point, Box, Transformation
 from sticks_251207 import Stick
-from nadja_mainmodule_25_12_04_r1 import StickModuleA
+from nadja_stick_module import StickModuleA
 import math
 
 

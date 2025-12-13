@@ -1,5 +1,5 @@
 from compas.geometry import intersection_line_plane, Plane, Translation, distance_point_point, Frame, Scale
-from compas.geometry import Point, bounding_box
+from compas.geometry import Point, bounding_box, Rotation
 import math
 
 def sort_sticks_by_z(sticks):
@@ -43,8 +43,8 @@ def scale_and_move_to_point(assembly, center):
 
 
 def generate_default_tolerances(joints):
-    DEFAULT_TOLERANCE_METERS = 0.001
-    DEFAULT_TOLERANCE_RADIANS = math.radians(0.1)
+    DEFAULT_TOLERANCE_METERS = 0.01 ### Nadja - changed from 0.001 to 0.01
+    DEFAULT_TOLERANCE_RADIANS = math.radians(.1) ### Nadja - changed from 0.01 to 0.1 deg
 
     return [DEFAULT_TOLERANCE_METERS if j.is_scalable() else DEFAULT_TOLERANCE_RADIANS for j in joints]
 
@@ -56,8 +56,15 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     Calculate the pick trajectory for a given pick frame.
     """
     pick_frame = pickup_frame.copy()
-    # pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
-    # pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
+    pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
+    pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
+    
+    ### Nadja - if the pickup plane is not flat for UR, rotate it 180 deg around Z axis
+    planar_plane = Frame(pick_frame.point, [1,0,0], [0,1,0])
+    R = Rotation.from_axis_and_angle(planar_plane.zaxis, -math.radians(180), pick_frame.point)
+    pick_frame.transform(R)
+    ### End Nadja
+    
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
     approach_pick_frame.translate(
