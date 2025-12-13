@@ -29,9 +29,13 @@ def move_and_scale(assembly):
 
         # scale to meters
         S = Scale.from_factors([factor, factor, factor], frame=Frame.worldXY())
-        part.frame.transform(S)
+        part.frame.transform(S)  # target (place) frame
         part.attributes["shape"].scale(factor)
         part.attributes["shape"].frame.scale(factor)
+
+
+        # part.frame.point.x = -part.frame.point.x  # Invert X axis for UR
+        # part.frame.point.y = -part.frame.point.y  # Invert Y axis for UR
 
         part.attributes["pick_up_geo"].scale(factor)
         part.attributes["pick_up_geo"].frame.scale(factor)
