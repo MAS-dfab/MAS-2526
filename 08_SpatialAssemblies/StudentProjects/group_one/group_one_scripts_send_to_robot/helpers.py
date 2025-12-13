@@ -59,7 +59,7 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
     pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
     planar_frame = Frame(pick_frame.point, [1,0,0], [0,1,0])
-    R = Rotation.from_axis_and_angle(planar_frame.zaxis, math.pi, pick_frame.point)
+    R = Rotation.from_axis_and_angle(planar_frame.zaxis, -math.pi, pick_frame.point)
     pick_frame.transform(R)
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
