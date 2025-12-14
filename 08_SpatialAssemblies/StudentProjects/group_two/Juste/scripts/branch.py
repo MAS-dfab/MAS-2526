@@ -62,7 +62,7 @@ class BranchingModule:
 
         return new_frame
          
-    def grow_stick(self, from_stick_index = -1, face_index = 0, angle = 90, offset = 0.0):
+    def grow_stick(self, from_stick_index = -1, face_index = 0, angle = 0.0, offset = 0.0):
         """
         Grows a new stick from an existing stick.
         
