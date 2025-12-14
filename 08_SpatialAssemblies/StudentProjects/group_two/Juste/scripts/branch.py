@@ -31,7 +31,7 @@ class BranchingModule:
             frame: Frame from which stick will grow
         """
         # Draw line based on start frame
-        stick_axis = Line.from_point_and_vector(frame.point, frame.xaxis * self.stick_length)
+        stick_axis = Line.from_point_and_vector(frame.point, frame.zaxis * self.stick_length)
 
         # Create stick 
         st_stick = Stick(stick_axis, z_vector = frame.yaxis)
