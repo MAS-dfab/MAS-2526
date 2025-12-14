@@ -21,7 +21,7 @@ class BranchingModule:
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
 
-        self._init_first_stick(root_frame)
+        #self._init_first_stick(root_frame)
 
     def _init_first_stick(self, frame):
         """
