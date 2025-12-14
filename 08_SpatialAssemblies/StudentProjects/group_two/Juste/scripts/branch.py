@@ -20,7 +20,7 @@ class BranchingModule:
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
 
-        # ✅ ALWAYS create exactly one root stick
+        # ALWAYS create exactly one root stick
         self._init_first_stick()
 
     # --------------------------------------------------
@@ -87,7 +87,7 @@ class BranchingModule:
     # GROWTH
     # --------------------------------------------------
 
-    def grow_stick(self, from_stick_index=-1, face_index=0, angle=0.0, offset=0.0):
+    def grow_stick(self, from_stick_index=0, face_index=0, angle=0.0, offset=0.0):
         """
         Grows a new stick from a face of an existing stick.
 
