@@ -102,7 +102,7 @@ class BranchingModule:
 
         parent_index = (
             from_stick_index
-            if from_stick_index != 0
+            if from_stick_index != -1
             else len(self.sticks) - 1
         )
 
@@ -110,7 +110,7 @@ class BranchingModule:
 
         # Ensure clean face-to-face separation
         face_frame.point += face_frame.yaxis * (self.depth * 0.5)
-        face_frame.point -= face_frame.xaxis * offset
+        face_frame.point -= face_frame.xaxis * offset + (face_frame.yaxis * (self.depth * 0.5))
 
         if angle != 0.0:
             R = Rotation.from_axis_and_angle(
