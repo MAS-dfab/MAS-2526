@@ -88,8 +88,11 @@ class BranchingModule:
             """
         position = self.get_face_frame(from_stick_index, face_index).copy()
 
-        # Apply offset along X axis (growth direction)
-        position.point += -position.xaxis * offset
+        # Shift outward another half-depth to ensure separation
+        position.point += position.yaxis * (self.depth * 0.5)
+
+        # Apply offset if needed
+        position.point -= position.xaxis * offset
 
         # Optional in-plane rotation around Z (if any angle is needed)
         if angle != 0.0:
