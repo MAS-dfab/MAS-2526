@@ -1,18 +1,18 @@
-from compas.geometry import Line, Frame, Vector
-from compas.geometry import Rotation
+from compas.geometry import Line, Frame, Vector, Rotation
 import math
 
 from Sticks import Stick
 
 
 class BranchingModule:
-    def __init__(self, root_frame, stick_length=None, width=None, depth=None):
-        """
-        Branching module that grows sticks from a root frame.
+    """
+    Branching module that grows sticks from a root frame.
 
-        The first (root) stick is always created automatically.
-        Subsequent sticks grow from faces of existing sticks.
-        """
+    • Exactly ONE root stick is created on init
+    • All further sticks grow from faces of existing sticks
+    """
+
+    def __init__(self, root_frame, stick_length=None, width=None, depth=None):
         self.root_frame = root_frame
         self.sticks = []
 
@@ -20,16 +20,17 @@ class BranchingModule:
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
 
-        # ALWAYS create exactly one root stick
+        # ✅ always create exactly one root stick
         self._init_first_stick()
 
     # --------------------------------------------------
-    # ROOT STICK
+    # ROOT STICK (NO ARGUMENTS)
     # --------------------------------------------------
 
     def _init_first_stick(self):
         """
-        Creates the initial root stick from self.root_frame.
+        Creates the single root stick from self.root_frame.
+        This must be called ONCE and ONLY ONCE.
         """
         frame = self.root_frame
 
@@ -38,8 +39,8 @@ class BranchingModule:
             frame.xaxis * self.stick_length
         )
 
-        z_vector = frame.yaxis
-        self.sticks.append(Stick(axis, z_vector))
+        root_stick = Stick(axis, frame.yaxis)
+        self.sticks.append(root_stick)
 
     # --------------------------------------------------
     # FACE FRAMES
@@ -73,14 +74,10 @@ class BranchingModule:
         else:
             raise ValueError("face_index must be 0, 1, 2, or 3")
 
-        xaxis = base.xaxis
-        yaxis = normal
-        zaxis = xaxis.cross(yaxis).unitized()
-
         return Frame(
-            end_pt + yaxis * (self.depth * 0.5),
-            xaxis,
-            yaxis
+            end_pt + normal * (self.depth * 0.5),
+            base.xaxis,
+            normal
         )
 
     # --------------------------------------------------
@@ -90,15 +87,9 @@ class BranchingModule:
     def grow_stick(self, from_stick_index=0, face_index=0, angle=0.0, offset=0.0):
         """
         Grows a new stick from a face of an existing stick.
-
-        Args:
-            from_stick_index: index of parent stick (-1 = last stick)
-            face_index: which face to grow from (0–3)
-            angle: optional in-plane rotation (degrees)
-            offset: lateral offset along X
         """
         if not self.sticks:
-            return  # safety, should never happen
+            return  # safety
 
         parent_index = (
             from_stick_index
@@ -108,10 +99,11 @@ class BranchingModule:
 
         face_frame = self.get_face_frame(parent_index, face_index).copy()
 
-        # Ensure clean face-to-face separation
+        # Face-to-face separation
         face_frame.point += face_frame.yaxis * (self.depth * 0.5)
-        face_frame.point -= face_frame.xaxis * offset - (face_frame.zaxis * (self.depth * .5))
+        face_frame.point -= face_frame.xaxis * offset
 
+        # Optional rotation
         if angle != 0.0:
             R = Rotation.from_axis_and_angle(
                 face_frame.yaxis,
@@ -125,15 +117,11 @@ class BranchingModule:
             face_frame.xaxis * self.stick_length
         )
 
-        z_vector = face_frame.yaxis
-        self.sticks.append(Stick(axis, z_vector))
+        self.sticks.append(Stick(axis, face_frame.yaxis))
 
     # --------------------------------------------------
     # VISUALIZATION
     # --------------------------------------------------
 
     def visualize(self):
-        """
-        Returns COMPAS Box geometries (GH previews these directly).
-        """
         return [stick.geometry for stick in self.sticks]
