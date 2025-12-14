@@ -21,13 +21,13 @@ class BranchingModule:
         self.depth = depth or Stick.DEPTH
 
         # ALWAYS create exactly one root stick
-        self._init_first_stick(root_frame)
+        self._init_first_stick()
 
     # --------------------------------------------------
     # ROOT STICK
     # --------------------------------------------------
 
-    def _init_first_stick(self,):
+    def _init_first_stick(self):
         """
         Creates the initial root stick from self.root_frame.
         """
