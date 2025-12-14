@@ -78,7 +78,7 @@ class BranchingModule:
         zaxis = xaxis.cross(yaxis).unitized()
 
         return Frame(
-            end_pt + yaxis * (self.depth * 1.5),
+            end_pt + yaxis * (self.depth * 1.25),
             xaxis,
             yaxis
         )
@@ -109,7 +109,7 @@ class BranchingModule:
         face_frame = self.get_face_frame(parent_index, face_index).copy()
 
         # Ensure clean face-to-face separation
-        face_frame.point += face_frame.yaxis * (self.depth *  1.5)
+        face_frame.point += face_frame.yaxis * (self.depth *  1.25)
         face_frame.point -= face_frame.xaxis * offset - (face_frame.zaxis * (self.depth * 1))
 
         if angle != 0.0:
