@@ -78,7 +78,7 @@ class BranchingModule:
         zaxis = xaxis.cross(yaxis).unitized()
 
         return Frame(
-            end_pt + yaxis * (self.depth * 1.0),
+            end_pt + yaxis * (self.depth * 0.5),
             xaxis,
             yaxis
         )
