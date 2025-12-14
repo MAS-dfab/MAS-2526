@@ -110,7 +110,7 @@ class BranchingModule:
 
         # Ensure clean face-to-face separation
         face_frame.point += face_frame.yaxis * (self.depth *  1.0)
-        face_frame.point -= face_frame.xaxis * offset - (face_frame.zaxis * (self.depth * 1))
+        face_frame.point -= face_frame.xaxis * offset - (face_frame.zaxis * (self.depth * .5))
 
         if angle != 0.0:
             R = Rotation.from_axis_and_angle(
