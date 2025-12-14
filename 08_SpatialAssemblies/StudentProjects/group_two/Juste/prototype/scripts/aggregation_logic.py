@@ -1,86 +1,54 @@
 from compas_rhino.conversions import mesh_to_compas
 from compas.geometry import Polyhedron, is_point_in_polyhedron
-from J3RRY_SingleStick_v1 import Stick
-from J3RRY_Collision_v1 import Collision
+from single_stick import Stick
+from collision_detection import Collision
 import math, random
 
 
-class AggregationManager:
-    def __init__(self):
-        """
-        Constructor for Aggregation Manager to handle multiple aggregations.
+def run_multiround_aggregation(first_frames, length_pattern, angle_pattern,
+                               agg_type, seed, agg_count, agg_round=2, branch_count=2,
+                               boundary_mesh=None, max_attempts=10):
+    
+    all_rounds = []
+    global_sticks = []
+    # ------- Round 0 -------
+    current_aggs = []
+    for i, frame in enumerate(first_frames):
+        agg = Aggregation(frame, length_pattern, angle_pattern, agg_type, seed+i*100, init=True)
+        for j in range(agg_count):
+            new_stick = agg.spawn_next_stick_random_in_boundary(
+                        boundary_mesh, max_attempts, seed+i*100 + j, global_sticks
+                        )
+            if new_stick is not None:
+                global_sticks.append(new_stick)
 
-        graph example:
-        [0, 0]; round = 0, root = 0
-        [1, 0, 1]; round = 1, root = 0, branch = [1]
-        [2, 1, 0, 2]; round = 2 root = 1, branch = [0,2]
-        """
-        self.graph = []  # {round, root, branch, sub-branch, ...}
-        self.aggs = [] # all aggregations, [[sticks], [sticks], [sticks],...[sticks]]
+        current_aggs.append(agg)
+    all_rounds.append(current_aggs)
 
+    # -------Subsequent Rounds -------
+    for r in range(1, agg_round):
+        next_aggs = []
+        for idx, parent_agg in enumerate(current_aggs):
+            parent_last_stick = parent_agg.sticks[-1]
+            branch_frame = parent_last_stick.frame
 
-    def run_multiround_aggregation(self, first_frames, length_pattern, angle_pattern,
-                                agg_type, seed, agg_count, agg_round=2, branch_count=2,
-                                boundary_mesh=None, max_attempts=10):
-        
-        global_sticks = []
-        # ------- Round 0 -------
-        current_iters = []
-        for root_idx, frame in enumerate(first_frames):
-            agg = Aggregation(frame, length_pattern, angle_pattern, agg_type, seed+root_idx*100, init=True)
-            success = False
-            for j in range(agg_count):
-                new_stick = agg.spawn_next_stick_random_in_boundary(
-                            boundary_mesh, max_attempts, seed+root_idx*100 + j, global_sticks
-                            )
-                if new_stick is not None:
-                    global_sticks.append(new_stick)
-                    success = True
-            if not success:
-                continue 
-            self.aggs.append(agg)
-            # Add to current index of aggregations
-            current_iters.append(len(self.aggs)-1)  # store current agg index. e.g. [0,1,2,..]
-            # Add to graph
-            self.graph.append([0, root_idx])  # init round 0, how many root idx. e.g. [0,2,3,...]
-        
-        # -------Subsequent Rounds -------
-        for r in range(1, agg_round):
-            next_iters = []
-            for parent_iter in current_iters:
-                parent_agg = self.aggs[parent_iter]
-                parent_last_stick = parent_agg.sticks[-1]
+            for b in range(branch_count):
+                child_seed = r*1000 + idx*branch_count + b
+                child_agg = Aggregation(branch_frame, length_pattern, angle_pattern, agg_type, child_seed,
+                                        init=False, parent_stick=parent_last_stick)
+                for j in range(agg_count):
+                    new_stick = child_agg.spawn_next_stick_random_in_boundary(
+                                boundary_mesh, max_attempts, child_seed + j, global_sticks
+                                )
+                    if new_stick is not None:
+                        global_sticks.append(new_stick)
+                next_aggs.append(child_agg)
 
-                branch_frame = parent_last_stick.frame
-                # Get parent path
-                parent_path = self.graph[parent_iter][1:]  # exclude round info
-
-                for b in range(branch_count):
-                    child_seed = r*1000 + parent_iter*branch_count + b
-                    child_agg = Aggregation(branch_frame, length_pattern, angle_pattern, agg_type, child_seed,
-                                            init=False, parent_stick=parent_last_stick
-                                            )
-                    success = False
-                    for j in range(agg_count):
-                        new_stick = child_agg.spawn_next_stick_random_in_boundary(
-                                    boundary_mesh, max_attempts, child_seed + j, global_sticks
-                                    )
-                        if new_stick is not None:
-                            global_sticks.append(new_stick)
-                            success = True
-                    if not success:
-                        continue
-                    self.aggs.append(child_agg)
-                    # Add to next index of aggregations
-                    next_iters.append(len(self.aggs)-1)  # store current agg index. e.g. [...,6,7,8,..]
-                    # Add to graph
-                    child_path = parent_path + [b]
-                    self.graph.append([r] + child_path)  # agg round, parent idx, branch b
-                
-            if not next_iters:
-                break
-            current_iters = next_iters
-        return self.aggs
+        all_rounds.append(next_aggs)
+        current_aggs = next_aggs
+        if not current_aggs:
+            break
+    return all_rounds
 
 
 class Aggregation:
@@ -104,12 +72,7 @@ class Aggregation:
         self.failed_sticks = []
         self.valid_sticks = []
         self.scores = []
-        self.face_indices = []
-        self.t_values = []
         self.collision_log = []
-
-        # Attributes for fabrication
-        self.graph = []
 
         self._boundary_polyhedron = None
 
@@ -123,8 +86,7 @@ class Aggregation:
 
         if init:
             self._init_first_stick(first_frame)
-            self.face_indices.append(None)
-            self.t_values.append(None)
+
 
     def _init_first_stick(self, first_frame):
         """
@@ -281,7 +243,7 @@ class Aggregation:
         next_frame.point += dir_vec * (current_stick.depth / 2)
         
         # Define which face relative to new stick attaches to previous stick
-        which_face = to_index * -90
+        which_face = to_index * 90
         next_frame.rotate(math.radians(which_face), next_frame.xaxis, next_frame.point)
 
         # Rotate next_frame around normal
@@ -381,7 +343,7 @@ class Aggregation:
             next_frame.point += dir_vec * (current_stick.depth / 2)
             
             # Define which face of new stick attaches to previous stick
-            which_face = to_index * -90
+            which_face = to_index * 90
             next_frame.rotate(math.radians(which_face), next_frame.xaxis, next_frame.point)
 
             # Rotate next_frame around normal
@@ -468,8 +430,6 @@ class Aggregation:
         # Preparation for selecting candidate
         valid_candidates = []
         valid_scores = []
-        valid_face_idx = []
-        valid_t = []
 
         # Preparation for logging
         failed_candidates = []
@@ -496,7 +456,7 @@ class Aggregation:
         for _ in range(max_attempts):
             new_length = self._next_length()
             angle = self._next_angle()
-            # Create random face index and t value for the next stick
+            # Create random index and t value for the next stick
             from_index = random.randint(0, 3)
             # Apply margin to from_t
             from_t = random.random()
@@ -523,7 +483,7 @@ class Aggregation:
             next_frame.point += dir_vec * (current_stick.depth / 2)
             
             # Define which face of new stick attaches to previous stick
-            which_face = to_index * -90  # should be -90
+            which_face = to_index * 90
             next_frame.rotate(math.radians(which_face), next_frame.xaxis, next_frame.point)
             # Rotate next_frame around normal
             if angle != 0:
@@ -559,16 +519,12 @@ class Aggregation:
             else:
                 valid_candidates.append(new_stick)
                 valid_scores.append(self._center_to_existing(new_stick, external_sticks))
-                valid_face_idx.append((to_index + 2) % 4)  # face on new stick that connects to current stick
-                valid_t.append(safe_to_t)
 
         # Select best candidate based on score
         if not valid_candidates:
             return None
         best_idx = max(range(len(valid_scores)), key=lambda i: valid_scores[i])
         best_candidate = valid_candidates[best_idx]
-        best_face_idx = valid_face_idx[best_idx]
-        best_t = valid_t[best_idx]
 
         # SUCCESS: append and return
         self.failed_sticks.append(failed_candidates)
@@ -577,23 +533,14 @@ class Aggregation:
         self.sticks.append(best_candidate)
         self.axes.append(best_candidate.axis)
         self.frames.append(best_candidate.frame)
-
-        self.face_indices.append(best_face_idx)
-        self.t_values.append(best_t)
-        
-        self.collision_log.append({
-            "attempts": max_attempts,
-            "fail_count": len(failed_candidates),
-            "success": True,
-            "reason": "Pass",
-            "params": {
-                "from_index": params_from_index,
-                "from_t": params_from_t,
-                "to_index": params_to_index,
-                "to_t": params_to_t,
-                "length": params_length,
-                "angle": angle
-                
-            }
-        })
         return best_candidate
+
+
+    def visualize(self):
+        """
+        Compute all stick geometries.
+        
+        Returns:
+            List of Box geometries
+        """
+        return [stick.geometry for stick in self.sticks]

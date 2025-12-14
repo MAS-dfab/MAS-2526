@@ -1,4 +1,5 @@
 from compas.geometry import intersection_line_plane, Plane, Translation, distance_point_point, Frame, Scale
+from compas.geometry import Vector
 from compas.geometry import Point, bounding_box
 import math
 
@@ -22,22 +23,39 @@ def scale_and_move_to_point(assembly, center):
     factor = 0.001 # 1mm to M
 
     #scale to 1mm
+    part = scaled_assembly.find_by_key(key=0)
+    ptA = Point(part.frame.point.x, part.frame.point.y, part.frame.point.z)
+    ptB = Point(-part.frame.point.x, -part.frame.point.y, part.frame.point.z)
+    T = Translation.from_vector(ptB - ptA)
+
     for part in scaled_assembly.parts():
+        part.frame.transform(T)
+        part.attributes["shape"].transform(T)
+        part.attributes["pick_up_geo"].transform(T)
+        part.attributes["pick_up_frame"].transform(T)
+        part.attributes["place_frame"].transform(T)
+
+
         S = Scale.from_factors([factor, factor, factor], frame=Frame.worldXY())
         part.frame.transform(S)
         part.attributes["shape"].scale(factor)
         part.attributes["shape"].frame.scale(factor)
 
+        part.attributes["pick_up_geo"].scale(factor)
+        part.attributes["pick_up_geo"].frame.scale(factor)
+        part.attributes["pick_up_frame"].scale(factor)
 
-    points = [p for part in scaled_assembly.parts() for p in part.attributes["shape"].vertices]
-    bbox = bounding_box(points)
-    cur_center = Point(0,0,bbox[0][2])
+        part.attributes["place_frame"].scale(factor)
 
-    T = Translation.from_vector(center-cur_center)
 
-    for part in scaled_assembly.parts():
-        part.frame.transform(T)
-        part.attributes["shape"].transform(T)
+
+    # points = [p for part in scaled_assembly.parts() for p in part.attributes["shape"].vertices]
+    # bbox = bounding_box(points)
+    # cur_center = Point(0,0,bbox[0][2])
+    # T = Translation.from_vector(center-cur_center)
+    # for part in scaled_assembly.parts():
+    #     part.frame.transform(T)
+    #     part.attributes["shape"].transform(T)
 
     return scaled_assembly
 
@@ -55,9 +73,11 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     """
     Calculate the pick trajectory for a given pick frame.
     """
+    ############# Add safety frame before and after pick###########
+
     pick_frame = pickup_frame.copy()
-    pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
-    pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
+    # pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
+    # pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
     # Find IK solution for pick frame
     approach_pick_frame = pick_frame.copy()
     approach_pick_frame.translate(
@@ -87,12 +107,16 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     return trajectory, trajectory.points[-1], trajectory.points[0]
 
 
-def calculate_place_trajectories(robot, current_config,  placement_frame, group="manipulator"):
+def calculate_place_trajectories(robot, current_config, placement_frame, group="manipulator"):
     """
     Calculates the  place trajectory (to place_frame), 
     and return trajectory (back to safe_config) for a part.
     """
+    ############# Add safety frame before and after place###########
+
     place_frame = placement_frame.copy()
+    # place_frame.point.x = -place_frame.point.x  # Invert X axis for UR
+    # place_frame.point.y = -place_frame.point.y  # Invert Y axis for UR
 
     start_config_for_place = current_config
     goal_constraints_place = robot.constraints_from_frame(
@@ -116,7 +140,7 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     # Go to exit frame (safe distance above place frame)
 
     exit_frame = place_frame.copy()
-    exit_frame.translate(APPROACH_DISTANCE * -exit_frame.zaxis)
+    exit_frame.translate(APPROACH_DISTANCE * -exit_frame.zaxis)  # Replace normal to lean_in_normal
     
     exit_trajectory = robot.plan_cartesian_motion(
         [place_frame, exit_frame],
@@ -167,3 +191,4 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     joined_exit_trajectory = exit_trajectory.copy()
     joined_exit_trajectory.points.extend(return_trajectory.points)
     return place_trajectory, joined_exit_trajectory
+

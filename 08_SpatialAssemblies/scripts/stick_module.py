@@ -1,10 +1,8 @@
 import math
-from compas.geometry import Line, Rotation
+from compas.geometry import Line, Rotation, Vector
 from Sticks import Stick
-<<<<<<< HEAD
-=======
 
-from sticks import Stick
+from Sticks import Stick
 import math
 
 from compas.geometry import Rotation
@@ -50,7 +48,6 @@ class OStickModule:
         stick_z = Stick(Line(offsetpt_z,offsetpt_z + Vector(0,0,self.length)), width = self.width,depth =self.depth)
         if type["z"] != 2:
             self.sticks.append(stick_z)
->>>>>>> cf4b3a4e9f70f257f82f20935a2ddff949c0a4c3
 
 
 class BranchingModule:
@@ -79,8 +76,6 @@ class BranchingModule:
         self.depth = depth or Stick.DEPTH  
         self._init_first_stick(root_frame)
 
-<<<<<<< HEAD
-=======
     def _init_first_stick(self, frame):
         """
         Private method for creating the first stick.
@@ -95,23 +90,9 @@ class BranchingModule:
         # Add stick to list of sticks
         self.sticks.append(my_stick)
         
->>>>>>> cf4b3a4e9f70f257f82f20935a2ddff949c0a4c3
 
     def get_face_frame(self, stick_index, face_index):
         """
-<<<<<<< HEAD
-        Returns a Frame on one of the four faces of the given stick.
-        
-        Face numbering (around stick frame.xaxis):
-            0 = original +Y face
-            1 = rotated 90 degrees
-            2 = rotated 180 degrees
-            3 = rotated 270 degrees
-        """
-
-        stick = self.sticks[stick_index]
-        frame = stick.frame
-=======
         Gets a frame on one of the four faces of a stick.
         Args:
             stick_index: Index of the stick
@@ -160,7 +141,6 @@ class BranchingModule:
         new_stick = Stick(centerline, zvector)
         self.sticks.append(new_stick)
 
->>>>>>> cf4b3a4e9f70f257f82f20935a2ddff949c0a4c3
 
     def visualize(self):
         """

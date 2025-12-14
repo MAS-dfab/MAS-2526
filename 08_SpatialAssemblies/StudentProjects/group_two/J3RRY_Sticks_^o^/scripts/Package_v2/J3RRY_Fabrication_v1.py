@@ -22,6 +22,7 @@ class Fabrication:
 
         self.erected_modules = []
         self.modules_with_adjacent = []
+        self.pick_up_modules = []
 
         
     def _round_to_indices(self):
@@ -76,6 +77,11 @@ class Fabrication:
                     if f is not None and t is not None:
                         frame = s.eval_frame(f, t)
                         joint_branch.append(frame)
+
+                # There is no joint frame in round 0 modules
+                # Insert a frame from index 1 of the stick frame to first stick
+                if len(joint_branch) != len(agg.sticks):
+                    joint_branch.insert(0, joint_branch[0])
                 joint_frames.append(joint_branch)
             return joint_frames
 
@@ -95,6 +101,11 @@ class Fabrication:
                 if f is not None or t is not None:
                     frame = stick.eval_frame(f, t)
                     joint_branch.append(frame)
+            
+            # There is no joint frame in round 0 modules
+            # Insert a frame from index 1 of the stick frame to first stick
+            if len(joint_branch) != len(branch):
+                joint_branch.insert(0, joint_branch[0])
             joint_frames.append(joint_branch)
         return joint_frames
 
@@ -286,10 +297,6 @@ class Fabrication:
         return plotted_modules, recs
 
 
-    def send_modules_to_placing_frame(self, frame):
-        pass
-
-
     def eval_target_frames(self, modules, robot_position=Point(0,0,0)):
         """
         Compute default target frames for each module.
@@ -302,9 +309,13 @@ class Fabrication:
             target_frames: list of type Frame, first target frames to try generating robot motions.
         """
         target_frames = []
+        new_face_indices = []
+        new_t_values = []
         for module_idx, branch in enumerate(modules):
 
             target_branch = []
+            face_branch = []
+            t_branch = []
             agg_idx_list = self.agg_indices[module_idx]
             stick_idx_list = self.stick_indices[module_idx]
             
@@ -323,5 +334,45 @@ class Fabrication:
                     frame = stick.eval_frame(new_face_idx, new_t)
                     frame.rotate(math.pi, stick.frame.xaxis, frame.point)
                     target_branch.append(frame)
+                    face_branch.append(new_face_idx)
+                    t_branch.append(new_t)
+                    
+            # There is no target frame in round 0 modules
+            # Insert a frame from index 1 of the stick frame to first stick
+            if len(target_branch) != len(branch):
+                target_branch.insert(0, target_branch[0])
+                face_branch.insert(0, face_branch[0])
+                t_branch.insert(0, t_branch[0])
             target_frames.append(target_branch)
-        return target_frames
+            new_face_indices.append(face_branch)
+            new_t_values.append(t_branch)
+        return target_frames, new_face_indices, new_t_values
+    
+
+    def send_sticks_to_pick_up_station(self, modules, pick_up_station_frame):
+        self.pick_up_modules = []
+        for branch in modules:
+            stick_branch = []
+            for stick in branch:
+                from_frame = stick.frame.copy()
+                to_frame = pick_up_station_frame.copy()
+                O = Transformation.from_frame_to_frame(from_frame, to_frame)
+                new_frame = stick.frame.transformed(O)
+                new_stick = Stick(new_frame, stick.length)
+                stick_branch.append(new_stick)
+            self.pick_up_modules.append(stick_branch)
+        return self.pick_up_modules
+    
+
+    def get_pick_up_frames(self, new_t_values):
+        # Based on the target frames.
+        pick_up_modules = self.pick_up_modules
+        pick_up_frames = []
+        for pick_up_branch, new_t_values_branch in zip(pick_up_modules, new_t_values):
+            branch_frames = []
+            for stick, t in zip(pick_up_branch, new_t_values_branch):
+                frame = stick.eval_frame(0, t)  # face index 0 for pick up
+                frame.rotate(math.pi, stick.frame.xaxis, frame.point)
+                branch_frames.append(frame)
+            pick_up_frames.append(branch_frames)
+        return pick_up_frames
