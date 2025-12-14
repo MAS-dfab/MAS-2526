@@ -1,5 +1,6 @@
 from compas.geometry import Point, Box, Frame, Vector, Plane, Rotation, Line
 from compas.geometry import angle_vectors, intersection_line_plane
+from compas_rhino.geometry import box_to_rhino
 import math
 
 def _calculate_z_vector_from_centerline(centerline_vector):
@@ -35,7 +36,7 @@ class Stick:
     @property
     def geometry(self):
         box = Box(self.axis.length, self.width, self.depth, self.frame)
-        return box
+        return box_to_rhino(box)
     
     def rotate_stick(self, angle, rotation_axis=None, pt=None):
         if not rotation_axis:
