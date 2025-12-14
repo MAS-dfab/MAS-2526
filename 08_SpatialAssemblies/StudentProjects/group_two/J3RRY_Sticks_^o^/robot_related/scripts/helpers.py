@@ -1,5 +1,5 @@
 from compas.geometry import intersection_line_plane, Plane, Translation, distance_point_point, Frame, Scale
-from compas.geometry import Vector
+from compas.geometry import Vector, Rotation
 from compas.geometry import Point, bounding_box
 import math
 
@@ -17,24 +17,39 @@ def sort_sticks_by_z(sticks):
 
 
 def scale_and_move_to_point(assembly, center):
-
-
     scaled_assembly = assembly.copy()
     factor = 0.001 # 1mm to M
 
-    #scale to 1mm
+    # Translation
     part = scaled_assembly.find_by_key(key=0)
     ptA = Point(part.frame.point.x, part.frame.point.y, part.frame.point.z)
     ptB = Point(-part.frame.point.x, -part.frame.point.y, part.frame.point.z)
     T = Translation.from_vector(ptB - ptA)
 
-    for part in scaled_assembly.parts():
-        part.frame.transform(T)
-        part.attributes["shape"].transform(T)
-        part.attributes["pick_up_geo"].transform(T)
-        part.attributes["pick_up_frame"].transform(T)
-        part.attributes["place_frame"].transform(T)
+    # for part in scaled_assembly.parts():
+    #     part.frame.transform(T)
+    #     part.attributes["shape"].transform(T)
+    #     part.attributes["pick_up_geo"].transform(T)
+    #     part.attributes["pick_up_frame"].transform(T)
 
+    #     S = Scale.from_factors([factor, factor, factor], frame=Frame.worldXY())
+    #     part.frame.transform(S)
+    #     part.attributes["shape"].scale(factor)
+    #     part.attributes["shape"].frame.scale(factor)
+
+    #     part.attributes["pick_up_geo"].scale(factor)
+    #     part.attributes["pick_up_geo"].frame.scale(factor)
+    #     part.attributes["pick_up_frame"].scale(factor)
+
+
+    # Rotation around world XY
+    R = Rotation.from_axis_and_angle(Vector(0,0,1), math.radians(180), Point(0,0,0))
+
+    for part in scaled_assembly.parts():
+        part.frame.transform(R)
+        part.attributes["shape"].transform(R)
+        part.attributes["pick_up_geo"].transform(R)
+        part.attributes["pick_up_frame"].transform(R)
 
         S = Scale.from_factors([factor, factor, factor], frame=Frame.worldXY())
         part.frame.transform(S)
@@ -44,9 +59,6 @@ def scale_and_move_to_point(assembly, center):
         part.attributes["pick_up_geo"].scale(factor)
         part.attributes["pick_up_geo"].frame.scale(factor)
         part.attributes["pick_up_frame"].scale(factor)
-
-        part.attributes["place_frame"].scale(factor)
-
 
 
     # points = [p for part in scaled_assembly.parts() for p in part.attributes["shape"].vertices]
@@ -107,7 +119,7 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     return trajectory, trajectory.points[-1], trajectory.points[0]
 
 
-def calculate_place_trajectories(robot, current_config, placement_frame, group="manipulator"):
+def calculate_place_trajectories(robot, current_config, placement_frame, lean_in_normal, group="manipulator"):
     """
     Calculates the  place trajectory (to place_frame), 
     and return trajectory (back to safe_config) for a part.
@@ -140,7 +152,10 @@ def calculate_place_trajectories(robot, current_config, placement_frame, group="
     # Go to exit frame (safe distance above place frame)
 
     exit_frame = place_frame.copy()
-    exit_frame.translate(APPROACH_DISTANCE * -exit_frame.zaxis)  # Replace normal to lean_in_normal
+    # exit_frame.translate(APPROACH_DISTANCE * -exit_frame.zaxis)  # Replace normal to lean_in_normal
+    enter_frame = place_frame.copy()
+    exit_frame.translate(APPROACH_DISTANCE * -lean_in_normal)
+    enter_frame.translate(APPROACH_DISTANCE * lean_in_normal)
     
     exit_trajectory = robot.plan_cartesian_motion(
         [place_frame, exit_frame],

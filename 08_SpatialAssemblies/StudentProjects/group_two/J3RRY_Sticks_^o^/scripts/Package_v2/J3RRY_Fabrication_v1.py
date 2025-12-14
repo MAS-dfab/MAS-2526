@@ -22,7 +22,15 @@ class Fabrication:
 
         self.erected_modules = []
         self.modules_with_adjacent = []
+
+        self.target_frames = []
+        self.new_face_indices = []
+        self.new_t_values = []
+
         self.pick_up_modules = []
+        self.pick_up_frames = []
+        self.place_modules = []
+        self.place_frames = []
 
         
     def _round_to_indices(self):
@@ -308,9 +316,9 @@ class Fabrication:
         Returns:
             target_frames: list of type Frame, first target frames to try generating robot motions.
         """
-        target_frames = []
-        new_face_indices = []
-        new_t_values = []
+        self.target_frames = []
+        self.new_face_indices = []
+        self.new_t_values = []
         for module_idx, branch in enumerate(modules):
 
             target_branch = []
@@ -343,36 +351,77 @@ class Fabrication:
                 target_branch.insert(0, target_branch[0])
                 face_branch.insert(0, face_branch[0])
                 t_branch.insert(0, t_branch[0])
-            target_frames.append(target_branch)
-            new_face_indices.append(face_branch)
-            new_t_values.append(t_branch)
-        return target_frames, new_face_indices, new_t_values
+            self.target_frames.append(target_branch)
+            self.new_face_indices.append(face_branch)
+            self.new_t_values.append(t_branch)
+        return self.target_frames, self.new_face_indices, self.new_t_values
     
 
-    def send_sticks_to_pick_up_station(self, modules, pick_up_station_frame):
+    def send_to_pick_up_station(self, modules, pick_up_station_frame):
+        """
+        Send each module to pick up station.
+
+        Args:
+            modules: list of list of type Stick, basically erected modules.
+            pick_up_station_frame: type Frame, pick up station frame calibrated in robot workspace.
+        
+        Returns:
+            pick_up_modules: list of list of type Stick, modules positioned at pick up station.
+            pick_up_frames: list of list of type Frame.
+        """
         self.pick_up_modules = []
-        for branch in modules:
+        self.pick_up_frames = []
+        for module_branch, new_t_values_branch in zip(modules, self.new_t_values):
             stick_branch = []
-            for stick in branch:
+            frame_branch = []
+            for stick, t in zip(module_branch, new_t_values_branch):
                 from_frame = stick.frame.copy()
                 to_frame = pick_up_station_frame.copy()
                 O = Transformation.from_frame_to_frame(from_frame, to_frame)
                 new_frame = stick.frame.transformed(O)
                 new_stick = Stick(new_frame, stick.length)
                 stick_branch.append(new_stick)
+
+                # Get pick up frame on the pick up station
+                pick_up_frame = new_stick.eval_frame(0, t)  # face index 0 for pick up
+                pick_up_frame.rotate(math.pi, stick.frame.xaxis, pick_up_frame.point)
+                frame_branch.append(pick_up_frame)
+                
             self.pick_up_modules.append(stick_branch)
-        return self.pick_up_modules
+            self.pick_up_frames.append(frame_branch)
+        return self.pick_up_modules, self.pick_up_frames
     
 
-    def get_pick_up_frames(self, new_t_values):
-        # Based on the target frames.
-        pick_up_modules = self.pick_up_modules
-        pick_up_frames = []
-        for pick_up_branch, new_t_values_branch in zip(pick_up_modules, new_t_values):
-            branch_frames = []
-            for stick, t in zip(pick_up_branch, new_t_values_branch):
-                frame = stick.eval_frame(0, t)  # face index 0 for pick up
-                frame.rotate(math.pi, stick.frame.xaxis, frame.point)
-                branch_frames.append(frame)
-            pick_up_frames.append(branch_frames)
-        return pick_up_frames
+    def send_to_holding_jig(self, modules, holding_jig_frame):
+        """
+        Send each module to holding jig.
+        
+        Args:
+            modules: list of list of type Stick, basically erected modules.
+            holding_jig_frame: type Frame, holding jig frame calibrated in robot workspace.
+        
+        Returns:
+            place_modules: list of list of type Stick, modules positioned at holding jig.
+            place_frames: list of list of type Frame.
+        """
+        self.place_modules = []
+        self.place_frames = []
+        for module_branch, place_frames in zip(modules, self.target_frames):
+            stick_branch = []
+            frame_branch = []
+            # From_frame is the first stick frame in each module (branch)
+            from_frame = module_branch[0].frame.copy()
+            to_frame = holding_jig_frame.copy()
+            O = Transformation.from_frame_to_frame(from_frame, to_frame)
+            for stick, place_frame in zip(module_branch, place_frames):
+                new_frame = stick.frame.transformed(O)
+                new_stick = Stick(new_frame, stick.length)
+                stick_branch.append(new_stick)
+                # Get place frame relative to holding jig
+                new_place_frame = place_frame.transformed(O)
+                frame_branch.append(new_place_frame)
+
+            self.place_modules.append(stick_branch)
+            self.place_frames.append(frame_branch)
+            
+        return self.place_modules, self.place_frames
