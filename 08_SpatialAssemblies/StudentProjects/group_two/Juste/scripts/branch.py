@@ -41,55 +41,68 @@ class BranchingModule:
 
     def get_face_frame(self, stick_index, face_index):
         """
-        Gets a frame on one of the four faces of a stick.
+        Gets the frame at each face of a stick. 
         Args:
-            stick_index: Index of the stick
-            face_index: Face index (0-3) around the stick
-
+            stick_index: Index of stick to get face from
+            face_index: Index of face to get frame from (0-3)
         Returns:
-            Frame on the specified face
+            Frame at the specified face
         """
+        stick = self.sticks[stick_index]
+        base_frame = stick.frame.copy()
+        end_pt = stick.axis.end
 
-        # Rotate stick frame based on index
-        stick_frame = self.sticks[stick_index].frame
-        angle = face_index * math.pi
-        R = Rotation.from_axis_and_angle(stick_frame.xaxis, angle, stick_frame.point)
-        new_frame = stick_frame.transformed(R)
-        new_frame.point = self.sticks[stick_index].axis.end
+        # Identify face direction
+        if face_index == 0:
+            normal = base_frame.yaxis
+        elif face_index == 1:
+            normal = -base_frame.yaxis
+        elif face_index == 2:
+            normal = base_frame.zaxis
+        elif face_index == 3:
+            normal = -base_frame.zaxis
+        else:
+            raise ValueError("face_index must be 0, 1, 2, or 3.")
 
-        # Offset frame to be on surface on stick
-        new_frame.point += new_frame.yaxis * self.depth/2
+        # Construct a new frame pointing in the direction of the face normal
+        xaxis = base_frame.xaxis
+        yaxis = normal
+        zaxis = xaxis.cross(yaxis).unitized()
 
-        return new_frame
+        face_frame = Frame(end_pt + yaxis * (self.depth / 2), xaxis, yaxis)
+
+        return face_frame
+
          
-    def grow_stick(self, from_stick_index = -1, face_index = 0, angle = 0.0, offset = 0.0):
+    def grow_stick(self, from_stick_index=-1, face_index=0, angle=0.0, offset=0.0):
         """
-        Grows a new stick from an existing stick.
-        
+        Grows a new stick from a specified face of an existing stick.
         Args:
-            from_stick_index: Index of stick to grow from 
-            face_index: Index of the face to grow from (0-3)
-            angle: Angle of rotation in radians
-        """
-                
-        # Get position on original stick
-        position = self.get_face_frame(from_stick_index, face_index).copy()
-        position.point += position.yaxis * self.depth/2
-        position.point += -position.xaxis * offset
-        
-        # Rotate along face frame
-        R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point = position.point)
-        position.transform(R)
+            from_stick_index: Index of stick to grow from (default: last stick)
+            face_index: Index of face to grow from (0-3)
+            angle: In-plane rotation angle in degrees (default: 0.0)
+            offset: Offset distance along growth direction (default: 0.0)
+        Returns:
+            None
 
-        # Offset along axis
+            """
+        position = self.get_face_frame(from_stick_index, face_index).copy()
+
+        # Apply offset along X axis (growth direction)
         position.point += -position.xaxis * offset
-        
-        # Create new stick
+
+        # Optional in-plane rotation around Z (if any angle is needed)
+        if angle != 0.0:
+            R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point=position.point)
+            position.transform(R)
+
+        # Create new stick along X axis from the face frame
         axis = Line.from_point_and_vector(position.point, position.xaxis * self.stick_length)
         z_vector = position.yaxis
 
         new_stick = Stick(axis, z_vector)
         self.sticks.append(new_stick)
+
 
     def visualize(self):
         """
