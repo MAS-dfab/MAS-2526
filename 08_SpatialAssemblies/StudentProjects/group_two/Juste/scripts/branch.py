@@ -4,99 +4,136 @@ import math
 
 from Sticks import Stick
 
+
 class BranchingModule:
     def __init__(self, root_frame, stick_length=None, width=None, depth=None):
         """
-        Constructor for Branching module.
+        Branching module that grows sticks from a root frame.
 
-        Args:
-            root_frame: Frame from which tree will grow
-            stick_length: Length of each stick
-            width: Width of sticks (defaults to Stick.WIDTH)
-            depth: Depth of sticks (defaults to Stick.DEPTH)
+        The first (root) stick is always created automatically.
+        Subsequent sticks grow from faces of existing sticks.
         """
         self.root_frame = root_frame
         self.sticks = []
+
         self.stick_length = stick_length
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
 
-        self._init_first_stick(root_frame)
+        # ✅ ALWAYS create exactly one root stick
+        self._init_first_stick()
 
-    def _init_first_stick(self, frame):
+    # --------------------------------------------------
+    # ROOT STICK
+    # --------------------------------------------------
+
+    def _init_first_stick(self):
         """
-        Creates the first stick from the root frame.
+        Creates the initial root stick from self.root_frame.
         """
-        axis = Line.from_point_and_vector(frame.point, frame.xaxis * self.stick_length)
+        frame = self.root_frame
+
+        axis = Line.from_point_and_vector(
+            frame.point,
+            frame.xaxis * self.stick_length
+        )
+
         z_vector = frame.yaxis
-        first_stick = Stick(axis, z_vector)
-        self.sticks.append(first_stick)
+        self.sticks.append(Stick(axis, z_vector))
+
+    # --------------------------------------------------
+    # FACE FRAMES
+    # --------------------------------------------------
 
     def get_face_frame(self, stick_index, face_index):
         """
-        Gets a frame located on a specified face of a stick.
+        Returns a frame on a specific face of a stick.
 
-        Args:
-            stick_index: Index of stick to extract from
-            face_index: Which face (0 = +Y, 1 = -Y, 2 = +Z, 3 = -Z)
-
-        Returns:
-            Frame on the specified face
+        Face index convention:
+            0 → +Y
+            1 → -Y
+            2 → +Z
+            3 → -Z
         """
         if stick_index >= len(self.sticks):
-            raise IndexError(f"Stick index {stick_index} out of range.")
+            raise IndexError("Invalid stick index")
 
         stick = self.sticks[stick_index]
-        base_frame = stick.frame.copy()
+        base = stick.frame.copy()
         end_pt = stick.axis.end
 
         if face_index == 0:
-            normal = base_frame.yaxis
+            normal = base.yaxis
         elif face_index == 1:
-            normal = -base_frame.yaxis
+            normal = -base.yaxis
         elif face_index == 2:
-            normal = base_frame.zaxis
+            normal = base.zaxis
         elif face_index == 3:
-            normal = -base_frame.zaxis
+            normal = -base.zaxis
         else:
-            raise ValueError("face_index must be 0, 1, 2, or 3.")
+            raise ValueError("face_index must be 0, 1, 2, or 3")
 
-        xaxis = base_frame.xaxis
+        xaxis = base.xaxis
         yaxis = normal
         zaxis = xaxis.cross(yaxis).unitized()
 
-        face_frame = Frame(end_pt + yaxis * (self.depth * 0.5), xaxis, yaxis)
-        return face_frame
+        return Frame(
+            end_pt + yaxis * (self.depth * 0.5),
+            xaxis,
+            yaxis
+        )
+
+    # --------------------------------------------------
+    # GROWTH
+    # --------------------------------------------------
 
     def grow_stick(self, from_stick_index=-1, face_index=0, angle=0.0, offset=0.0):
         """
-        Grows a new stick from a given stick's face.
+        Grows a new stick from a face of an existing stick.
 
         Args:
-            from_stick_index: Stick to grow from (-1 = last)
-            face_index: Which face to grow from (0-3)
-            angle: Optional rotation around Y axis (deg)
-            offset: Optional lateral offset
+            from_stick_index: index of parent stick (-1 = last stick)
+            face_index: which face to grow from (0–3)
+            angle: optional in-plane rotation (degrees)
+            offset: lateral offset along X
         """
-        from_stick_index = from_stick_index if from_stick_index != -1 else len(self.sticks) - 1
-        position = self.get_face_frame(from_stick_index, face_index).copy()
+        if not self.sticks:
+            return  # safety, should never happen
 
-        # Offset outward
-        position.point += position.yaxis * (self.depth * 0.5)
-        position.point -= position.xaxis * offset
+        parent_index = (
+            from_stick_index
+            if from_stick_index != -1
+            else len(self.sticks) - 1
+        )
 
-        # Optional rotation
+        face_frame = self.get_face_frame(parent_index, face_index).copy()
+
+        # Ensure clean face-to-face separation
+        face_frame.point += face_frame.yaxis * (self.depth * 0.5)
+        face_frame.point -= face_frame.xaxis * offset
+
         if angle != 0.0:
-            R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point=position.point)
-            position.transform(R)
+            R = Rotation.from_axis_and_angle(
+                face_frame.yaxis,
+                math.radians(angle),
+                point=face_frame.point
+            )
+            face_frame.transform(R)
 
-        axis = Line.from_point_and_vector(position.point, position.xaxis * self.stick_length)
-        z_vector = position.yaxis
-        new_stick = Stick(axis, z_vector)
-        self.sticks.append(new_stick)
+        axis = Line.from_point_and_vector(
+            face_frame.point,
+            face_frame.xaxis * self.stick_length
+        )
+
+        z_vector = face_frame.yaxis
+        self.sticks.append(Stick(axis, z_vector))
+
+    # --------------------------------------------------
+    # VISUALIZATION
+    # --------------------------------------------------
 
     def visualize(self):
         """
-        Returns all stick box geometries.
+        Returns COMPAS Box geometries (GH previews these directly).
         """
         return [stick.geometry for stick in self.sticks]
