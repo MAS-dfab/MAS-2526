@@ -86,6 +86,15 @@ class BranchingModule:
             None
 
             """
+        if not self.sticks:
+            # FIRST stick — grow from root_frame directly
+            axis = Line.from_point_and_vector(self.root_frame.point, self.root_frame.xaxis * self.stick_length)
+            z_vector = self.root_frame.yaxis
+            new_stick = Stick(axis, z_vector)
+            self.sticks.append(new_stick)
+            return  # skip rest of method   
+
+        #otherwise, grow from specified stick face                            
         position = self.get_face_frame(from_stick_index, face_index).copy()
 
         # Shift outward another half-depth to ensure separation
