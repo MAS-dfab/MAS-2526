@@ -52,7 +52,7 @@ class BranchingModule:
 
         # Rotate stick frame based on index
         stick_frame = self.sticks[stick_index].frame
-        angle = face_index * math.pi/2
+        angle = face_index * math.pi
         R = Rotation.from_axis_and_angle(stick_frame.xaxis, angle, stick_frame.point)
         new_frame = stick_frame.transformed(R)
         new_frame.point = self.sticks[stick_index].axis.end
