@@ -3,21 +3,20 @@ import math
 from Sticks import Stick
 
 class BranchingModule:
-    def __init__(self, root_frame, stick_length=None, width=None, depth=None):
-        """
-        Constructor for Branching module.
-
-        Args:
-            root_frame: Frame from which tree will grow
-            stick_length: Length of each stick
-            width: Width of sticks (defaults to Stick.WIDTH)
-            depth: Depth of sticks (defaults to Stick.DEPTH)
-        """
+    def __init__(self, root_frame, stick_length=None, width=None, depth=None, disable_init=False):
         self.root_frame = root_frame
         self.sticks = []
         self.stick_length = stick_length
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
+
+        if not disable_init:
+            self._init_first_stick(root_frame)
+
+    def _init_first_stick(self, frame):
+        axis = Line.from_point_and_vector(frame.point, frame.xaxis * self.stick_length)
+        st_stick = Stick(axis, z_vector=frame.yaxis)
+        self.sticks.append(st_stick)
 
     def get_face_frame(self, stick_index, face_index):
         """
