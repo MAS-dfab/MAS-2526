@@ -102,7 +102,7 @@ class BranchingModule:
 
         parent_index = (
             from_stick_index
-            if from_stick_index != -1
+            if from_stick_index != 0
             else len(self.sticks) - 1
         )
 
