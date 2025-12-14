@@ -76,44 +76,34 @@ class BranchingModule:
          
     def grow_stick(self, from_stick_index=-1, face_index=0, angle=0.0, offset=0.0):
         """
-        Grows a new stick from a specified face of an existing stick.
-        Args:
-            from_stick_index: Index of stick to grow from (default: last stick)
-            face_index: Index of face to grow from (0-3)
-            angle: In-plane rotation angle in degrees (default: 0.0)
-            offset: Offset distance along growth direction (default: 0.0)
-        Returns:
-            None
+        Grows a new stick from an existing stick.
 
-            """
+        If no sticks exist yet, grows the first stick directly from the root frame.
+        """
         if not self.sticks:
             # FIRST stick — grow from root_frame directly
             axis = Line.from_point_and_vector(self.root_frame.point, self.root_frame.xaxis * self.stick_length)
             z_vector = self.root_frame.yaxis
             new_stick = Stick(axis, z_vector)
             self.sticks.append(new_stick)
-            return  # skip rest of method   
+            return  # skip rest of method
 
-        #otherwise, grow from specified stick face                            
+        # Otherwise, grow from specified face of existing stick
         position = self.get_face_frame(from_stick_index, face_index).copy()
+        position.point += position.yaxis * self.depth / 2
+        position.point += -position.xaxis * offset
 
-        # Shift outward another half-depth to ensure separation
-        position.point += position.yaxis * (self.depth * 0.5)
+        # Apply rotation
+        R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point=position.point)
+        position.transform(R)
 
-        # Apply offset if needed
-        position.point -= position.xaxis * offset
+        position.point += -position.xaxis * offset
 
-        # Optional in-plane rotation around Z (if any angle is needed)
-        if angle != 0.0:
-            R = Rotation.from_axis_and_angle(position.yaxis, math.radians(angle), point=position.point)
-            position.transform(R)
-
-        # Create new stick along X axis from the face frame
         axis = Line.from_point_and_vector(position.point, position.xaxis * self.stick_length)
         z_vector = position.yaxis
-
         new_stick = Stick(axis, z_vector)
         self.sticks.append(new_stick)
+
 
 
     def visualize(self):
