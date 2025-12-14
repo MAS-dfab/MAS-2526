@@ -22,11 +22,9 @@ class BranchingModule:
         self.width = width or Stick.WIDTH
         self.depth = depth or Stick.DEPTH
 
-        self._init_first_stick()
-
-    def _init_first_stick(self):
+    def grow_first_stick(self):
         """
-        Creates the first stick from the root frame.
+        Explicitly grow the first stick from the root frame.
         """
         axis = Line.from_point_and_vector(self.root_frame.point, self.root_frame.xaxis * self.stick_length)
         z_vector = self.root_frame.yaxis
