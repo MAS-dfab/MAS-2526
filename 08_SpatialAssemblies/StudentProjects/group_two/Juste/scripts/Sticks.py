@@ -1,6 +1,6 @@
 from compas.geometry import Point, Box, Frame, Vector, Plane, Rotation, Line
 from compas.geometry import angle_vectors, intersection_line_plane
-from compas_rhino.geometry import box_to_rhino
+from compas_rhino.conversions import box_to_rhino
 import math
 
 def _calculate_z_vector_from_centerline(centerline_vector):
