@@ -27,19 +27,11 @@ class BranchingModule:
     # ROOT STICK
     # --------------------------------------------------
 
-    def _init_first_stick(self):
-        """
-        Creates the initial root stick from self.root_frame.
-        """
-        frame = self.root_frame
+    def _init_first_stick(self, frame):
+        axis = Line.from_point_and_vector(frame.point, frame.xaxis * self.stick_length)
+        stick = Stick(axis, frame.yaxis)
+        self.sticks.append(stick)
 
-        axis = Line.from_point_and_vector(
-            frame.point,
-            frame.xaxis * self.stick_length
-        )
-
-        z_vector = frame.yaxis
-        self.sticks.append(Stick(axis, z_vector))
 
     # --------------------------------------------------
     # FACE FRAMES
