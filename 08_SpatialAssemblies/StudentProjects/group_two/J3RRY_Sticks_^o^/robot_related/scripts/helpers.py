@@ -105,7 +105,7 @@ def generate_default_tolerances(joints):
     return [DEFAULT_TOLERANCE_METERS if j.is_scalable() else DEFAULT_TOLERANCE_RADIANS for j in joints]
 
 
-APPROACH_DISTANCE = 0.1  # 10 cm
+APPROACH_DISTANCE = 0.2  # 20 cm
     
 def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipulator"):
     """
@@ -265,8 +265,8 @@ def calculate_place_trajectories(robot, current_config, placement_frame, lean_in
 
     enter_constraints_place = robot.constraints_from_frame(
         enter_frame,
-        tolerance_position=0.01,
-        tolerances_axes=[0.01, 0.01, 0.01],
+        tolerance_position=0.025,
+        tolerances_axes=[0.025, 0.025, 0.025],
         use_attached_tool_frame=True,
         group=group or robot.main_group_name,
     )
