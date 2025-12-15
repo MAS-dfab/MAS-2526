@@ -1,5 +1,5 @@
 from J3RRY_SingleStick_v1 import Stick
-from compas.geometry import Frame, Transformation, Polyline, Point
+from compas.geometry import Frame, Transformation, Polyline, Point, Rotation
 import math
 
 
@@ -47,7 +47,7 @@ class Fabrication:
             mapping.setdefault(round, []).append(idx)
         return mapping
     
-
+    
     def get_face_t(self, agg_idx, stick_idx):
         """
         Get face index and t value for a specified stick in an aggregation.
@@ -185,8 +185,9 @@ class Fabrication:
             if both and round > 0:
                 parent_round = round - 1
                 for j in mapping.get(parent_round, []):
-                    pass  # do this later
-
+                      # do this later
+                    raise NotImplementedError
+            
         return self.modules_with_adjacent, self.agg_indices, self.stick_indices
 
 
@@ -304,7 +305,7 @@ class Fabrication:
 
         return plotted_modules, recs
 
-
+        
     def eval_target_frames(self, modules, robot_position=Point(0,0,0)):
         """
         Compute default target frames for each module.
@@ -357,26 +358,33 @@ class Fabrication:
         return self.target_frames, self.new_face_indices, self.new_t_values
     
 
-    def send_to_pick_up_station(self, modules, pick_up_station_frame):
+    def send_to_pick_up_station(self, modules, pick_up_station_frames):
         """
         Send each module to pick up station.
 
         Args:
             modules: list of list of type Stick, basically erected modules.
-            pick_up_station_frame: type Frame, pick up station frame calibrated in robot workspace.
+            pick_up_station_frames: list of type Frame, calibrated in robot workspace.
         
         Returns:
             pick_up_modules: list of list of type Stick, modules positioned at pick up station.
             pick_up_frames: list of list of type Frame.
         """
+        stick_dict = {200: 0, 300: 1, 400: 2}
+
         self.pick_up_modules = []
         self.pick_up_frames = []
         for module_branch, new_t_values_branch in zip(modules, self.new_t_values):
             stick_branch = []
             frame_branch = []
             for stick, t in zip(module_branch, new_t_values_branch):
+                # Get pick up station index based on stick length
+                length_key = int(round(stick.length))
+                idx = stick_dict.get(length_key)
+                station_frame = pick_up_station_frames[idx]
+
                 from_frame = stick.frame.copy()
-                to_frame = pick_up_station_frame.copy()
+                to_frame = station_frame.copy()
                 O = Transformation.from_frame_to_frame(from_frame, to_frame)
                 new_frame = stick.frame.transformed(O)
                 new_stick = Stick(new_frame, stick.length)
@@ -384,7 +392,7 @@ class Fabrication:
 
                 # Get pick up frame on the pick up station
                 pick_up_frame = new_stick.eval_frame(0, t)  # face index 0 for pick up
-                pick_up_frame.rotate(math.pi, stick.frame.xaxis, pick_up_frame.point)
+                pick_up_frame.rotate(math.pi, new_stick.frame.xaxis, pick_up_frame.point)
                 frame_branch.append(pick_up_frame)
                 
             self.pick_up_modules.append(stick_branch)
@@ -392,7 +400,7 @@ class Fabrication:
         return self.pick_up_modules, self.pick_up_frames
     
 
-    def send_to_holding_jig(self, modules, holding_jig_frame):
+    def send_to_holding_jig(self, modules, holding_jig_frame, rotation=0):
         """
         Send each module to holding jig.
         
@@ -411,7 +419,13 @@ class Fabrication:
             frame_branch = []
             # From_frame is the first stick frame in each module (branch)
             from_frame = module_branch[0].frame.copy()
-            to_frame = holding_jig_frame.copy()
+            to_frame = Frame(holding_jig_frame.point, from_frame.xaxis, from_frame.yaxis)
+            # Rotate if needed
+            angle = rotation * math.pi * 0.5
+            origin = to_frame.point
+            R = Rotation.from_axis_and_angle((0,0,1), angle, origin)
+            to_frame.transform(R)
+
             O = Transformation.from_frame_to_frame(from_frame, to_frame)
             for stick, place_frame in zip(module_branch, place_frames):
                 new_frame = stick.frame.transformed(O)
@@ -425,3 +439,34 @@ class Fabrication:
             self.place_frames.append(frame_branch)
             
         return self.place_modules, self.place_frames
+    
+    """
+    def find_lean_in_normals(self, modules):
+        
+        # graph example:
+        # [0, 0]; round = 0, root = 0
+        # [1, 0, 1]; round = 1, root = 0, branch = [1]
+        # [2, 1, 0, 2]; round = 2 root = 1, branch = [0,2]
+        
+        graph = self.graph
+        pairs = []
+        for idx, (module_branch, agg_branch, ori_branch) in \
+            enumerate(zip(modules, self.agg_indices, self.original_modules)):
+            pairs_branch = []
+
+            for j, agg_idx in enumerate(agg_branch):
+                current_graph = graph(agg_idx)
+
+                if len(current_graph) == 2 and j > 0:
+                    pair = [module_branch[j], module_branch[j-1]]
+                    pairs_branch.append(pair)
+
+                if len(current_graph) > 2:
+                    pair_idx = len(ori_branch) - 1 # last stick in original module
+                    pair = [module_branch[pair_idx], module_branch[j]]
+                    pairs_branch.append(pair)
+                
+            pairs.append(pairs_branch)
+        return pairs
+    """
+        
