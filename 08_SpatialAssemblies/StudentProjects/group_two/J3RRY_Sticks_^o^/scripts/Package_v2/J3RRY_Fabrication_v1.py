@@ -1,5 +1,5 @@
 from J3RRY_SingleStick_v1 import Stick
-from compas.geometry import Frame, Transformation, Polyline, Point, Rotation
+from compas.geometry import Frame, Transformation, Polyline, Point, Rotation, Vector
 import math
 
 
@@ -242,7 +242,7 @@ class Fabrication:
         pass
 
 
-    def plot_modules(self, modules=None, origin=(0,0,0), x_size=400, y_size=240):
+    def plot_modules(self, modules, origin=(0,0,0), x_size=400, y_size=240):
         """
         Create a plot layout for all modules.
         
@@ -266,10 +266,12 @@ class Fabrication:
             rows.append(row)
             
         to_frames = []
+        to_points = []
         for col, row in zip(cols, rows):
             pt = Point(origin[0] + col * x_size, origin[1] + row * y_size, origin[2])
             to_frame = Frame(pt, [0,0,1], [0,1,0])
             to_frames.append(to_frame)
+            to_points.append(pt)
 
         # Create Border
         half_x = x_size / 2
@@ -286,19 +288,18 @@ class Fabrication:
 
         # Orient modules to plotting frames
         plotted_modules = []
-        if modules is None:
-            current_modules = self.original_modules
-        else: 
-            current_modules = modules
-
-        for idx, sticks in enumerate(current_modules):
-            to_frame = to_frames[idx]
-            from_frame = sticks[0].frame.copy()
+        for idx, sticks in enumerate(modules):
+            # to_frame = to_frames[idx]
+            to_point = to_points[idx]
+            to_frame = Frame(to_point, sticks[0].frame.xaxis, sticks[0].frame.yaxis)
+            from_frame = sticks[0].midframe.copy()
             branch_sticks = []
             for stick in sticks:
                 new_frame = stick.frame.copy()
                 translation = Transformation.from_frame_to_frame(from_frame, to_frame)
                 new_frame.transform(translation)
+                new_frame.translate(Vector(0,0,sticks[0].length / 2))
+
                 ori_stick = Stick(new_frame, stick.length)
                 branch_sticks.append(ori_stick)
             plotted_modules.append(branch_sticks)
@@ -411,14 +412,14 @@ class Fabrication:
         Returns:
             place_modules: list of list of type Stick, modules positioned at holding jig.
             place_frames: list of list of type Frame.
-        """
+        """ 
         self.place_modules = []
         self.place_frames = []
         for module_branch, place_frames in zip(modules, self.target_frames):
             stick_branch = []
             frame_branch = []
             # From_frame is the first stick frame in each module (branch)
-            from_frame = module_branch[0].frame.copy()
+            from_frame = module_branch[0].midframe.copy()
             to_frame = Frame(holding_jig_frame.point, from_frame.xaxis, from_frame.yaxis)
             # Rotate if needed
             angle = rotation * math.pi * 0.5
@@ -429,10 +430,12 @@ class Fabrication:
             O = Transformation.from_frame_to_frame(from_frame, to_frame)
             for stick, place_frame in zip(module_branch, place_frames):
                 new_frame = stick.frame.transformed(O)
+                new_frame.translate(Vector(0,0,module_branch[0].length / 2))
                 new_stick = Stick(new_frame, stick.length)
                 stick_branch.append(new_stick)
                 # Get place frame relative to holding jig
                 new_place_frame = place_frame.transformed(O)
+                new_place_frame.translate(Vector(0,0,module_branch[0].length / 2))
                 frame_branch.append(new_place_frame)
 
             self.place_modules.append(stick_branch)
@@ -440,33 +443,44 @@ class Fabrication:
             
         return self.place_modules, self.place_frames
     
-    """
-    def find_lean_in_normals(self, modules):
-        
-        # graph example:
-        # [0, 0]; round = 0, root = 0
-        # [1, 0, 1]; round = 1, root = 0, branch = [1]
-        # [2, 1, 0, 2]; round = 2 root = 1, branch = [0,2]
-        
-        graph = self.graph
-        pairs = []
-        for idx, (module_branch, agg_branch, ori_branch) in \
-            enumerate(zip(modules, self.agg_indices, self.original_modules)):
-            pairs_branch = []
 
-            for j, agg_idx in enumerate(agg_branch):
-                current_graph = graph(agg_idx)
-
-                if len(current_graph) == 2 and j > 0:
-                    pair = [module_branch[j], module_branch[j-1]]
-                    pairs_branch.append(pair)
-
-                if len(current_graph) > 2:
-                    pair_idx = len(ori_branch) - 1 # last stick in original module
-                    pair = [module_branch[pair_idx], module_branch[j]]
-                    pairs_branch.append(pair)
-                
-            pairs.append(pairs_branch)
-        return pairs
-    """
+    def check_and_flip_modules(self, modules):
+        """
+        Check if module are below its first stick.
         
+        Args:
+            modules: list of list of type Stick, basically erected modules.
+        
+        Returns:
+            None, change self.erected_modules in place.
+        """
+        new_erected = []
+
+        for module_branch in modules:
+            first_stick = module_branch[0]
+            lowest_z = first_stick.frame.point.z
+
+            # decide flip
+            flip = False
+            for stick in module_branch[1:]:
+                stpt, ndpt = stick.axis.start, stick.axis.end
+                if stpt.z < lowest_z or ndpt.z < lowest_z:
+                    flip = True
+                    break
+
+            if flip:
+                # build flipped branch
+                rot_frame = first_stick.midframe.copy()
+                R = Rotation.from_axis_and_angle(first_stick.frame.zaxis, math.pi, rot_frame.point)
+                flipped_branch = []
+                for stick in module_branch:
+                    new_frame = stick.frame.transformed(R)
+
+                    flipped_branch.append(Stick(new_frame, stick.length))
+
+                new_erected.append(flipped_branch)
+            else:
+                # keep original branch
+                new_erected.append(module_branch)
+
+        self.erected_modules = new_erected
