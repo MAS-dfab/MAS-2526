@@ -28,7 +28,6 @@ def scale_and_move_to_point(assembly, center):
         part.attributes["shape"].scale(factor)
         part.attributes["shape"].frame.scale(factor)
 
-
     points = [p for part in scaled_assembly.parts() for p in part.attributes["shape"].vertices]
     bbox = bounding_box(points)
     cur_center = Point(0,0,bbox[0][2])
@@ -49,32 +48,41 @@ def generate_default_tolerances(joints):
     return [DEFAULT_TOLERANCE_METERS if j.is_scalable() else DEFAULT_TOLERANCE_RADIANS for j in joints]
 
 
-APPROACH_DISTANCE = 0.2  # 10 cm
+APPROACH_DISTANCE = 0.1  # 10 cm
     
 def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipulator"):
     """
     Calculate the pick trajectory for a given pick frame.
     """
-    pick_frame = pickup_frame.copy()
-    pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
-    pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
+    initial_pick_frame = pickup_frame.copy()
+    # pick_frame.point.x = -pick_frame.point.x  # Invert X axis for UR
+    # pick_frame.point.y = -pick_frame.point.y  # Invert Y axis for UR
     
     ### Nadja - if the pickup plane is not flat for UR, rotate it 180 deg around Z axis
-    planar_plane = Frame(pick_frame.point, [1,0,0], [0,1,0])
-    R = Rotation.from_axis_and_angle(planar_plane.zaxis, -math.radians(180), pick_frame.point)
-    pick_frame.transform(R)
+    planar_plane = Frame([0,0,0], [1,0,0], [0,1,0])
+    R = Rotation.from_axis_and_angle(planar_plane.zaxis, math.radians(180), planar_plane.point)
+    initial_pick_frame.transform(R)
+    
+    initial_pick_frame.xaxis = -initial_pick_frame.xaxis  # Invert X axis for UR
+    initial_pick_frame.yaxis = -initial_pick_frame.yaxis  # Invert Y axis for UR
     ### End Nadja
     
+    # Plan motion to approach pick frame   
+    pick_frame = initial_pick_frame.copy() 
+    pick_frame.translate(
+        APPROACH_DISTANCE/2 * -pick_frame.zaxis
+    )
+    
     # Find IK solution for pick frame
-    approach_pick_frame = pick_frame.copy()
+    approach_pick_frame = initial_pick_frame.copy()
     approach_pick_frame.translate(
         APPROACH_DISTANCE * -approach_pick_frame.zaxis
     )
-
+    
     # Generate cartesian trajectory from pick to approach pick frame
-    max_step = 0.1
+    max_step = 0.02
     trajectory = robot.plan_cartesian_motion(
-        [approach_pick_frame, pick_frame],
+        [pick_frame, initial_pick_frame],
         start_configuration=start_config,
         group=group,
         options=dict(
@@ -100,6 +108,12 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     and return trajectory (back to safe_config) for a part.
     """
     place_frame = placement_frame.copy()
+    
+    # Find IK solution for pick frame
+    approach_place_frame = place_frame.copy()
+    approach_place_frame.translate(
+        APPROACH_DISTANCE*2 * -approach_place_frame.zaxis
+    )
 
     start_config_for_place = current_config
     goal_constraints_place = robot.constraints_from_frame(
@@ -109,6 +123,8 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
         use_attached_tool_frame=True,
         group=group or robot.main_group_name,
     )
+
+    
     place_trajectory = robot.plan_motion(
         goal_constraints_place,
         start_configuration=start_config_for_place,
@@ -125,6 +141,7 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     exit_frame = place_frame.copy()
     exit_frame.translate(APPROACH_DISTANCE * -exit_frame.zaxis)
     
+    
     exit_trajectory = robot.plan_cartesian_motion(
         [place_frame, exit_frame],
         start_configuration=place_trajectory.points[-1],
@@ -136,6 +153,7 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
         ),  
     )
     print("Planned safe trajectory.")
+    
 
     # Go to safe configuration (home)
     safe_config = start_config_for_place

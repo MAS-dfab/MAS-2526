@@ -69,9 +69,9 @@
         </chunk>
         <chunk name="GHALibraries">
           <items count="1">
-            <item name="Count" type_name="gh_int32" type_code="3">5</item>
+            <item name="Count" type_name="gh_int32" type_code="3">7</item>
           </items>
-          <chunks count="5">
+          <chunks count="7">
             <chunk name="Library" index="0">
               <items count="4">
                 <item name="Author" type_name="gh_string" type_code="10">Robert McNeel &amp; Associates</item>
@@ -105,6 +105,22 @@
               </items>
             </chunk>
             <chunk name="Library" index="4">
+              <items count="4">
+                <item name="Author" type_name="gh_string" type_code="10">Robert McNeel &amp; Associates</item>
+                <item name="Id" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
+                <item name="Name" type_name="gh_string" type_code="10">Grasshopper</item>
+                <item name="Version" type_name="gh_string" type_code="10">8.25.25328.11001</item>
+              </items>
+            </chunk>
+            <chunk name="Library" index="5">
+              <items count="4">
+                <item name="Author" type_name="gh_string" type_code="10">Robert McNeel &amp; Associates</item>
+                <item name="Id" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
+                <item name="Name" type_name="gh_string" type_code="10">Grasshopper</item>
+                <item name="Version" type_name="gh_string" type_code="10">8.25.25328.11001</item>
+              </items>
+            </chunk>
+            <chunk name="Library" index="6">
               <items count="6">
                 <item name="AssemblyFullName" type_name="gh_string" type_code="10">Robots.Grasshopper, Version=1.9.0.0, Culture=neutral, PublicKeyToken=null</item>
                 <item name="AssemblyVersion" type_name="gh_string" type_code="10">1.9.0.0</item>
@@ -896,9 +912,9 @@
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>169</X>
-                          <Y>1053</Y>
+                          <Y>1075</Y>
                           <W>107</W>
-                          <H>71</H>
+                          <H>28</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>223</X>
@@ -921,13 +937,13 @@
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>171</X>
-                              <Y>1055</Y>
+                              <Y>1077</Y>
                               <W>37</W>
-                              <H>67</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>191</X>
-                              <Y>1088.5</Y>
+                              <Y>1089</Y>
                             </item>
                           </items>
                         </chunk>
@@ -972,13 +988,13 @@
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>238</X>
-                              <Y>1055</Y>
+                              <Y>1077</Y>
                               <W>36</W>
-                              <H>67</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>256</X>
-                              <Y>1088.5</Y>
+                              <Y>1089</Y>
                             </item>
                           </items>
                         </chunk>
@@ -1545,9 +1561,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>985</X>
-                          <Y>1164</Y>
+                          <Y>1201</Y>
                           <W>86</W>
-                          <H>118</H>
+                          <H>44</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>1057</X>
@@ -1571,13 +1587,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>987</X>
-                              <Y>1166</Y>
+                              <Y>1203</Y>
                               <W>55</W>
-                              <H>57</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1016</X>
-                              <Y>1194.5</Y>
+                              <Y>1213</Y>
                             </item>
                           </items>
                         </chunk>
@@ -1600,11 +1616,11 @@ stick_module_modified_frame</item>
                               <X>987</X>
                               <Y>1223</Y>
                               <W>55</W>
-                              <H>57</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1016</X>
-                              <Y>1251.5</Y>
+                              <Y>1233</Y>
                             </item>
                           </items>
                         </chunk>
@@ -1899,9 +1915,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>98</X>
-                          <Y>1080</Y>
+                          <Y>1078</Y>
                           <W>50</W>
-                          <H>20</H>
+                          <H>24</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>123.582275</X>
@@ -2002,9 +2018,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>933</X>
-                          <Y>1365</Y>
+                          <Y>1378</Y>
                           <W>68</W>
-                          <H>53</H>
+                          <H>28</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>964</X>
@@ -2027,13 +2043,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>935</X>
-                              <Y>1367</Y>
+                              <Y>1380</Y>
                               <W>14</W>
-                              <H>49</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>943.5</X>
-                              <Y>1391.5</Y>
+                              <Y>1392</Y>
                             </item>
                           </items>
                         </chunk>
@@ -2053,13 +2069,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>979</X>
-                              <Y>1367</Y>
+                              <Y>1380</Y>
                               <W>20</W>
-                              <H>49</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>989</X>
-                              <Y>1391.5</Y>
+                              <Y>1392</Y>
                             </item>
                           </items>
                         </chunk>
@@ -2239,9 +2255,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>1065</X>
-                          <Y>1377</Y>
+                          <Y>1382</Y>
                           <W>44</W>
-                          <H>54</H>
+                          <H>44</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>1095</X>
@@ -2266,13 +2282,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>1067</X>
-                              <Y>1379</Y>
+                              <Y>1384</Y>
                               <W>13</W>
-                              <H>25</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1075</X>
-                              <Y>1391.5</Y>
+                              <Y>1394</Y>
                             </item>
                           </items>
                         </chunk>
@@ -2295,11 +2311,11 @@ stick_module_modified_frame</item>
                               <X>1067</X>
                               <Y>1404</Y>
                               <W>13</W>
-                              <H>25</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1075</X>
-                              <Y>1416.5</Y>
+                              <Y>1414</Y>
                             </item>
                           </items>
                         </chunk>
@@ -3197,7 +3213,7 @@ stick_module_modified_frame</item>
                           <X>210</X>
                           <Y>1557</Y>
                           <W>107</W>
-                          <H>71</H>
+                          <H>28</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>264</X>
@@ -3222,7 +3238,7 @@ stick_module_modified_frame</item>
                               <X>212</X>
                               <Y>1559</Y>
                               <W>37</W>
-                              <H>67</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>232</X>
@@ -3273,7 +3289,7 @@ stick_module_modified_frame</item>
                               <X>279</X>
                               <Y>1559</Y>
                               <W>36</W>
-                              <H>67</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>297</X>
@@ -3844,9 +3860,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>988</X>
-                          <Y>1666</Y>
+                          <Y>1703</Y>
                           <W>86</W>
-                          <H>118</H>
+                          <H>44</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>1060</X>
@@ -3870,13 +3886,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>990</X>
-                              <Y>1668</Y>
+                              <Y>1705</Y>
                               <W>55</W>
-                              <H>57</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1019</X>
-                              <Y>1696.5</Y>
+                              <Y>1715</Y>
                             </item>
                           </items>
                         </chunk>
@@ -3899,11 +3915,11 @@ stick_module_modified_frame</item>
                               <X>990</X>
                               <Y>1725</Y>
                               <W>55</W>
-                              <H>57</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1019</X>
-                              <Y>1753.5</Y>
+                              <Y>1735</Y>
                             </item>
                           </items>
                         </chunk>
@@ -4198,9 +4214,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>101</X>
-                          <Y>1582</Y>
+                          <Y>1580</Y>
                           <W>50</W>
-                          <H>20</H>
+                          <H>24</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>126.64581</X>
@@ -4301,9 +4317,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>936</X>
-                          <Y>1867</Y>
+                          <Y>1880</Y>
                           <W>68</W>
-                          <H>53</H>
+                          <H>28</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>967</X>
@@ -4326,13 +4342,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>938</X>
-                              <Y>1869</Y>
+                              <Y>1882</Y>
                               <W>14</W>
-                              <H>49</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>946.5</X>
-                              <Y>1893.5</Y>
+                              <Y>1894</Y>
                             </item>
                           </items>
                         </chunk>
@@ -4352,13 +4368,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>982</X>
-                              <Y>1869</Y>
+                              <Y>1882</Y>
                               <W>20</W>
-                              <H>49</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>992</X>
-                              <Y>1893.5</Y>
+                              <Y>1894</Y>
                             </item>
                           </items>
                         </chunk>
@@ -4538,9 +4554,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>1068</X>
-                          <Y>1879</Y>
+                          <Y>1884</Y>
                           <W>44</W>
-                          <H>54</H>
+                          <H>44</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>1098</X>
@@ -4565,13 +4581,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>1070</X>
-                              <Y>1881</Y>
+                              <Y>1886</Y>
                               <W>13</W>
-                              <H>25</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1078</X>
-                              <Y>1893.5</Y>
+                              <Y>1896</Y>
                             </item>
                           </items>
                         </chunk>
@@ -4594,11 +4610,11 @@ stick_module_modified_frame</item>
                               <X>1070</X>
                               <Y>1906</Y>
                               <W>13</W>
-                              <H>25</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1078</X>
-                              <Y>1918.5</Y>
+                              <Y>1916</Y>
                             </item>
                           </items>
                         </chunk>
@@ -5012,9 +5028,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>1027</X>
-                          <Y>1530</Y>
+                          <Y>1544</Y>
                           <W>65</W>
-                          <H>72</H>
+                          <H>44</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>1059</X>
@@ -5038,13 +5054,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>1029</X>
-                              <Y>1532</Y>
+                              <Y>1546</Y>
                               <W>15</W>
-                              <H>34</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1038</X>
-                              <Y>1549</Y>
+                              <Y>1556</Y>
                             </item>
                           </items>
                         </chunk>
@@ -5066,11 +5082,11 @@ stick_module_modified_frame</item>
                               <X>1029</X>
                               <Y>1566</Y>
                               <W>15</W>
-                              <H>34</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1038</X>
-                              <Y>1583</Y>
+                              <Y>1576</Y>
                             </item>
                           </items>
                         </chunk>
@@ -5090,9 +5106,9 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>1074</X>
-                              <Y>1532</Y>
+                              <Y>1546</Y>
                               <W>16</W>
-                              <H>68</H>
+                              <H>40</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1082</X>
@@ -5136,7 +5152,7 @@ stick_module_modified_frame</item>
                           <X>1836</X>
                           <Y>1674</Y>
                           <W>129</W>
-                          <H>113</H>
+                          <H>104</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>1893</X>
@@ -5181,7 +5197,7 @@ stick_module_modified_frame</item>
                                   <X>1838</X>
                                   <Y>1676</Y>
                                   <W>40</W>
-                                  <H>54</H>
+                                  <H>50</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                                   <X>1859.5</X>
@@ -5220,7 +5236,7 @@ stick_module_modified_frame</item>
                                   <X>1838</X>
                                   <Y>1730</Y>
                                   <W>40</W>
-                                  <H>55</H>
+                                  <H>50</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                                   <X>1859.5</X>
@@ -5252,7 +5268,7 @@ stick_module_modified_frame</item>
                                   <X>1908</X>
                                   <Y>1676</Y>
                                   <W>55</W>
-                                  <H>21</H>
+                                  <H>20</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                                   <X>1935.5</X>
@@ -5284,7 +5300,7 @@ stick_module_modified_frame</item>
                                   <X>1908</X>
                                   <Y>1697</Y>
                                   <W>55</W>
-                                  <H>22</H>
+                                  <H>20</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                                   <X>1935.5</X>
@@ -5322,7 +5338,7 @@ stick_module_modified_frame</item>
                                   <X>1908</X>
                                   <Y>1719</Y>
                                   <W>55</W>
-                                  <H>22</H>
+                                  <H>20</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                                   <X>1935.5</X>
@@ -5360,7 +5376,7 @@ stick_module_modified_frame</item>
                                   <X>1908</X>
                                   <Y>1741</Y>
                                   <W>55</W>
-                                  <H>22</H>
+                                  <H>20</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                                   <X>1935.5</X>
@@ -5398,7 +5414,7 @@ stick_module_modified_frame</item>
                                   <X>1908</X>
                                   <Y>1763</Y>
                                   <W>55</W>
-                                  <H>22</H>
+                                  <H>20</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                                   <X>1935.5</X>
@@ -5467,7 +5483,7 @@ stick_module_modified_frame</item>
                           <X>2055</X>
                           <Y>1562</Y>
                           <W>70</W>
-                          <H>126</H>
+                          <H>84</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>2111</X>
@@ -5492,7 +5508,7 @@ stick_module_modified_frame</item>
                               <X>2057</X>
                               <Y>1564</Y>
                               <W>39</W>
-                              <H>30</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2078</X>
@@ -5519,7 +5535,7 @@ stick_module_modified_frame</item>
                               <X>2057</X>
                               <Y>1594</Y>
                               <W>39</W>
-                              <H>31</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2078</X>
@@ -5546,7 +5562,7 @@ stick_module_modified_frame</item>
                               <X>2057</X>
                               <Y>1625</Y>
                               <W>39</W>
-                              <H>30</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2078</X>
@@ -5594,7 +5610,7 @@ stick_module_modified_frame</item>
                               <X>2057</X>
                               <Y>1655</Y>
                               <W>39</W>
-                              <H>31</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2078</X>
@@ -5648,7 +5664,7 @@ stick_module_modified_frame</item>
                           <X>2055</X>
                           <Y>1694</Y>
                           <W>70</W>
-                          <H>126</H>
+                          <H>84</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>2111</X>
@@ -5673,7 +5689,7 @@ stick_module_modified_frame</item>
                               <X>2057</X>
                               <Y>1696</Y>
                               <W>39</W>
-                              <H>30</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2078</X>
@@ -5700,7 +5716,7 @@ stick_module_modified_frame</item>
                               <X>2057</X>
                               <Y>1726</Y>
                               <W>39</W>
-                              <H>31</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2078</X>
@@ -5727,7 +5743,7 @@ stick_module_modified_frame</item>
                               <X>2057</X>
                               <Y>1757</Y>
                               <W>39</W>
-                              <H>30</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2078</X>
@@ -5775,7 +5791,7 @@ stick_module_modified_frame</item>
                               <X>2057</X>
                               <Y>1787</Y>
                               <W>39</W>
-                              <H>31</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2078</X>
@@ -5829,7 +5845,7 @@ stick_module_modified_frame</item>
                           <X>2076</X>
                           <Y>1829</Y>
                           <W>70</W>
-                          <H>126</H>
+                          <H>84</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>2132</X>
@@ -5853,7 +5869,7 @@ stick_module_modified_frame</item>
                               <X>2078</X>
                               <Y>1831</Y>
                               <W>39</W>
-                              <H>30</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2099</X>
@@ -5880,7 +5896,7 @@ stick_module_modified_frame</item>
                               <X>2078</X>
                               <Y>1861</Y>
                               <W>39</W>
-                              <H>31</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2099</X>
@@ -5907,7 +5923,7 @@ stick_module_modified_frame</item>
                               <X>2078</X>
                               <Y>1892</Y>
                               <W>39</W>
-                              <H>30</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2099</X>
@@ -5955,7 +5971,7 @@ stick_module_modified_frame</item>
                               <X>2078</X>
                               <Y>1922</Y>
                               <W>39</W>
-                              <H>31</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>2099</X>
@@ -6218,7 +6234,7 @@ stick_module_modified_frame</item>
                             <item name="ScriptParamAccess" type_name="gh_int32" type_code="3">0</item>
                             <item name="ScriptParameterVersion" type_name="gh_int32" type_code="3">2</item>
                             <item name="ShowTypeHints" type_name="gh_bool" type_code="1">true</item>
-                            <item name="Source" index="0" type_name="gh_guid" type_code="9">daa0732d-ba9e-4bf5-87d4-62e7a9d94bc2</item>
+                            <item name="Source" index="0" type_name="gh_guid" type_code="9">93779e5a-e054-46f3-9ffc-5630ca86f122</item>
                             <item name="SourceCount" type_name="gh_int32" type_code="3">1</item>
                             <item name="ToolTip" type_name="gh_string" type_code="10"></item>
                             <item name="TypeHintID" type_name="gh_guid" type_code="9">3897522d-58e9-4d60-b38c-978ddacfedd8</item>
@@ -6912,10 +6928,10 @@ stick_module_modified_frame</item>
                     <chunk name="ScriptEditor">
                       <items count="1">
                         <item name="StartBounds" type_name="gh_drawing_rectangle" type_code="34">
-                          <X>542</X>
-                          <Y>88</Y>
+                          <X>211</X>
+                          <Y>50</Y>
                           <W>974</W>
-                          <H>818</H>
+                          <H>868</H>
                         </item>
                       </items>
                     </chunk>
@@ -6943,7 +6959,7 @@ stick_module_modified_frame</item>
                           <X>370</X>
                           <Y>145</Y>
                           <W>107</W>
-                          <H>71</H>
+                          <H>28</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>424</X>
@@ -6968,7 +6984,7 @@ stick_module_modified_frame</item>
                               <X>372</X>
                               <Y>147</Y>
                               <W>37</W>
-                              <H>67</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>392</X>
@@ -7019,7 +7035,7 @@ stick_module_modified_frame</item>
                               <X>439</X>
                               <Y>147</Y>
                               <W>36</W>
-                              <H>67</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>457</X>
@@ -7116,7 +7132,7 @@ stick_module_modified_frame</item>
                         <item name="Max" type_name="gh_double" type_code="6">100</item>
                         <item name="Min" type_name="gh_double" type_code="6">0</item>
                         <item name="SnapCount" type_name="gh_int32" type_code="3">0</item>
-                        <item name="Value" type_name="gh_double" type_code="6">2</item>
+                        <item name="Value" type_name="gh_double" type_code="6">0</item>
                       </items>
                     </chunk>
                   </chunks>
@@ -7590,9 +7606,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>1103</X>
-                          <Y>245</Y>
+                          <Y>282</Y>
                           <W>86</W>
-                          <H>118</H>
+                          <H>44</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>1175</X>
@@ -7616,13 +7632,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>1105</X>
-                              <Y>247</Y>
+                              <Y>284</Y>
                               <W>55</W>
-                              <H>57</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1134</X>
-                              <Y>275.5</Y>
+                              <Y>294</Y>
                             </item>
                           </items>
                         </chunk>
@@ -7645,11 +7661,11 @@ stick_module_modified_frame</item>
                               <X>1105</X>
                               <Y>304</Y>
                               <W>55</W>
-                              <H>57</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1134</X>
-                              <Y>332.5</Y>
+                              <Y>314</Y>
                             </item>
                           </items>
                         </chunk>
@@ -7943,14 +7959,14 @@ stick_module_modified_frame</item>
                     <chunk name="Attributes">
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
-                          <X>215</X>
-                          <Y>164</Y>
+                          <X>225</X>
+                          <Y>165</Y>
                           <W>50</W>
-                          <H>20</H>
+                          <H>24</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                          <X>240.24994</X>
-                          <Y>174.21948</Y>
+                          <X>250.24994</X>
+                          <Y>177.21948</Y>
                         </item>
                       </items>
                     </chunk>
@@ -7969,7 +7985,7 @@ stick_module_modified_frame</item>
                               <!--GH_Point only stores data which exists, test the existence of data fields prior to reading.-->
                               <items count="1">
                                 <item name="Coordinate" type_name="gh_point3d" type_code="51">
-                                  <X>-604.3220608693825</X>
+                                  <X>202.83815486440406</X>
                                   <Y>5.793225900681655E-07</Y>
                                   <Z>19.500000026967964</Z>
                                 </item>
@@ -8047,9 +8063,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>1051</X>
-                          <Y>446</Y>
+                          <Y>459</Y>
                           <W>68</W>
-                          <H>53</H>
+                          <H>28</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>1082</X>
@@ -8072,13 +8088,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>1053</X>
-                              <Y>448</Y>
+                              <Y>461</Y>
                               <W>14</W>
-                              <H>49</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1061.5</X>
-                              <Y>472.5</Y>
+                              <Y>473</Y>
                             </item>
                           </items>
                         </chunk>
@@ -8098,13 +8114,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>1097</X>
-                              <Y>448</Y>
+                              <Y>461</Y>
                               <W>20</W>
-                              <H>49</H>
+                              <H>24</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1107</X>
-                              <Y>472.5</Y>
+                              <Y>473</Y>
                             </item>
                           </items>
                         </chunk>
@@ -8284,9 +8300,9 @@ stick_module_modified_frame</item>
                       <items count="2">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>1183</X>
-                          <Y>458</Y>
+                          <Y>463</Y>
                           <W>44</W>
-                          <H>54</H>
+                          <H>44</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>1213</X>
@@ -8311,13 +8327,13 @@ stick_module_modified_frame</item>
                           <items count="2">
                             <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                               <X>1185</X>
-                              <Y>460</Y>
+                              <Y>465</Y>
                               <W>13</W>
-                              <H>25</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1193</X>
-                              <Y>472.5</Y>
+                              <Y>475</Y>
                             </item>
                           </items>
                         </chunk>
@@ -8340,11 +8356,11 @@ stick_module_modified_frame</item>
                               <X>1185</X>
                               <Y>485</Y>
                               <W>13</W>
-                              <H>25</H>
+                              <H>20</H>
                             </item>
                             <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                               <X>1193</X>
-                              <Y>497.5</Y>
+                              <Y>495</Y>
                             </item>
                           </items>
                         </chunk>
@@ -8766,7 +8782,7 @@ stick_module_modified_frame</item>
                         <item name="MarshGuids" type_name="gh_bool" type_code="1">true</item>
                         <item name="MarshInputs" type_name="gh_bool" type_code="1">true</item>
                         <item name="MarshOutputs" type_name="gh_bool" type_code="1">true</item>
-                        <item name="Text" type_name="gh_string" type_code="10">ZnJvbSBjb21wYXMgaW1wb3J0IGpzb25fZHVtcA0KaW1wb3J0IG9zLCBzeXMNCmZyb20gaXRlcnRvb2xzIGltcG9ydCBjb21iaW5hdGlvbnMNCmZyb20gY29tcGFzX3JoaW5vIGltcG9ydCB1bmxvYWRfbW9kdWxlcw0KZnJvbSBjb21wYXMuZ2VvbWV0cnkgaW1wb3J0IExpbmUsIFBsYW5lLCBWZWN0b3IsIFBvaW50DQoNCiNnZXQgY3VycmVudCBmaWxlIHBhdGgNCnBhdGggPSBnaGVudi5Db21wb25lbnQuT25QaW5nRG9jdW1lbnQoKS5GaWxlUGF0aA0KI2dldCBwYXJlbnQgZGlyZWN0b3J5IG9mIHRoZSBwYXJlbnQgZGlyZWN0b3J5DQpwYXJlbnRkaXIgPSBvcy5wYXRoLmRpcm5hbWUocGF0aCkNCiNnZXQgc3JjIGZvbGRlciB3aGljaCBjb250YWlucyBjbGFzc2VzDQpkaXJlID0gb3MucGF0aC5qb2luKHBhcmVudGRpciwnc2NyaXB0cycpDQoNCnN5cy5wYXRoLmFwcGVuZChkaXJlKQ0KDQpmcm9tIGdyb3VwX29uZV9zdGlja3MgaW1wb3J0IFN0aWNrIA0KDQpmcm9tIGNvbXBhcy5kYXRhc3RydWN0dXJlcyBpbXBvcnQgQXNzZW1ibHksIFBhcnQNCg0KanNvbl9wYXRoID0gb3MucGF0aC5qb2luKHBhcmVudGRpciwgJ2RhdGEnLCAnc3RpY2tfRkptb2Q1X2Fzc2VtYmx5Lmpzb24nKSAjIGZpbGUgaXMgc2FmZWQgd2hlcmUgZ2ggZmlsZSBpcyBzdG9yZWQsIGZyb20gdGhlcmUgaXQgcHV0cyBpdCBpbiBkYXRhIGZvbGRlcg0KDQpzdGlja193aWR0aCA9IDEzLjANCnN0aWNrX2RlcHRoID0gMTMuMA0Kc3RpY2tfbGVuZ3RoID0gMjAwDQoNCnN0aWNrc19kYXRhID0gW10NCg0KIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjDQojIE1ha2UgZnJhbWVzIHBvaW50IGluIGJlc3QgZGlyZWN0aW9uDQojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMNCmltcG9ydCBtYXRoDQppbXBvcnQgY29weQ0KDQpmcm9tIGNvbXBhcy5nZW9tZXRyeSBpbXBvcnQgZG90X3ZlY3RvcnMsIFJvdGF0aW9uDQpmcm9tIGNvbXBhcy5nZW9tZXRyeSBpbXBvcnQgY2VudHJvaWRfcG9pbnRzDQoNCmRlZiBpc19wYXJhbGxlbCh2MSwgdjIpOg0KICAgIGlmIG1hdGguaXNjbG9zZShkb3RfdmVjdG9ycyh2MSwgdjIpLCAxLCBhYnNfdG9sID0gMC4wMDEpIG9yIG1hdGguaXNjbG9zZShkb3RfdmVjdG9ycyh2MSwgdjIpLCAtMSAsYWJzX3RvbCA9IDAuMDAxKToNCiAgICAgICAgIyBNZWFucyBpdCBpcyBwYXJhbGxlbA0KICAgICAgICBwcmludCgicGFyYWxsZWwiKQ0KICAgICAgICByZXR1cm4gVHJ1ZQ0KICAgIGVsc2U6DQogICAgICAgICMgTWVhbnMgaXQgaXMgbm90IHBhcmFsbGVsDQogICAgICAgIHByaW50KCJub3QgcGFyYWxsZWwiKQ0KICAgICAgICByZXR1cm4gRmFsc2UNCg0KZGVmIGdldF9mcmFtZV9jbG9zZXN0X3RvX3RhcmdldCh0YXJnZXRfdmVjdG9yLCBzdGljayk6DQogICAgYmVzdF9kb3QgPSAtMTAwMC4wDQogICAgZm9yIGkgaW4gcmFuZ2UoNCk6DQogICAgICAgIGFuZ2xlID0gbWF0aC5waS8yICogaQ0KICAgICAgICBSID0gUm90YXRpb24uZnJvbV9heGlzX2FuZF9hbmdsZShzdGljay5mcmFtZS54YXhpcywgYW5nbGUsIHN0aWNrLmZyYW1lLnBvaW50KQ0KICAgICAgICBmcmFtZSA9IHN0aWNrLmZyYW1lLnRyYW5zZm9ybWVkKFIpDQogICAgICAgIGRvdCA9IGRvdF92ZWN0b3JzKGZyYW1lLnpheGlzLCB0YXJnZXRfdmVjdG9yLnVuaXRpemVkKCkpDQogICAgICAgIGlmIGRvdD5iZXN0X2RvdDoNCiAgICAgICAgICAgIGJlc3RfZG90ID0gZG90DQogICAgICAgICAgICBiZXN0X2ZyYW1lID0gZnJhbWUNCiAgICAgICAgICAgIHByaW50KGkpDQogICAgcmV0dXJuIGJlc3RfZnJhbWUNCg0KZGVmIGdldF9jZW50ZXIoc3RpY2tzX2xpc3QpOg0KICAgIGFsbF9wb2ludHMgPSBbc3RpY2suZnJhbWUucG9pbnQgZm9yIHN0aWNrIGluIHN0aWNrc19saXN0XQ0KICAgIGNlbnRlciA9IGNlbnRyb2lkX3BvaW50cyhhbGxfcG9pbnRzKQ0KICAgIHByaW50KGNlbnRlcikNCiAgICByZXR1cm4gY2VudGVyDQoNCiMgQ29weSBzdGlja3MNCg0Kc3RpY2tzX2NvcHkgPSBjb3B5LmRlZXBjb3B5KHN0aWNrcykNCmNlbnRlcl9wdCA9IGdldF9jZW50ZXIoc3RpY2tzX2NvcHkpDQoNCg0KZm9yIHN0aWNrIGluIHN0aWNrc19jb3B5Og0KICAgIGlmIGlzX3BhcmFsbGVsKHN0aWNrLmF4aXMuZGlyZWN0aW9uLnVuaXRpemVkKCksIFZlY3RvcigwLDAsMSkpOg0KICAgICAgICAjIFRhcmdldCBmcmFtZSBpcyBmcmFtZSBwb2ludGluZyBpbnRvIGNlbnRlciBvZiBzdHJ1Y3R1cmUNCiAgICAgICAgY2VudGVyX3ZlY3RvciA9IFZlY3Rvci5mcm9tX3N0YXJ0X2VuZChzdGljay5mcmFtZS5wb2ludCwgY2VudGVyX3B0KQ0KICAgICAgICBiZXN0X2ZyYW1lID0gZ2V0X2ZyYW1lX2Nsb3Nlc3RfdG9fdGFyZ2V0KGNlbnRlcl92ZWN0b3IsIHN0aWNrPXN0aWNrKQ0KICAgICAgICBzdGljay5mcmFtZSA9IGJlc3RfZnJhbWUNCg0KICAgIGVsc2U6DQogICAgICAgICMgTWFrZSBzdXJlIHogYXhpcyBpcyBwb2ludGluZyBkb3duDQogICAgICAgIFIgPSBSb3RhdGlvbi5mcm9tX2F4aXNfYW5kX2FuZ2xlKHN0aWNrLmZyYW1lLnhheGlzLCBtYXRoLnBpLzIsIHN0aWNrLmZyYW1lLnBvaW50KQ0KICAgICAgICBzdGljay5mcmFtZS50cmFuc2Zvcm0oUikNCg0KDQpmcm9tIGhlbHBlcnMgaW1wb3J0IHNvcnRfc3RpY2tzX2J5X3oNCg0Kc3RpY2tzX2NvcHkgPSBzb3J0X3N0aWNrc19ieV96KHN0aWNrc19jb3B5KQ0KZnJvbSBjb21wYXNfcmhpbm8uY29udmVyc2lvbnMgaW1wb3J0IGZyYW1lX3RvX3JoaW5vX3BsYW5lDQoNCiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIw0KIyBNYWtlIGZyYW1lcyBwb2ludCBpbiBiZXN0IGRpcmVjdGlvbg0KIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjDQoNCmFzc2VtYmx5ID0gQXNzZW1ibHkoKQ0KZm9yIGksIHMgaW4gZW51bWVyYXRlKHN0aWNrc19jb3B5KToNCiAgICBwYXJ0X25hbWUgPSAic3RpY2siKyBzdHIoaSkNCiAgICBwYXJ0ID0gUGFydChuYW1lID0gcGFydF9uYW1lLCBmcmFtZSA9IHMuZnJhbWUpDQogICAgcGFydC5rZXkgPSBpDQogICAgcGFydC5hdHRyaWJ1dGVzWyJzaGFwZSJdID0gcy5nZW9tZXRyeQ0KICAgIGFzc2VtYmx5LmFkZF9wYXJ0KHBhcnQpDQogICAgDQoNCmZyYW1lcyA9IFtmcmFtZV90b19yaGlub19wbGFuZShwLmZyYW1lKSBmb3IgcCBpbiBhc3NlbWJseS5wYXJ0cygpXQ0KDQppZiBzYXZlOg0KICAgIGpzb25fZHVtcChhc3NlbWJseSwgZnA9anNvbl9wYXRoLCBwcmV0dHk9VHJ1ZSk=</item>
+                        <item name="Text" type_name="gh_string" type_code="10">IyByOiBjb21wYXM+PTIuMTQuMQ0KIyB2ZW52OiBzdGlja3MNCg0KZnJvbSBjb21wYXMgaW1wb3J0IGpzb25fZHVtcA0KaW1wb3J0IG9zLCBzeXMNCmZyb20gaXRlcnRvb2xzIGltcG9ydCBjb21iaW5hdGlvbnMNCmZyb20gY29tcGFzX3JoaW5vIGltcG9ydCB1bmxvYWRfbW9kdWxlcw0KZnJvbSBjb21wYXMuZ2VvbWV0cnkgaW1wb3J0IExpbmUsIFBsYW5lLCBWZWN0b3IsIFBvaW50DQoNCiNnZXQgY3VycmVudCBmaWxlIHBhdGgNCnBhdGggPSBnaGVudi5Db21wb25lbnQuT25QaW5nRG9jdW1lbnQoKS5GaWxlUGF0aA0KcHJpbnQocGF0aCkNCiNnZXQgcGFyZW50IGRpcmVjdG9yeSBvZiB0aGUgcGFyZW50IGRpcmVjdG9yeQ0KcGFyZW50ZGlyID0gb3MucGF0aC5kaXJuYW1lKHBhdGgpDQpwcmludChwYXJlbnRkaXIpDQojZ2V0IHNyYyBmb2xkZXIgd2hpY2ggY29udGFpbnMgY2xhc3Nlcw0KZGlyZSA9IG9zLnBhdGguam9pbihwYXJlbnRkaXIsJ2dyb3VwX29uZV9zY3JpcHRzX3NlbmRfdG9fcm9ib3QnKQ0KcHJpbnQoZGlyZSkNCg0Kc3lzLnBhdGguYXBwZW5kKGRpcmUpDQoNCnVubG9hZF9tb2R1bGVzKCJoZWxwZXJzIikNCg0KaW1wb3J0IGhlbHBlcnMNCg0KZnJvbSBncm91cF9vbmVfc3RpY2tzIGltcG9ydCBTdGljayANCmZyb20gaGVscGVycyBpbXBvcnQgc29ydF9zdGlja3NfYnlfeg0KZnJvbSBjb21wYXMuZ2VvbWV0cnkgaW1wb3J0IExpbmUsIFBvaW50LCBWZWN0b3IsIEZyYW1lDQpmcm9tIGNvbXBhcy5kYXRhc3RydWN0dXJlcyBpbXBvcnQgQXNzZW1ibHksIFBhcnQNCg0KanNvbl9wYXRoID0gb3MucGF0aC5qb2luKHBhcmVudGRpciwgJ2RhdGEnLCAnc3RpY2tfRkptb2Q1X2Fzc2VtYmx5Lmpzb24nKSAjIGZpbGUgaXMgc2FmZWQgd2hlcmUgZ2ggZmlsZSBpcyBzdG9yZWQsIGZyb20gdGhlcmUgaXQgcHV0cyBpdCBpbiBkYXRhIGZvbGRlcg0KDQpzdGlja193aWR0aCA9IDEzLjANCnN0aWNrX2RlcHRoID0gMTMuMA0Kc3RpY2tfbGVuZ3RoID0gMjAwDQoNCnN0aWNrc19kYXRhID0gW10NCg0KIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjDQojIE1ha2UgZnJhbWVzIHBvaW50IGluIGJlc3QgZGlyZWN0aW9uDQojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMNCmltcG9ydCBtYXRoDQppbXBvcnQgY29weQ0KDQpmcm9tIGNvbXBhcy5nZW9tZXRyeSBpbXBvcnQgZG90X3ZlY3RvcnMsIFJvdGF0aW9uDQpmcm9tIGNvbXBhcy5nZW9tZXRyeSBpbXBvcnQgY2VudHJvaWRfcG9pbnRzDQoNCmRlZiBpc19wYXJhbGxlbCh2MSwgdjIpOg0KICAgIGlmIG1hdGguaXNjbG9zZShkb3RfdmVjdG9ycyh2MSwgdjIpLCAxLCBhYnNfdG9sID0gMC4wMDEpIG9yIG1hdGguaXNjbG9zZShkb3RfdmVjdG9ycyh2MSwgdjIpLCAtMSAsYWJzX3RvbCA9IDAuMDAxKToNCiAgICAgICAgIyBNZWFucyBpdCBpcyBwYXJhbGxlbA0KICAgICAgICBwcmludCgicGFyYWxsZWwiKQ0KICAgICAgICByZXR1cm4gVHJ1ZQ0KICAgIGVsc2U6DQogICAgICAgICMgTWVhbnMgaXQgaXMgbm90IHBhcmFsbGVsDQogICAgICAgIHByaW50KCJub3QgcGFyYWxsZWwiKQ0KICAgICAgICByZXR1cm4gRmFsc2UNCg0KZGVmIGdldF9mcmFtZV9jbG9zZXN0X3RvX3RhcmdldCh0YXJnZXRfdmVjdG9yLCBzdGljayk6DQogICAgYmVzdF9kb3QgPSAtMTAwMC4wDQogICAgZm9yIGkgaW4gcmFuZ2UoNCk6DQogICAgICAgIGFuZ2xlID0gbWF0aC5waS8yICogaQ0KICAgICAgICBSID0gUm90YXRpb24uZnJvbV9heGlzX2FuZF9hbmdsZShzdGljay5mcmFtZS54YXhpcywgYW5nbGUsIHN0aWNrLmZyYW1lLnBvaW50KQ0KICAgICAgICBmcmFtZSA9IHN0aWNrLmZyYW1lLnRyYW5zZm9ybWVkKFIpDQogICAgICAgIGRvdCA9IGRvdF92ZWN0b3JzKGZyYW1lLnpheGlzLCB0YXJnZXRfdmVjdG9yLnVuaXRpemVkKCkpDQogICAgICAgIGlmIGRvdD5iZXN0X2RvdDoNCiAgICAgICAgICAgIGJlc3RfZG90ID0gZG90DQogICAgICAgICAgICBiZXN0X2ZyYW1lID0gZnJhbWUNCiAgICAgICAgICAgIHByaW50KGkpDQogICAgcmV0dXJuIGJlc3RfZnJhbWUNCg0KZGVmIGdldF9jZW50ZXIoc3RpY2tzX2xpc3QpOg0KICAgIGFsbF9wb2ludHMgPSBbc3RpY2suZnJhbWUucG9pbnQgZm9yIHN0aWNrIGluIHN0aWNrc19saXN0XQ0KICAgIGNlbnRlciA9IGNlbnRyb2lkX3BvaW50cyhhbGxfcG9pbnRzKQ0KICAgIHByaW50KGNlbnRlcikNCiAgICByZXR1cm4gY2VudGVyDQoNCiMgQ29weSBzdGlja3MNCg0Kc3RpY2tzX2NvcHkgPSBjb3B5LmRlZXBjb3B5KHN0aWNrcykNCmNlbnRlcl9wdCA9IGdldF9jZW50ZXIoc3RpY2tzX2NvcHkpDQoNCg0KZm9yIHN0aWNrIGluIHN0aWNrc19jb3B5Og0KICAgIGlmIGlzX3BhcmFsbGVsKHN0aWNrLmF4aXMuZGlyZWN0aW9uLnVuaXRpemVkKCksIFZlY3RvcigwLDAsMSkpOg0KICAgICAgICAjIFRhcmdldCBmcmFtZSBpcyBmcmFtZSBwb2ludGluZyBpbnRvIGNlbnRlciBvZiBzdHJ1Y3R1cmUNCiAgICAgICAgY2VudGVyX3ZlY3RvciA9IFZlY3Rvci5mcm9tX3N0YXJ0X2VuZChzdGljay5mcmFtZS5wb2ludCwgY2VudGVyX3B0KQ0KICAgICAgICBiZXN0X2ZyYW1lID0gZ2V0X2ZyYW1lX2Nsb3Nlc3RfdG9fdGFyZ2V0KGNlbnRlcl92ZWN0b3IsIHN0aWNrPXN0aWNrKQ0KICAgICAgICBzdGljay5mcmFtZSA9IGJlc3RfZnJhbWUNCg0KICAgIGVsc2U6DQogICAgICAgICMgTWFrZSBzdXJlIHogYXhpcyBpcyBwb2ludGluZyBkb3duDQogICAgICAgIFIgPSBSb3RhdGlvbi5mcm9tX2F4aXNfYW5kX2FuZ2xlKHN0aWNrLmZyYW1lLnhheGlzLCBtYXRoLnBpLzIsIHN0aWNrLmZyYW1lLnBvaW50KQ0KICAgICAgICBzdGljay5mcmFtZS50cmFuc2Zvcm0oUikNCg0KDQpzdGlja3Nfc29ydGVkID0gc29ydF9zdGlja3NfYnlfeihzdGlja3NfY29weSkNCg0KZnJvbSBjb21wYXNfcmhpbm8uY29udmVyc2lvbnMgaW1wb3J0IGZyYW1lX3RvX3JoaW5vX3BsYW5lDQoNCiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIw0KIyBNYWtlIGZyYW1lcyBwb2ludCBpbiBiZXN0IGRpcmVjdGlvbg0KIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjDQoNCmFzc2VtYmx5ID0gQXNzZW1ibHkoKQ0KZm9yIGksIHMgaW4gZW51bWVyYXRlKHN0aWNrc19zb3J0ZWQpOg0KICAgIHBhcnRfbmFtZSA9IGYic3RpY2t7aTowM2R9IiAjICJzdGljayIrIHN0cihpKSANCiAgICBwYXJ0ID0gUGFydChuYW1lID0gcGFydF9uYW1lLCBmcmFtZSA9IHMuZnJhbWUpDQogICAgcGFydC5rZXkgPSBpDQogICAgcGFydC5hdHRyaWJ1dGVzWyJzaGFwZSJdID0gcy5nZW9tZXRyeQ0KICAgIGFzc2VtYmx5LmFkZF9wYXJ0KHBhcnQpDQogICAgDQoNCmZyYW1lcyA9IFtmcmFtZV90b19yaGlub19wbGFuZShwLmZyYW1lKSBmb3IgcCBpbiBhc3NlbWJseS5wYXJ0cygpXQ0KDQppZiBzYXZlOg0KICAgIGpzb25fZHVtcChhc3NlbWJseSwgZnA9anNvbl9wYXRoLCBwcmV0dHk9VHJ1ZSk=</item>
                         <item name="Title" type_name="gh_string" type_code="10">Py3</item>
                       </items>
                       <chunks count="1">
@@ -8781,10 +8797,10 @@ stick_module_modified_frame</item>
                     <chunk name="ScriptEditor">
                       <items count="1">
                         <item name="StartBounds" type_name="gh_drawing_rectangle" type_code="34">
-                          <X>-5</X>
+                          <X>504</X>
                           <Y>0</Y>
-                          <W>1318</W>
-                          <H>906</H>
+                          <W>872</W>
+                          <H>968</H>
                         </item>
                       </items>
                     </chunk>
