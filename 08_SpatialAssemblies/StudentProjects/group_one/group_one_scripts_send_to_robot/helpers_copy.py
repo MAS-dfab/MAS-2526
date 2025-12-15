@@ -48,7 +48,7 @@ def generate_default_tolerances(joints):
     return [DEFAULT_TOLERANCE_METERS if j.is_scalable() else DEFAULT_TOLERANCE_RADIANS for j in joints]
 
 
-APPROACH_DISTANCE = 0.5  # 10 cm
+APPROACH_DISTANCE = 0.3  # 10 cm
     
 def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipulator"):
     """
@@ -80,7 +80,7 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     )
     
     # Generate cartesian trajectory from pick to approach pick frame
-    max_step = 0.02
+    max_step = .05
     trajectory = robot.plan_cartesian_motion(
         [pick_frame, initial_pick_frame],
         start_configuration=start_config,
@@ -90,6 +90,41 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
         ),
     )
 
+    # Go to exit frame (safe distance above place frame)
+
+    exit_frame = initial_pick_frame.copy()
+    exit_frame.translate(APPROACH_DISTANCE/2 * -exit_frame.zaxis)
+    
+    exit_pick_trajectory = robot.plan_cartesian_motion(
+        [initial_pick_frame, exit_frame],
+        start_configuration=trajectory.points[-1],
+        group=group or robot.main_group_name,
+        options=dict(
+            max_step=.05,
+            avoid_collisions=True,
+            
+        ),  
+    )
+    print("Planned safe trajectory.")
+    
+    # Go to safe configuration (home)
+    safe_config = start_config
+    safe_constraints = robot.constraints_from_configuration(
+        safe_config,
+        tolerances_above = [0.0001]*6,
+        tolerances_below = [0.0001]*6,
+    )
+    return_trajectory = robot.plan_motion(
+        safe_constraints,
+        start_configuration=exit_pick_trajectory.points[-1],
+        group=group or robot.main_group_name,
+        options=dict(
+            planner_id="RRTConnect",
+            avoid_collisions=True,
+        ),
+    )
+    print("Planned return trajectory.")
+    
     # Check if trajectory is complete
     if trajectory.fraction < 1:
         raise Exception(
@@ -97,9 +132,24 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
                 trajectory.fraction * 100
             )
         )
+    if exit_pick_trajectory.fraction < 1:
+        raise Exception(
+            "Incomplete exit trajectory found. Only {:.1f}% of the trajectory could be planned".format(
+                exit_pick_trajectory.fraction * 100
+            )
+        )
+    if return_trajectory.fraction < 1:
+        raise Exception(
+            "Incomplete return trajectory found. Only {:.1f}% of the trajectory could be planned".format(
+                return_trajectory.fraction * 100
+            )
+        )
+
+    joined_exit_trajectory = exit_pick_trajectory.copy()
+    joined_exit_trajectory.points.extend(return_trajectory.points)
 
     # Return trajectory, pick configuration and approach pick configuration
-    return trajectory, trajectory.points[-1], trajectory.points[0]
+    return trajectory, joined_exit_trajectory
 
 
 def calculate_place_trajectories(robot, current_config,  placement_frame, group="manipulator"):
@@ -111,13 +161,14 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     
     # Find IK solution for pick frame
     approach_place_frame = place_frame.copy()
+    frame = Frame(approach_place_frame.point, [1,0,0], [0,1,0])
     approach_place_frame.translate(
-        APPROACH_DISTANCE * approach_place_frame.zaxis
+        APPROACH_DISTANCE * frame.zaxis
     )
 
     start_config_for_place = current_config
     goal_constraints_place = robot.constraints_from_frame(
-        place_frame,
+        approach_place_frame,
         tolerance_position=0.0001,
         tolerances_axes=[0.0001, 0.0001, 0.0001],
         use_attached_tool_frame=True,
@@ -135,11 +186,23 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
         ),
     )
     print("Planned place trajectory.")
+    
+    place_place_trajectory = robot.plan_cartesian_motion(
+        [approach_place_frame, place_frame],
+        start_configuration=place_trajectory.points[-1],
+        group=group or robot.main_group_name,
+        options=dict(
+            max_step=.05,
+            avoid_collisions=True,
+            
+        ),  
+    )
+    print("Planned safe trajectory.")
 
     # Go to exit frame (safe distance above place frame)
 
     exit_frame = place_frame.copy()
-    exit_frame.translate(APPROACH_DISTANCE * -exit_frame.zaxis)
+    exit_frame.translate(APPROACH_DISTANCE * frame.zaxis)
     
     
     exit_trajectory = robot.plan_cartesian_motion(
@@ -147,7 +210,7 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
         start_configuration=place_trajectory.points[-1],
         group=group or robot.main_group_name,
         options=dict(
-            max_step=0.01,
+            max_step=.05,
             avoid_collisions=True,
             
         ),  
@@ -178,6 +241,12 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
                 place_trajectory.fraction * 100
             )
         )
+    if place_place_trajectory.fraction < 1:
+        raise Exception(
+            "Incomplete place_place trajectory found. Only {:.1f}% of the trajectory could be planned".format(
+                place_place_trajectory.fraction * 100
+            )
+        )
     if exit_trajectory.fraction < 1:
         raise Exception(
             "Incomplete exit trajectory found. Only {:.1f}% of the trajectory could be planned".format(
@@ -190,7 +259,10 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
                 return_trajectory.fraction * 100
             )
         )
+
     
     joined_exit_trajectory = exit_trajectory.copy()
     joined_exit_trajectory.points.extend(return_trajectory.points)
-    return place_trajectory, joined_exit_trajectory
+    joined_place_trajectory = place_trajectory.copy()
+    joined_place_trajectory.points.extend(place_place_trajectory.points)
+    return joined_place_trajectory, joined_exit_trajectory

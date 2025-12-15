@@ -112,7 +112,7 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     # Find IK solution for pick frame
     approach_place_frame = place_frame.copy()
     approach_place_frame.translate(
-        APPROACH_DISTANCE*2 * -approach_place_frame.zaxis
+        APPROACH_DISTANCE*2 * approach_place_frame.zaxis
     )
 
     start_config_for_place = current_config
