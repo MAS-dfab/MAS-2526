@@ -12,7 +12,7 @@ def sort_sticks_by_z(sticks):
     Returns:
         list: A list of stick objects sorted by their z-coordinate.
     """
-    return sorted(sticks, key=lambda x: min(x.axis.start.z, x.axis.end.z))
+    return sorted(sticks, key=lambda x: min(x.axis.center.z, x.axis.end.z))
 
 
 def scale_and_move_to_point(assembly, center):
