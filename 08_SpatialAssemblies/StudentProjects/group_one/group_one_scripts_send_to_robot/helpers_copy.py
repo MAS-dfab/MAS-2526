@@ -82,7 +82,7 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     )
     
     # Generate cartesian trajectory from pick to approach pick frame
-    max_step = .05
+    max_step = MAXSTEPS
     trajectory = robot.plan_cartesian_motion(
         [pick_frame, initial_pick_frame],
         start_configuration=start_config,
