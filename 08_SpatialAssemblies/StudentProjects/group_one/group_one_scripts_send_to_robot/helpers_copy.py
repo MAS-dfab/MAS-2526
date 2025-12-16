@@ -49,6 +49,8 @@ def generate_default_tolerances(joints):
 
 
 APPROACH_DISTANCE = 0.3  # 10 cm
+TOLERANCE = 0.001 
+MAXSTEPS = 0.025  
     
 def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipulator"):
     """
