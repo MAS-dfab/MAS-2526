@@ -113,8 +113,8 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
     safe_config = start_config
     safe_constraints = robot.constraints_from_configuration(
         safe_config,
-        tolerances_above = [0.0001]*6,
-        tolerances_below = [0.0001]*6,
+        tolerances_above = [TOLERANCE]*6,
+        tolerances_below = [TOLERANCE]*6,
     )
     return_trajectory = robot.plan_motion(
         safe_constraints,
@@ -161,6 +161,14 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     """
     place_frame = placement_frame.copy()
     
+    # ### Nadja - if the pickup plane is not flat for UR, rotate it 180 deg around Z axis
+    # planar_plane = Frame([0,0,0], [1,0,0], [0,1,0])
+    # R = Rotation.from_axis_and_angle(planar_plane.zaxis, math.radians(180), planar_plane.point)
+    # place_frame.transform(R)
+    # place_frame.xaxis = -place_frame.xaxis  # Invert X axis for UR
+    # place_frame.yaxis = -place_frame.yaxis  # Invert Y axis for UR
+    # ### End Nadja
+    
     # Find IK solution for pick frame
     approach_place_frame = place_frame.copy()
     frame = Frame(approach_place_frame.point, [1,0,0], [0,1,0])
@@ -171,8 +179,8 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     start_config_for_place = current_config
     goal_constraints_place = robot.constraints_from_frame(
         approach_place_frame,
-        tolerance_position=0.0001,
-        tolerances_axes=[0.0001, 0.0001, 0.0001],
+        tolerance_position=TOLERANCE,
+        tolerances_axes=[TOLERANCE, TOLERANCE, TOLERANCE],
         use_attached_tool_frame=True,
         group=group or robot.main_group_name,
     )
@@ -194,7 +202,7 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
         start_configuration=place_trajectory.points[-1],
         group=group or robot.main_group_name,
         options=dict(
-            max_step=.05,
+            max_step=MAXSTEPS,
             avoid_collisions=True,
             
         ),  
@@ -209,10 +217,10 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     
     exit_trajectory = robot.plan_cartesian_motion(
         [place_frame, exit_frame],
-        start_configuration=place_trajectory.points[-1],
+        start_configuration=place_place_trajectory.points[-1],
         group=group or robot.main_group_name,
         options=dict(
-            max_step=.05,
+            max_step=MAXSTEPS,
             avoid_collisions=True,
             
         ),  
@@ -224,8 +232,8 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
     safe_config = start_config_for_place
     safe_constraints = robot.constraints_from_configuration(
         safe_config,
-        tolerances_above = [0.0001]*6,
-        tolerances_below = [0.0001]*6,
+        tolerances_above = [TOLERANCE]*6,
+        tolerances_below = [TOLERANCE]*6,
     )
     return_trajectory = robot.plan_motion(
         safe_constraints,
@@ -262,7 +270,7 @@ def calculate_place_trajectories(robot, current_config,  placement_frame, group=
             )
         )
 
-    
+
     joined_exit_trajectory = exit_trajectory.copy()
     joined_exit_trajectory.points.extend(return_trajectory.points)
     joined_place_trajectory = place_trajectory.copy()
