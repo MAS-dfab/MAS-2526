@@ -102,7 +102,7 @@ def calculate_pick_trajectory(pickup_frame, robot, start_config, group = "manipu
         start_configuration=trajectory.points[-1],
         group=group or robot.main_group_name,
         options=dict(
-            max_step=.05,
+            max_step=MAXSTEPS,
             avoid_collisions=True,
             
         ),  
