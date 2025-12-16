@@ -15,7 +15,6 @@ def sort_sticks_by_z(sticks):
     """
     return sorted(sticks, key=lambda x: min(x.axis.start.z, x.axis.end.z))
 
-
 def scale_and_move_to_point(assembly, center):
     scaled_assembly = assembly.copy()
     factor = 0.001 # 1mm to M
@@ -261,7 +260,7 @@ def calculate_place_trajectories(robot, current_config, placement_frame, lean_in
     enter_frame = place_frame.copy()
     # enter_frame.rotate(-math.pi/2, enter_frame.yaxis, enter_frame.point)
 
-    enter_frame.translate(APPROACH_DISTANCE * -enter_frame.yaxis)
+    enter_frame.translate(APPROACH_DISTANCE * lean_in_normal)
 
     enter_constraints_place = robot.constraints_from_frame(
         enter_frame,
@@ -296,7 +295,7 @@ def calculate_place_trajectories(robot, current_config, placement_frame, lean_in
     # Go to exit frame (safe distance above place frame)
     exit_frame = place_frame.copy()
     # exit_frame.rotate(-math.pi, exit_frame.yaxis, exit_frame.point)
-    exit_frame.translate(APPROACH_DISTANCE * -exit_frame.yaxis)
+    exit_frame.translate(APPROACH_DISTANCE * lean_in_normal)
 
     exit_trajectory = robot.plan_cartesian_motion(
         [place_frame, exit_frame],

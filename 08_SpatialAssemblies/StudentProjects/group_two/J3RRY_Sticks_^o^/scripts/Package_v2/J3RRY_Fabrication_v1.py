@@ -357,7 +357,6 @@ class Fabrication:
             self.new_face_indices.append(face_branch)
             self.new_t_values.append(t_branch)
         return self.target_frames, self.new_face_indices, self.new_t_values
-    
 
     def send_to_pick_up_station(self, modules, pick_up_station_frames):
         """
@@ -415,6 +414,7 @@ class Fabrication:
         """ 
         self.place_modules = []
         self.place_frames = []
+        
         for module_branch, place_frames in zip(modules, self.target_frames):
             stick_branch = []
             frame_branch = []
