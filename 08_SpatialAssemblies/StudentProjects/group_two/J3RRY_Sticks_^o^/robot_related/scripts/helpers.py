@@ -260,7 +260,7 @@ def calculate_place_trajectories(robot, current_config, placement_frame, lean_in
     enter_frame = place_frame.copy()
     # enter_frame.rotate(-math.pi/2, enter_frame.yaxis, enter_frame.point)
 
-    enter_frame.translate(APPROACH_DISTANCE * lean_in_normal)
+    enter_frame.translate(APPROACH_DISTANCE * -lean_in_normal * 0.5)
 
     enter_constraints_place = robot.constraints_from_frame(
         enter_frame,
@@ -276,7 +276,7 @@ def calculate_place_trajectories(robot, current_config, placement_frame, lean_in
         options=dict(
             planner_id="RRTConnect",
             avoid_collisions=True,
-            timeout=380.0,
+            timeout=540.0,
         ),
     )
     print("Planned enter trajectory.")
@@ -295,14 +295,14 @@ def calculate_place_trajectories(robot, current_config, placement_frame, lean_in
     # Go to exit frame (safe distance above place frame)
     exit_frame = place_frame.copy()
     # exit_frame.rotate(-math.pi, exit_frame.yaxis, exit_frame.point)
-    exit_frame.translate(APPROACH_DISTANCE * lean_in_normal)
+    exit_frame.translate(APPROACH_DISTANCE * -lean_in_normal * 0.5)
 
     exit_trajectory = robot.plan_cartesian_motion(
         [place_frame, exit_frame],
         start_configuration=place_trajectory.points[-1],
         group=group or robot.main_group_name,
         options=dict(
-            max_step=0.05,
+            max_step=0.01,
         ),  
     )
     print("Planned exit trajectory.")
