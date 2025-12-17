@@ -5,7 +5,7 @@ import math
 class Collision:
     def __init__(self, stick1, stick2):
         """
-        Constructor for Collision between two sticks.
+        Constructor for Collision detection between two sticks.
         
         Args:
             stick1: type Stick, first stick.

@@ -16,7 +16,7 @@ class AggregationManager:
         [2, 1, 0, 2]; round = 2 root = 1, branch = [0,2]
         """
         self.graph = []  # {round, root, branch, sub-branch, ...}
-        self.aggs = [] # all aggregations, [[sticks], [sticks], [sticks],...[sticks]]
+        self.aggs = []  # all aggregations, [[sticks], [sticks], [sticks],...[sticks]]
 
 
     def run_multiround_aggregation(self, first_frames, length_pattern, angle_pattern,
@@ -83,17 +83,21 @@ class AggregationManager:
         return self.aggs
 
 
+
 class Aggregation:
     def __init__(self, first_frame, length_pattern=[100], angle_pattern=[0],
                  aggregation_type=0, global_seed=None, init=True, parent_stick=None):
         """
-        Constructor for Stick Aggregation.
+        Constructor for a single Aggregation spawn.
         
         Args:
             first_frame: Frame for the first stick.
             length_pattern: List of lengths or single length value for sticks.
+            angle_pattern: list of angles or single angle value for sticks.
             aggregation_type: 0 = regular, 1 = random
             global_seed: Seed for random generator (defaults to None)
+            init: bool, whether to initialize the first stick.
+            parent_stick: optional, type Stick, parent stick from previous aggregation round.
         """
         self.length_pattern = length_pattern
         self.angle_pattern = angle_pattern
@@ -108,8 +112,6 @@ class Aggregation:
         self.t_values = []
         self.collision_log = []
 
-        # Attributes for fabrication
-        self.graph = []
 
         self._boundary_polyhedron = None
 
@@ -455,11 +457,14 @@ class Aggregation:
             boundary: type Rhino Mesh, to constrain sticks within boundary.
             max_attempts: Maximum number of attempts to find a non-colliding position.
             local_seed: Seed for random generator (overrides global seed if provided).
-            external_sticks: list of type Stick, from other Aggregations.
+            external_sticks: list of type Stick for additional collision checking, basically from other Aggregations.
 
         Records:
             - collision_log: pure metadata
             - failed_sticks: list of Stick objects colliding in each spawn attempt
+        
+        Returns:
+            type Stick: successfully spawned stick, or None if all attempts fail.
         """
         # 0 = regular, 1 = random
         if self.aggregation_type == 0 and local_seed is not None:
