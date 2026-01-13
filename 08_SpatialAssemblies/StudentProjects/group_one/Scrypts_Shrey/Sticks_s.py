@@ -721,7 +721,8 @@ def extract_zyx_euler_angles(frame_0, frame_1):
 
 def bridge_sticks_euler_config(stick_0, stick_1, bridge_length, config_id, 
                                 width=None, depth=None, angle_tolerance=0.01, 
-                                bridge_A_start=0.5, print_info=True):
+                                bridge_A_start=0.5, print_info=True,
+                                return_separate=False):
     """
     Create bridges using a specific configuration ID (1-64).
     
@@ -737,9 +738,15 @@ def bridge_sticks_euler_config(stick_0, stick_1, bridge_length, config_id,
         angle_tolerance: Angle tolerance for bridge creation (default: 0.01 rad)
         bridge_A_start: Where Bridge A starts on stick_0 (default: 0.5)
         print_info: Whether to print debug info (default: True)
+        return_separate: If True, return (bridge_A, bridge_B, bridge_C, info_dict) 
+                        instead of (bridges, info_dict) (default: False)
     
     Returns:
-        tuple: (bridges, info_dict)
+        If return_separate=False (default):
+            tuple: (bridges, info_dict)
+        If return_separate=True:
+            tuple: (bridge_A, bridge_B, bridge_C, info_dict)
+            where bridge_A, bridge_B, bridge_C are individual bridges or None
     """
     import math
     from compas.geometry import Rotation, Plane
@@ -787,6 +794,11 @@ def bridge_sticks_euler_config(stick_0, stick_1, bridge_length, config_id,
     
     bridges = []
     bridge_sequence = []
+    
+    # Individual bridge tracking
+    bridge_A = None
+    bridge_B = None
+    bridge_C = None
     
     # Create temporary sticks with the configured frames
     temp_stick_0 = stick_from_frame(frame_0, stick_0.length, width=stick_0.width, depth=stick_0.depth)
@@ -1084,7 +1096,11 @@ def bridge_sticks_euler_config(stick_0, stick_1, bridge_length, config_id,
     info['bridge_sequence'] = bridge_sequence
     info['best_face'] = best_face_idx
     
-    return bridges, info
+    # Return based on return_separate flag
+    if return_separate:
+        return bridge_A, bridge_B, bridge_C, info
+    else:
+        return bridges, info
 
 
 def find_best_configuration(stick_0, stick_1, criterion='min_angles'):
