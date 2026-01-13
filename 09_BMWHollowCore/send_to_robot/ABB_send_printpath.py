@@ -33,8 +33,8 @@ from CustomPrintInstructions import *
 # ==============================================================================
 
 # Switches
-ROBOT_ON = True
-PRINT_ON = True 
+ROBOT_ON = False
+PRINT_ON = False 
 
 HC_ON = True
 
