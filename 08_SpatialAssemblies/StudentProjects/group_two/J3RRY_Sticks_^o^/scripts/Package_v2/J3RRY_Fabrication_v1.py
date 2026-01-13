@@ -135,9 +135,9 @@ class Fabrication:
             both (bool): Whether to include both upper and lower adjacent sticks.
         
         Returns:
-            modules_with_adjacent: list of type Stick, list of sticks with adjacent sticks added.
-            agg_indices: list of int, aggregation indices corresponding to each stick in modules_with_adjacent.
-            stick_indices: list of int, stick indices within their aggregations corresponding to each stick in modules_with_adjacent.
+            modules_with_adjacent: nested list of type Stick, list of sticks with adjacent sticks added.
+            agg_indices: nested list of int, aggregation indices corresponding to each stick in modules_with_adjacent.
+            stick_indices: nested list of int, stick indices within their aggregations corresponding to each stick in modules_with_adjacent.
         """ 
         graph = self.graph
         max_round = max(g[0] for g in graph)  # Get the maximum round number
@@ -197,10 +197,10 @@ class Fabrication:
         The first stick of each module will be aligned to global Z axis.
 
         Args:
-            modules: optional, list of type Stick to erect (basically for modules with adjacent sticks).
+            modules: optional, list of list of type Stick to erect (basically with adjacent sticks).
 
         Returns:
-            erected_modules: list of type Stick, list of sticks in erected position.
+            erected_modules: list of list of type Stick in erected position.
         """
         new_modules = []
         if modules is None:
