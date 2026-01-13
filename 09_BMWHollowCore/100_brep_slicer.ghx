@@ -991,8 +991,8 @@
                     <chunk name="ScriptEditor">
                       <items count="1">
                         <item name="StartBounds" type_name="gh_drawing_rectangle" type_code="34">
-                          <X>-25600</X>
-                          <Y>-25600</Y>
+                          <X>103</X>
+                          <Y>163</Y>
                           <W>1180</W>
                           <H>816</H>
                         </item>
