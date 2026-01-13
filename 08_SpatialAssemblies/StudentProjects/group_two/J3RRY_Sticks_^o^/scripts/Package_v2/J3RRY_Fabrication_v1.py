@@ -1,5 +1,5 @@
 from J3RRY_SingleStick_v1 import Stick
-from compas.geometry import Frame, Transformation, Polyline, Point
+from compas.geometry import Frame, Transformation, Polyline, Point, Rotation, Vector
 import math
 
 
@@ -47,7 +47,7 @@ class Fabrication:
             mapping.setdefault(round, []).append(idx)
         return mapping
     
-
+    
     def get_face_t(self, agg_idx, stick_idx):
         """
         Get face index and t value for a specified stick in an aggregation.
@@ -135,9 +135,9 @@ class Fabrication:
             both (bool): Whether to include both upper and lower adjacent sticks.
         
         Returns:
-            modules_with_adjacent: list of type Stick, list of sticks with adjacent sticks added.
-            agg_indices: list of int, aggregation indices corresponding to each stick in modules_with_adjacent.
-            stick_indices: list of int, stick indices within their aggregations corresponding to each stick in modules_with_adjacent.
+            modules_with_adjacent: nested list of type Stick, list of sticks with adjacent sticks added.
+            agg_indices: nested list of int, aggregation indices corresponding to each stick in modules_with_adjacent.
+            stick_indices: nested list of int, stick indices within their aggregations corresponding to each stick in modules_with_adjacent.
         """ 
         graph = self.graph
         max_round = max(g[0] for g in graph)  # Get the maximum round number
@@ -185,8 +185,9 @@ class Fabrication:
             if both and round > 0:
                 parent_round = round - 1
                 for j in mapping.get(parent_round, []):
-                    pass  # do this later
-
+                      # do this later
+                    raise NotImplementedError
+            
         return self.modules_with_adjacent, self.agg_indices, self.stick_indices
 
 
@@ -196,10 +197,10 @@ class Fabrication:
         The first stick of each module will be aligned to global Z axis.
 
         Args:
-            modules: optional, list of type Stick to erect (basically for modules with adjacent sticks).
+            modules: optional, list of list of type Stick to erect (basically with adjacent sticks).
 
         Returns:
-            erected_modules: list of type Stick, list of sticks in erected position.
+            erected_modules: list of list of type Stick in erected position.
         """
         new_modules = []
         if modules is None:
@@ -241,7 +242,7 @@ class Fabrication:
         pass
 
 
-    def plot_modules(self, modules=None, origin=(0,0,0), x_size=400, y_size=240):
+    def plot_modules(self, modules, origin=(0,0,0), x_size=400, y_size=240):
         """
         Create a plot layout for all modules.
         
@@ -265,10 +266,12 @@ class Fabrication:
             rows.append(row)
             
         to_frames = []
+        to_points = []
         for col, row in zip(cols, rows):
             pt = Point(origin[0] + col * x_size, origin[1] + row * y_size, origin[2])
             to_frame = Frame(pt, [0,0,1], [0,1,0])
             to_frames.append(to_frame)
+            to_points.append(pt)
 
         # Create Border
         half_x = x_size / 2
@@ -285,26 +288,25 @@ class Fabrication:
 
         # Orient modules to plotting frames
         plotted_modules = []
-        if modules is None:
-            current_modules = self.original_modules
-        else: 
-            current_modules = modules
-
-        for idx, sticks in enumerate(current_modules):
-            to_frame = to_frames[idx]
-            from_frame = sticks[0].frame.copy()
+        for idx, sticks in enumerate(modules):
+            # to_frame = to_frames[idx]
+            to_point = to_points[idx]
+            to_frame = Frame(to_point, sticks[0].frame.xaxis, sticks[0].frame.yaxis)
+            from_frame = sticks[0].midframe.copy()
             branch_sticks = []
             for stick in sticks:
                 new_frame = stick.frame.copy()
                 translation = Transformation.from_frame_to_frame(from_frame, to_frame)
                 new_frame.transform(translation)
+                new_frame.translate(Vector(0,0,sticks[0].length / 2))
+
                 ori_stick = Stick(new_frame, stick.length)
                 branch_sticks.append(ori_stick)
             plotted_modules.append(branch_sticks)
 
         return plotted_modules, recs
 
-
+        
     def eval_target_frames(self, modules, robot_position=Point(0,0,0)):
         """
         Compute default target frames for each module.
@@ -355,28 +357,34 @@ class Fabrication:
             self.new_face_indices.append(face_branch)
             self.new_t_values.append(t_branch)
         return self.target_frames, self.new_face_indices, self.new_t_values
-    
 
-    def send_to_pick_up_station(self, modules, pick_up_station_frame):
+    def send_to_pick_up_station(self, modules, pick_up_station_frames):
         """
         Send each module to pick up station.
 
         Args:
             modules: list of list of type Stick, basically erected modules.
-            pick_up_station_frame: type Frame, pick up station frame calibrated in robot workspace.
+            pick_up_station_frames: list of type Frame, calibrated in robot workspace.
         
         Returns:
             pick_up_modules: list of list of type Stick, modules positioned at pick up station.
             pick_up_frames: list of list of type Frame.
         """
+        stick_dict = {200: 0, 300: 1, 400: 2}
+
         self.pick_up_modules = []
         self.pick_up_frames = []
         for module_branch, new_t_values_branch in zip(modules, self.new_t_values):
             stick_branch = []
             frame_branch = []
             for stick, t in zip(module_branch, new_t_values_branch):
+                # Get pick up station index based on stick length
+                length_key = int(round(stick.length))
+                idx = stick_dict.get(length_key)
+                station_frame = pick_up_station_frames[idx]
+
                 from_frame = stick.frame.copy()
-                to_frame = pick_up_station_frame.copy()
+                to_frame = station_frame.copy()
                 O = Transformation.from_frame_to_frame(from_frame, to_frame)
                 new_frame = stick.frame.transformed(O)
                 new_stick = Stick(new_frame, stick.length)
@@ -384,7 +392,7 @@ class Fabrication:
 
                 # Get pick up frame on the pick up station
                 pick_up_frame = new_stick.eval_frame(0, t)  # face index 0 for pick up
-                pick_up_frame.rotate(math.pi, stick.frame.xaxis, pick_up_frame.point)
+                pick_up_frame.rotate(math.pi, new_stick.frame.xaxis, pick_up_frame.point)
                 frame_branch.append(pick_up_frame)
                 
             self.pick_up_modules.append(stick_branch)
@@ -392,7 +400,7 @@ class Fabrication:
         return self.pick_up_modules, self.pick_up_frames
     
 
-    def send_to_holding_jig(self, modules, holding_jig_frame):
+    def send_to_holding_jig(self, modules, holding_jig_frame, rotation=0):
         """
         Send each module to holding jig.
         
@@ -403,25 +411,76 @@ class Fabrication:
         Returns:
             place_modules: list of list of type Stick, modules positioned at holding jig.
             place_frames: list of list of type Frame.
-        """
+        """ 
         self.place_modules = []
         self.place_frames = []
+        
         for module_branch, place_frames in zip(modules, self.target_frames):
             stick_branch = []
             frame_branch = []
             # From_frame is the first stick frame in each module (branch)
-            from_frame = module_branch[0].frame.copy()
-            to_frame = holding_jig_frame.copy()
+            from_frame = module_branch[0].midframe.copy()
+            to_frame = Frame(holding_jig_frame.point, from_frame.xaxis, from_frame.yaxis)
+            # Rotate if needed
+            angle = rotation * math.pi * 0.5
+            origin = to_frame.point
+            R = Rotation.from_axis_and_angle((0,0,1), angle, origin)
+            to_frame.transform(R)
+
             O = Transformation.from_frame_to_frame(from_frame, to_frame)
             for stick, place_frame in zip(module_branch, place_frames):
                 new_frame = stick.frame.transformed(O)
+                new_frame.translate(Vector(0,0,module_branch[0].length / 2))
                 new_stick = Stick(new_frame, stick.length)
                 stick_branch.append(new_stick)
                 # Get place frame relative to holding jig
                 new_place_frame = place_frame.transformed(O)
+                new_place_frame.translate(Vector(0,0,module_branch[0].length / 2))
                 frame_branch.append(new_place_frame)
 
             self.place_modules.append(stick_branch)
             self.place_frames.append(frame_branch)
             
         return self.place_modules, self.place_frames
+    
+
+    def check_and_flip_modules(self, modules):
+        """
+        Check if module are below its first stick.
+        
+        Args:
+            modules: list of list of type Stick, basically erected modules.
+        
+        Returns:
+            None, change self.erected_modules in place.
+        """
+        new_erected = []
+
+        for module_branch in modules:
+            first_stick = module_branch[0]
+            lowest_z = first_stick.frame.point.z
+
+            # decide flip
+            flip = False
+            for stick in module_branch[1:]:
+                stpt, ndpt = stick.axis.start, stick.axis.end
+                if stpt.z < lowest_z or ndpt.z < lowest_z:
+                    flip = True
+                    break
+
+            if flip:
+                # build flipped branch
+                rot_frame = first_stick.midframe.copy()
+                R = Rotation.from_axis_and_angle(first_stick.frame.zaxis, math.pi, rot_frame.point)
+                flipped_branch = []
+                for stick in module_branch:
+                    new_frame = stick.frame.transformed(R)
+
+                    flipped_branch.append(Stick(new_frame, stick.length))
+
+                new_erected.append(flipped_branch)
+            else:
+                # keep original branch
+                new_erected.append(module_branch)
+
+        self.erected_modules = new_erected
