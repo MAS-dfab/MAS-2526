@@ -22,7 +22,7 @@ class PrintPoint:
         self.trigger_motor_1 = trigger_motor_1
 
     def get_frame(self):
-        return Frame(self.point, Vector(-1, 5, 0), Vector(0, -1, 0))
+        return Frame(self.point, Vector(1, -5, 0), Vector(0, -1, 0))
       
     def to_dict(self):
         return {
@@ -54,7 +54,7 @@ class PrintPath:
     path : Polyline
         a polyline representing the path
     """
-    def __init__(self, layers, average_robot_speed =6):
+    def __init__(self, layers, average_robot_speed =10):
         self.layers = layers
         self.printpoints = self.get_printpoints()
         self.path = Polyline([printpoint.point for printpoint in self.printpoints])
