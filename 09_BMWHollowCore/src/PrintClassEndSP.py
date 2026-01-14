@@ -61,7 +61,7 @@ class PrintPath:
     path : Polyline
         a polyline representing the path
     """
-    def __init__(self, layers, average_robot_speed =10):
+    def __init__(self, layers, average_robot_speed = 10):
         self.layers = layers
         self.printpoints = self.get_printpoints()
         self.path = Polyline([printpoint.point for printpoint in self.printpoints])
@@ -107,7 +107,7 @@ class PrintPath:
         grams = volume * material_density
         return grams/1000 # grams to kg
     
-    def get_print_angles_and_offsets(self):
+    def get_print_angles(self):
         # this function is exactly the same as the one from Nik's tutorial (but uses compas)
 
         vert_vec = Vector(0, 0, -1)
