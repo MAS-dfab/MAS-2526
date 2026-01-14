@@ -81,10 +81,10 @@ class PrintPath:
         self.printpoints.insert(0, safe_pt)
     
     #add end safety point
-    def add_end_safety_point(self, vector, safety_distance = 50.0):
+    def add_end_safety_point(self, vector, safety_distance = 0):
         vec = vector * safety_distance
         T = Translation.from_vector(vec)
-        TT = Translation.from_vector(Vector(0, 0, 50))
+        TT = Translation.from_vector(Vector(0, 0, 0))
         tail_pt = PrintPoint(self.printpoints[-1].point.transformed(T), toggle = True, layer_idx = self.printpoints[-1].layer_idx)
         safe_pt = PrintPoint(tail_pt.point.transformed(TT), velocity=18.0, toggle=True, layer_idx=self.printpoints[-1].layer_idx)
         self.printpoints.append(tail_pt)
