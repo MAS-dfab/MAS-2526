@@ -1,6 +1,12 @@
-from compas.geometry import Point, Polyline, Frame, Vector, distance_point_line, Translation
+from compas.geometry import Point, Polyline, Frame, Vector, distance_point_line, Translation, closest_point_on_polyline, Line, Curve
 import math
 
+def remap(value, from_min, from_max, to_min, to_max):
+    # Remap a value from one range to another
+    from_range = from_max - from_min
+    to_range = to_max - to_min
+    scaled_value = float(value - from_min) / float(from_range)
+    return to_min + (scaled_value * to_range)
 
 class PrintPoint:
     def __init__(self, point, velocity = 18.0, air_pressure = 8.0, blend= 1.0, wait_time=0.0, toggle=True, layer_idx=None, trigger_motor_0=False, trigger_motor_1=False):
@@ -54,7 +60,11 @@ class PrintPath:
     path : Polyline
         a polyline representing the path
     """
+<<<<<<< HEAD
     def __init__(self, layers, average_robot_speed =10):
+=======
+    def __init__(self, layers, average_robot_speed = 10):
+>>>>>>> d4fd01ec1a7a8ec3343b1a0519053ac8ddad92c7
         self.layers = layers
         self.printpoints = self.get_printpoints()
         self.path = Polyline([printpoint.point for printpoint in self.printpoints])
@@ -90,8 +100,84 @@ class PrintPath:
         grams = volume * material_density
         return grams/1000 # grams to kg
     
+    def get_print_angles(self):
+        # this function is exactly the same as the one from Nik's tutorial (but uses compas)
+
+        vert_vec = Vector(0, 0, -1)
+
+        print_offset = []
+        print_angles = []
+
+        # get directly the contours from the layers
+        contours = [layer.path for layer in self.layers]
+        # print (len(contours))
+        for i, crv in enumerate(contours):
+            if i == 0:
+                print_angles.extend([0] * len(crv))
+                print_offset.extend([0] * len(crv))
+
+            else:
+                prev_pl = contours[i - 1]
+                for pt in crv:
+                    # layer.path is a polyline = list of points
+                    par = Point(*closest_point_on_polyline(pt, prev_pl))
+                    # print(par)
+                    vect = par - pt
+                    ang = vect.angle(vert_vec, True)
+                    print_angles.append(ang)
+
+                    dist = par.distance_to_point(Point(pt.x, pt.y, par.z))
+                    print_offset.append(dist)
+
+        return print_angles, print_offset
+    
+    def build_spiral_path(self, turns_per_layer=1):
+        """
+        Build a single continuous polyline that ramps from layer 0 -> 1 -> 2 -> ...
+
+        Parameters
+        ----------
+        turns_per_layer : int
+            How many "index turns" to do per layer transition. 1 matches your original.
+        use_layer_path : bool
+            If True, use layer.path (if present). Otherwise use layer.printpoints.
+
+        Returns
+        -------
+        Polyline
+        """
+        
+        all_pts = []
+
+        
+
+        for i in range(len(self.layers) - 1):
+            layer_points = self.layers[i].printpoints
+            pts1 = [pp.point for pp in layer_points]
+            pts2 = [pp.point for pp in self.layers[i + 1].printpoints]
+            div = turns_per_layer * len(layer_points)
+
+
+            for i in range(len(layer_points)):
+                
+                point1 = pts1[i]
+                point2 = pts2[i]
+            
+                line = Line(point1, point2)
+                a = remap(i, 0, div, 0, 1)
+                point = line.point_at(a)
+
+                all_pts.append(point)
+        spiral = Polyline(all_pts)
+        self.path = spiral
+        self.printpoints = [PrintPoint(point) for point in spiral.points]
+        return spiral
+
+
+    
     def to_dict(self):
         return {i : printpoint.to_dict() for i, printpoint in enumerate(self.printpoints)}
+
 
 
 class Layer:
