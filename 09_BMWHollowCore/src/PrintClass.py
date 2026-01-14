@@ -60,11 +60,7 @@ class PrintPath:
     path : Polyline
         a polyline representing the path
     """
-<<<<<<< HEAD
-    def __init__(self, layers, average_robot_speed =10):
-=======
     def __init__(self, layers, average_robot_speed = 10):
->>>>>>> d4fd01ec1a7a8ec3343b1a0519053ac8ddad92c7
         self.layers = layers
         self.printpoints = self.get_printpoints()
         self.path = Polyline([printpoint.point for printpoint in self.printpoints])
