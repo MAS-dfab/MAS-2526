@@ -170,7 +170,7 @@
                                   <H>60</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                                  <X>288.5</X>
+                                  <X>287</X>
                                   <Y>410</Y>
                                 </item>
                               </items>
@@ -234,7 +234,7 @@
                                   <H>20</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                                  <X>377.5</X>
+                                  <X>380.5</X>
                                   <Y>410</Y>
                                 </item>
                               </items>
@@ -339,7 +339,7 @@
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>-4</X>
                           <Y>400</Y>
-                          <W>203</W>
+                          <W>208</W>
                           <H>20</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
@@ -438,7 +438,7 @@
                                   <H>60</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                                  <X>863</X>
+                                  <X>862</X>
                                   <Y>410</Y>
                                 </item>
                               </items>
@@ -502,7 +502,7 @@
                                   <H>20</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                                  <X>950.5</X>
+                                  <X>953.5</X>
                                   <Y>410</Y>
                                 </item>
                               </items>
@@ -661,7 +661,7 @@
                                   <H>60</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                                  <X>1613</X>
+                                  <X>1612</X>
                                   <Y>410</Y>
                                 </item>
                               </items>
@@ -725,7 +725,7 @@
                                   <H>20</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                                  <X>1700.5</X>
+                                  <X>1703.5</X>
                                   <Y>410</Y>
                                 </item>
                               </items>
@@ -884,7 +884,7 @@
                                   <H>60</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                                  <X>2429</X>
+                                  <X>2428</X>
                                   <Y>407</Y>
                                 </item>
                               </items>
@@ -948,7 +948,7 @@
                                   <H>20</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                                  <X>2516.5</X>
+                                  <X>2519.5</X>
                                   <Y>407</Y>
                                 </item>
                               </items>
@@ -1006,7 +1006,7 @@
                         <item name="MarshGuids" type_name="gh_bool" type_code="1">true</item>
                         <item name="MarshInputs" type_name="gh_bool" type_code="1">true</item>
                         <item name="MarshOutputs" type_name="gh_bool" type_code="1">true</item>
-                        <item name="Text" type_name="gh_string" type_code="10">aW1wb3J0IG1vbGENCmZyb20gbW9sYSBpbXBvcnQgbW9kdWxlX3JoaW5vDQoNCiN0aGlyZCBzdGVwDQpuZXdfbWVzaCA9IG1vbGEuTWVzaCgpDQpmb3IgZiBpbiBtZXNoLmZhY2VzOg0KICBpZiBmLmdyb3VwID09IDE6DQogICAgbmV3X2ZhY2VzID0gbW9sYS5zdWJkaXZpZGVfZmFjZV9zcGxpdF9ncmlkKGYsIDQsIDEpDQogICAgbmV3X2ZhY2VzWy0xXS5ncm91cCA9IDMNCiAgICBuZXdfZmFjZXNbMF0uZ3JvdXAgPSAzDQogICAgbmV3X21lc2guZmFjZXMuYXBwZW5kKG5ld19mYWNlc1stMV0pDQogICAgbmV3X21lc2guZmFjZXMuYXBwZW5kKG5ld19mYWNlc1swXSkNCiAgZWxpZiBmLmdyb3VwID09IDA6DQogICAgbmV3X2ZhY2VzID0gbW9sYS5zdWJkaXZpZGVfZmFjZV9zcGxpdF9ncmlkKGYsIDQsIDEpDQogICAgbmV3X2ZhY2VzWy0xXS5ncm91cCA9IDQNCiAgICBuZXdfZmFjZXNbMF0uZ3JvdXAgPSA0DQogICAgbmV3X21lc2guZmFjZXMuYXBwZW5kKG5ld19mYWNlc1stMV0pDQogICAgbmV3X21lc2guZmFjZXMuYXBwZW5kKG5ld19mYWNlc1swXSkNCiAgZWxzZToNCiAgICBuZXdfbWVzaC5mYWNlcy5hcHBlbmQoZikNCm15X21lc2ggPSBuZXdfbWVzaA0KbXlfbWVzaC51cGRhdGVfdG9wb2xvZ3koKQ0KDQojZGlzcGxheQ0KbXlfbWVzaF9yaGlubyA9IG1vZHVsZV9yaGluby5kaXNwbGF5X21lc2gobXlfbWVzaCkNCg0K</item>
+                        <item name="Text" type_name="gh_string" type_code="10">aW1wb3J0IG1vbGENCmZyb20gbW9sYSBpbXBvcnQgbW9kdWxlX3JoaW5vDQoNCiN0aGlyZCBzdGVwDQpuZXdfbWVzaCA9IG1vbGEuTWVzaCgpDQpmb3IgZiBpbiBtZXNoLmZhY2VzOg0KICBpZiBmLmdyb3VwID09IDE6DQogICAgbmV3X2ZhY2VzID0gbW9sYS5zdWJkaXZpZGVfZmFjZV9zcGxpdF9ncmlkKGYsIG5VPTQsIG5WPTEpDQogICAgbmV3X2ZhY2VzWy0xXS5ncm91cCA9IDMNCiAgICBuZXdfZmFjZXNbMF0uZ3JvdXAgPSAzDQogICAgbmV3X21lc2guZmFjZXMuYXBwZW5kKG5ld19mYWNlc1stMV0pDQogICAgbmV3X21lc2guZmFjZXMuYXBwZW5kKG5ld19mYWNlc1swXSkNCiAgZWxpZiBmLmdyb3VwID09IDA6DQogICAgbmV3X2ZhY2VzID0gbW9sYS5zdWJkaXZpZGVfZmFjZV9zcGxpdF9ncmlkKGYsIDQsIDEpDQogICAgbmV3X2ZhY2VzWy0xXS5ncm91cCA9IDQNCiAgICBuZXdfZmFjZXNbMF0uZ3JvdXAgPSA0DQogICAgbmV3X21lc2guZmFjZXMuYXBwZW5kKG5ld19mYWNlc1stMV0pDQogICAgbmV3X21lc2guZmFjZXMuYXBwZW5kKG5ld19mYWNlc1swXSkNCiAgZWxzZToNCiAgICBuZXdfbWVzaC5mYWNlcy5hcHBlbmQoZikNCm15X21lc2ggPSBuZXdfbWVzaA0KbXlfbWVzaC51cGRhdGVfdG9wb2xvZ3koKQ0KDQojZGlzcGxheQ0KbXlfbWVzaF9yaGlubyA9IG1vZHVsZV9yaGluby5kaXNwbGF5X21lc2gobXlfbWVzaCkNCg0K</item>
                         <item name="Title" type_name="gh_string" type_code="10">subdivide_split_grid</item>
                       </items>
                       <chunks count="1">
@@ -1284,10 +1284,10 @@
                     <chunk name="ScriptEditor">
                       <items count="1">
                         <item name="StartBounds" type_name="gh_drawing_rectangle" type_code="34">
-                          <X>667</X>
-                          <Y>476</Y>
-                          <W>1062</W>
-                          <H>650</H>
+                          <X>199</X>
+                          <Y>163</Y>
+                          <W>596</W>
+                          <H>700</H>
                         </item>
                       </items>
                     </chunk>
@@ -2145,7 +2145,7 @@ specific faces to create variation</item>
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>-12</X>
                           <Y>248</Y>
-                          <W>203</W>
+                          <W>208</W>
                           <H>20</H>
                         </item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
