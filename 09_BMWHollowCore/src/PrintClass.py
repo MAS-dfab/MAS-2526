@@ -22,10 +22,10 @@ class PrintPoint:
 
         # NEW: color + motor setpoints
         self.rgb = None       
-        self.gray_scale = None
+        self.rgb_raw = None
 
-        self.trigger_motor_0 = trigger_motor_0
-        self.trigger_motor_1 = trigger_motor_1
+        self.motor_106 = trigger_motor_0
+        self.motor_107 = trigger_motor_1
 
     def get_frame(self):
         return Frame(self.point, Vector(-1, 5, 0), Vector(0, -1, 0))
@@ -41,8 +41,8 @@ class PrintPoint:
             "toggle": self.toggle,
             "layer_idx": self.layer_idx,
             "hc_set_point": self.hc_set_point,
-            "trigger_motor_0": self.trigger_motor_0,
-            "trigger_motor_1": self.trigger_motor_1
+            "trigger_motor_0": self.motor_106,
+            "trigger_motor_1": self.motor_107
 
         }
 
@@ -135,17 +135,12 @@ class PrintPath:
         ----------
         turns_per_layer : int
             How many "index turns" to do per layer transition. 1 matches your original.
-        use_layer_path : bool
-            If True, use layer.path (if present). Otherwise use layer.printpoints.
-
         Returns
         -------
         Polyline
         """
         
         all_pts = []
-
-        
 
         for i in range(len(self.layers) - 1):
             layer_points = self.layers[i].printpoints
