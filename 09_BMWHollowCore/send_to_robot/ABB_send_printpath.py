@@ -398,14 +398,14 @@ else:
 
             # ------- trigger_motor 0 ----------------------------------------
             if trig0 != port_1_state:
-                abb.send(rrc.SetDigital(IO_PORT_1, 1 if trig0 else 0))
+                abb.send(rrc.SetDigital(IO_PORT_1, 1 if trig0==True else 0))
                 port_1_state = trig0
                 # ─── MOTOR SPEED: send analog for motor 0
                 # abb.send(rrc.SetAnalog(IO_PORT_1.replace('doR', 'aoR'), motor_speed_analog))
                 
         # ------- trigger_motor 1 ----------------------------------------
             if trig1 != port_2_state:
-                abb.send(rrc.SetDigital(IO_PORT_2, 1 if trig1 else 0))
+                abb.send(rrc.SetDigital(IO_PORT_2, 1 if trig1==True else 0))
                 port_2_state = trig1
                 # ─── MOTOR SPEED: send analog for motor 1
                 # abb.send(rrc.SetAnalog(IO_PORT_2.replace('doR', 'aoR'), motor_speed_analog))
