@@ -87,8 +87,8 @@ IO_C4_AC2 = "doR111E1Out_4"  # ACTIVATE Nozzle Air-Ring
 # color2- doR111E1Out_6
 
 # Trigger motor I/Os
-IO_PORT_1 = "doR111E1Out_7"   # maps to JSON["trigger_motor_0"]
-IO_PORT_2 = "doR111E1Out_6"   # maps to JSON["trigger_motor_1"]
+IO_PORT_1 = "doR111E1Out_6"   # maps to JSON["trigger_motor_0"]
+IO_PORT_2 = "doR111E1Out_7"   # maps to JSON["trigger_motor_1"]
 
 IO_HC_AIR = "doR111E1Out_5"  # ACTIVATE Nozzle Air-Pressure SMC  KEEP ALWAYS ON
 IO_HC_AIR_PRESSURE = "aoR111E1AOut_3"  # values from 0 to 255
