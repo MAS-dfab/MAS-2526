@@ -60,7 +60,7 @@ class PrintPath:
     path : Polyline
         a polyline representing the path
     """
-    def __init__(self, layers, average_robot_speed = 10):
+    def __init__(self, layers, average_robot_speed = 18.0):
         self.layers = layers
         self.printpoints = self.get_printpoints()
         self.path = Polyline([printpoint.point for printpoint in self.printpoints])
@@ -78,7 +78,14 @@ class PrintPath:
         safe_pt = PrintPoint(tail_pt.point.transformed(TT), velocity=18.0, toggle=True, layer_idx=0)
         self.printpoints.insert(0,tail_pt)
         self.printpoints.insert(0, safe_pt)
-    
+
+    def end_safety_point(self, vector, safety_distance = 50.0):
+        vec = vector * safety_distance
+        T = Translation.from_vector(vec)
+        head_pt = PrintPoint(self.printpoints[-1].point.transformed(T), toggle = False, layer_idx = self.layers[-1].layer_idx)
+        self.printpoints.insert(-1,head_pt)
+       
+
     def get_printpoints(self):
         printpoints = []
         for layer in self.layers:

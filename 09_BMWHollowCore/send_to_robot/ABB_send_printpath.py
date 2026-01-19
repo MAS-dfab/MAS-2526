@@ -232,9 +232,6 @@ if not PRINT_ON and not ROBOT_ON:
     print(len(color_mp.colors))
     viewer = Viewer()
     viewer.unit = "mm"
-    # viewer.scene.attributes()
-    #for point, vel in zip(points, remaped_velocities):
-        #viewer.scene.add(point, color=color_mp.colors[int(vel)], pointsize=30)
 
     viewer.scene.add(polyline, settings={"color": (0, 0, 255), "width": 2})
     viewer.scene.add(moved_abb_print_frames[0])
@@ -331,6 +328,7 @@ else:
         abb.send(rrc.SetAnalog(IO_HC_AIR_PRESSURE, 50))  # minimal val for HC air pressure
         print("HC air pressure active")
 
+
         if COOLING_HC_FANS_1_ON:
             abb.send(rrc.SetDigital(IO_C1_FAN1, 1))  # turn air on
             print("Fans 1 active")
@@ -381,6 +379,22 @@ else:
             
             # Optional sleep time in loop
             time.sleep(0.1)
+            if li == 0:
+                abb.send(rrc.SetDigital(IO_C1_FAN1, 0))  # turn air off
+                abb.send(rrc.SetDigital(IO_C2_FAN2, 0))  # turn air off
+                print("Fans 1 deactivated for layer0")
+                print("Fans 2 deactivated for layer0")
+            else:
+                abb.send(rrc.SetDigital(IO_C1_FAN1, 1))  # turn air on
+                abb.send(rrc.SetDigital(IO_C2_FAN2, 1))  # turn air on
+                print("Fans 1 activated for layer >0")
+           
+            if v <= 6.0:
+                abb.send(rrc.SetDigital(IO_C3_AC1, 1))  # turn air on
+                print("HC air pressure cooling ring active")
+            else:
+                abb.send(rrc.SetDigital(IO_C3_AC1, 0))  # turn air off
+                print("HC air pressure cooling ring deactivated")
 
             # ------- trigger_motor 0 ----------------------------------------
             if trig0 != port_1_state:
