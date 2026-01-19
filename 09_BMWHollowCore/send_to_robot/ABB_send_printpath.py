@@ -34,7 +34,11 @@ from CustomPrintInstructions import *
 
 # Switches
 ROBOT_ON = False
+<<<<<<< HEAD
+PRINT_ON = False 
+=======
 PRINT_ON = False
+>>>>>>> d4fd01ec1a7a8ec3343b1a0519053ac8ddad92c7
 
 HC_ON = True
 
