@@ -87,8 +87,8 @@ IO_C4_AC2 = "doR111E1Out_4"  # ACTIVATE Nozzle Air-Ring
 # color2- doR111E1Out_6
 
 # Trigger motor I/Os
-IO_PORT_1 = "doR111E1Out_7"   # maps to JSON["trigger_motor_0"]
-IO_PORT_2 = "doR111E1Out_6"   # maps to JSON["trigger_motor_1"]
+IO_PORT_1 = "doR111E1Out_6"   # maps to JSON["trigger_motor_0"]
+IO_PORT_2 = "doR111E1Out_7"   # maps to JSON["trigger_motor_1"]
 
 IO_HC_AIR = "doR111E1Out_5"  # ACTIVATE Nozzle Air-Pressure SMC  KEEP ALWAYS ON
 IO_HC_AIR_PRESSURE = "aoR111E1AOut_3"  # values from 0 to 255
@@ -398,14 +398,14 @@ else:
 
             # ------- trigger_motor 0 ----------------------------------------
             if trig0 != port_1_state:
-                abb.send(rrc.SetDigital(IO_PORT_1, 1 if trig0 else 0))
+                abb.send(rrc.SetDigital(IO_PORT_1, 1 if trig0==True else 0))
                 port_1_state = trig0
                 # ─── MOTOR SPEED: send analog for motor 0
                 # abb.send(rrc.SetAnalog(IO_PORT_1.replace('doR', 'aoR'), motor_speed_analog))
                 
         # ------- trigger_motor 1 ----------------------------------------
             if trig1 != port_2_state:
-                abb.send(rrc.SetDigital(IO_PORT_2, 1 if trig1 else 0))
+                abb.send(rrc.SetDigital(IO_PORT_2, 1 if trig1==True else 0))
                 port_2_state = trig1
                 # ─── MOTOR SPEED: send analog for motor 1
                 # abb.send(rrc.SetAnalog(IO_PORT_2.replace('doR', 'aoR'), motor_speed_analog))
