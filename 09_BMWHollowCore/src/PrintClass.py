@@ -22,10 +22,10 @@ class PrintPoint:
 
         # NEW: color + motor setpoints
         self.rgb = None       
-        self.gray_scale = None
+        self.rgb_raw = None
 
-        self.trigger_motor_0 = trigger_motor_0
-        self.trigger_motor_1 = trigger_motor_1
+        self.motor_106 = trigger_motor_0
+        self.motor_107 = trigger_motor_1
 
     def get_frame(self):
         return Frame(self.point, Vector(1, -5, 0), Vector(0, -1, 0))
@@ -41,8 +41,8 @@ class PrintPoint:
             "toggle": self.toggle,
             "layer_idx": self.layer_idx,
             "hc_set_point": self.hc_set_point,
-            "trigger_motor_0": self.trigger_motor_0,
-            "trigger_motor_1": self.trigger_motor_1
+            "trigger_motor_0": self.motor_106,
+            "trigger_motor_1": self.motor_107
 
         }
 
@@ -78,7 +78,29 @@ class PrintPath:
         safe_pt = PrintPoint(tail_pt.point.transformed(TT), velocity=18.0, toggle=True, layer_idx=0)
         self.printpoints.insert(0,tail_pt)
         self.printpoints.insert(0, safe_pt)
-    
+
+    def end_safety_point(self, vector, safety_distance = 50.0):
+        vec = vector * safety_distance
+        T = Translation.from_vector(vec)
+        TT = Translation.from_vector(Vector(0, 0, 50))
+        head_pt = PrintPoint(self.printpoints[-1].point.transformed(T), toggle = False, layer_idx = self.layers[-1].layer_idx)
+        safe_pt = PrintPoint(head_pt.point.transformed(TT), velocity=18.0, toggle=False, layer_idx=self.layers[-1].layer_idx)
+        self.printpoints.append(head_pt)
+        self.printpoints.append(safe_pt)
+
+    def add_exit_path(self, lift_z=50.0, exit_speed=10.0):
+        last_pp = self.printpoints[-1]
+        last_pt = last_pp.point
+
+        Tz = Translation.from_vector(Vector(0, 0, lift_z))
+        up_pt = last_pt.transformed(Tz)
+
+        exit_pp = PrintPoint(up_pt, velocity=exit_speed, air_pressure=last_pp.air_pressure, blend=last_pp.blend, wait_time=0.0, toggle=False, layer_idx=last_pp.layer_idx)
+
+        self.printpoints.append(exit_pp)  
+        self.path = Polyline([pp.point for pp in self.printpoints])
+        self.length = self.path.length
+        
     def get_printpoints(self):
         printpoints = []
         for layer in self.layers:
@@ -135,17 +157,12 @@ class PrintPath:
         ----------
         turns_per_layer : int
             How many "index turns" to do per layer transition. 1 matches your original.
-        use_layer_path : bool
-            If True, use layer.path (if present). Otherwise use layer.printpoints.
-
         Returns
         -------
         Polyline
         """
         
         all_pts = []
-
-        
 
         for i in range(len(self.layers) - 1):
             layer_points = self.layers[i].printpoints
