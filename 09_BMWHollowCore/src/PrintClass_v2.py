@@ -8,9 +8,8 @@ def remap(value, from_min, from_max, to_min, to_max):
     scaled_value = float(value - from_min) / float(from_range)
     return to_min + (scaled_value * to_range)
 
-
 class PrintPoint:
-    def __init__(self, point, velocity = 18.0, air_pressure = 8.0, blend= 1.0, wait_time=0.0, toggle=True, layer_idx=None, trigger_motor_0=False, trigger_motor_1=False):
+    def __init__(self, point, velocity = 18.0, air_pressure = 8.0, blend= 1.0, wait_time=0.0, toggle=True, layer_idx=None, trigger_motor_0=False, trigger_motor_1=False, fan1_on=False, fan2_on=False):
         self.point = point
         self.velocity = velocity
         self.air_pressure = air_pressure # 4.16 (flat) to 20.00 (max) layer_height 18.00 = mid(range)
@@ -23,10 +22,14 @@ class PrintPoint:
 
         # NEW: color + motor setpoints
         self.rgb = None       
-        self.gray_scale = None
+        self.rgb_raw = None
 
-        self.trigger_motor_0 = trigger_motor_0
-        self.trigger_motor_1 = trigger_motor_1
+        self.motor_106 = trigger_motor_0
+        self.motor_107 = trigger_motor_1
+
+        # NEW: fan control flags
+        self.fan1_on = fan1_on
+        self.fan2_on = fan2_on
 
     def get_frame(self):
         return Frame(self.point, Vector(1, -5, 0), Vector(0, -1, 0))
@@ -42,8 +45,10 @@ class PrintPoint:
             "toggle": self.toggle,
             "layer_idx": self.layer_idx,
             "hc_set_point": self.hc_set_point,
-            "trigger_motor_0": self.trigger_motor_0,
-            "trigger_motor_1": self.trigger_motor_1
+            "trigger_motor_0": self.motor_106,
+            "trigger_motor_1": self.motor_107,
+            "fan1_on": self.fan1_on,
+            "fan2_on": self.fan2_on
 
         }
 
@@ -79,17 +84,29 @@ class PrintPath:
         safe_pt = PrintPoint(tail_pt.point.transformed(TT), velocity=18.0, toggle=True, layer_idx=0)
         self.printpoints.insert(0,tail_pt)
         self.printpoints.insert(0, safe_pt)
-    
-    #add end safety point
-    def add_end_safety_point(self, vector, safety_distance = 0):
+
+    def end_safety_point(self, vector, safety_distance = 50.0):
         vec = vector * safety_distance
         T = Translation.from_vector(vec)
-        TT = Translation.from_vector(Vector(0, 0, 0))
-        tail_pt = PrintPoint(self.printpoints[-1].point.transformed(T), toggle = True, layer_idx = self.printpoints[-1].layer_idx)
-        safe_pt = PrintPoint(tail_pt.point.transformed(TT), velocity=18.0, toggle=True, layer_idx=self.printpoints[-1].layer_idx)
-        self.printpoints.append(tail_pt)
+        TT = Translation.from_vector(Vector(0, 0, 50))
+        head_pt = PrintPoint(self.printpoints[-1].point.transformed(T), toggle = False, layer_idx = self.layers[-1].layer_idx)
+        safe_pt = PrintPoint(head_pt.point.transformed(TT), velocity=18.0, toggle=False, layer_idx=self.layers[-1].layer_idx)
+        self.printpoints.append(head_pt)
         self.printpoints.append(safe_pt)
-    
+
+    def add_exit_path(self, lift_z=50.0, exit_speed=10.0):
+        last_pp = self.printpoints[-1]
+        last_pt = last_pp.point
+
+        Tz = Translation.from_vector(Vector(0, 0, lift_z))
+        up_pt = last_pt.transformed(Tz)
+
+        exit_pp = PrintPoint(up_pt, velocity=exit_speed, air_pressure=last_pp.air_pressure, blend=last_pp.blend, wait_time=0.0, toggle=False, layer_idx=last_pp.layer_idx)
+
+        self.printpoints.append(exit_pp)  
+        self.path = Polyline([pp.point for pp in self.printpoints])
+        self.length = self.path.length
+        
     def get_printpoints(self):
         printpoints = []
         for layer in self.layers:
@@ -138,6 +155,57 @@ class PrintPath:
 
         return print_angles, print_offset
     
+    def set_first_layer_speed(self, first_layer_speed=7.0):
+        """
+        Set custom speed for all printpoints in the first layer (layer_idx == 0).
+        Default is 35% of base speed (18 mm/s * 0.35 = 6.3, rounded up to 7.0).
+        
+        Parameters
+        ----------
+        first_layer_speed : float
+            Speed in mm/s for first layer (default 7.0)
+            
+        Returns
+        -------
+        int
+            Number of printpoints modified
+        """
+        modified_count = 0
+        for printpoint in self.printpoints:
+            if printpoint.layer_idx == 0:
+                printpoint.velocity = first_layer_speed
+                modified_count += 1
+        
+        print(f"First layer speed set to {first_layer_speed} mm/s for {modified_count} points")
+        return modified_count
+    
+    def detect_and_enable_fans_for_overhangs(self, overhang_threshold=45.0):
+        """
+        Enable fans (fan1_on and fan2_on) for printpoints at bridging and overhang regions.
+        
+        Parameters
+        ----------
+        overhang_threshold : float
+            Angle threshold in degrees (default 45.0). Points with angles
+            greater than this are considered overhangs and will have fans enabled.
+            
+        Returns
+        -------
+        int
+            Number of printpoints with fans enabled
+        """
+        print_angles, print_offset = self.get_print_angles()
+        
+        fan_enabled_count = 0
+        for i, (angle, pp) in enumerate(zip(print_angles, self.printpoints)):
+            if angle > overhang_threshold:
+                pp.fan1_on = True
+                pp.fan2_on = True
+                fan_enabled_count += 1
+        
+        print(f"Fans enabled for {fan_enabled_count} overhang points (threshold: {overhang_threshold}°)")
+        return fan_enabled_count
+    
     def build_spiral_path(self, turns_per_layer=1):
         """
         Build a single continuous polyline that ramps from layer 0 -> 1 -> 2 -> ...
@@ -146,17 +214,12 @@ class PrintPath:
         ----------
         turns_per_layer : int
             How many "index turns" to do per layer transition. 1 matches your original.
-        use_layer_path : bool
-            If True, use layer.path (if present). Otherwise use layer.printpoints.
-
         Returns
         -------
         Polyline
         """
         
         all_pts = []
-
-        
 
         for i in range(len(self.layers) - 1):
             layer_points = self.layers[i].printpoints
@@ -184,6 +247,7 @@ class PrintPath:
     
     def to_dict(self):
         return {i : printpoint.to_dict() for i, printpoint in enumerate(self.printpoints)}
+
 
 
 class Layer:
