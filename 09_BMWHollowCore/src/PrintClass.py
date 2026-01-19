@@ -75,7 +75,7 @@ class PrintPath:
         T = Translation.from_vector(vec)
         TT = Translation.from_vector(Vector(0, 0, 50))
         tail_pt = PrintPoint(self.printpoints[0].point.transformed(T), toggle = True, layer_idx = 0, velocity=7.0)
-        safe_pt = PrintPoint(tail_pt.point.transformed(TT), velocity=18.0, toggle=True, layer_idx=0, velocity=7.0)
+        safe_pt = PrintPoint(tail_pt.point.transformed(TT), toggle=True, layer_idx=0, velocity=7.0)
         self.printpoints.insert(0,tail_pt)
         self.printpoints.insert(0, safe_pt)
     
@@ -83,7 +83,7 @@ class PrintPath:
         vec = vector * safety_distance
         T = Translation.from_vector(vec)
         head_pt = PrintPoint(self.printpoints[-1].point.transformed(T), toggle = False, layer_idx = self.layers[-1].layer_idx, velocity=7.0)
-        self.printpoints.insert(-1,head_pt)
+        self.printpoints.append(head_pt)
        
 
     def get_printpoints(self):
