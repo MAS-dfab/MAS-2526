@@ -119,7 +119,7 @@ offset_vec = Vector(x_offset, y_offset, z_offset)
 
 DATA_OUTPUT_FOLDER = os.path.join(os.path.dirname(__file__), "data")
 print("Data folder:", DATA_OUTPUT_FOLDER)
-PRINT_FILE_NAME = "sample.json"
+PRINT_FILE_NAME = "test.json"
 
 now = datetime.now()
 print("Current time:", now.strftime("%H:%M:%S"))
