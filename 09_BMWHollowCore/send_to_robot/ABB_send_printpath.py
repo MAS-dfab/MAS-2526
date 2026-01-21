@@ -33,12 +33,8 @@ from CustomPrintInstructions import *
 # ==============================================================================
 
 # Switches
-ROBOT_ON = False
-<<<<<<< HEAD
-PRINT_ON = False 
-=======
-PRINT_ON = False
->>>>>>> d4fd01ec1a7a8ec3343b1a0519053ac8ddad92c7
+ROBOT_ON = True
+PRINT_ON = True
 
 HC_ON = True
 
@@ -91,8 +87,8 @@ IO_C4_AC2 = "doR111E1Out_4"  # ACTIVATE Nozzle Air-Ring
 # color2- doR111E1Out_6
 
 # Trigger motor I/Os
-IO_PORT_1 = "doR111E1Out_7"   # maps to JSON["trigger_motor_0"]
-IO_PORT_2 = "doR111E1Out_6"   # maps to JSON["trigger_motor_1"]
+IO_PORT_1 = "doR111E1Out_6"   # maps to JSON["trigger_motor_0"]
+IO_PORT_2 = "doR111E1Out_7"   # maps to JSON["trigger_motor_1"]
 
 IO_HC_AIR = "doR111E1Out_5"  # ACTIVATE Nozzle Air-Pressure SMC  KEEP ALWAYS ON
 IO_HC_AIR_PRESSURE = "aoR111E1AOut_3"  # values from 0 to 255
@@ -107,7 +103,7 @@ extruder_state = 0  # do not modify this
 # ==============================================================================
 # distance for 24mm nozzle
 x_offset = 500
-y_offset = 700
+y_offset = 200
 z_offset = 18 + 9 #table + board height
 
 offset_vec = Vector(x_offset, y_offset, z_offset)
@@ -119,7 +115,7 @@ offset_vec = Vector(x_offset, y_offset, z_offset)
 
 DATA_OUTPUT_FOLDER = os.path.join(os.path.dirname(__file__), "data")
 print("Data folder:", DATA_OUTPUT_FOLDER)
-PRINT_FILE_NAME = "test.json"
+PRINT_FILE_NAME = "geo_08_a.json"
 
 now = datetime.now()
 print("Current time:", now.strftime("%H:%M:%S"))
@@ -236,9 +232,6 @@ if not PRINT_ON and not ROBOT_ON:
     print(len(color_mp.colors))
     viewer = Viewer()
     viewer.unit = "mm"
-    # viewer.scene.attributes()
-    #for point, vel in zip(points, remaped_velocities):
-        #viewer.scene.add(point, color=color_mp.colors[int(vel)], pointsize=30)
 
     viewer.scene.add(polyline, settings={"color": (0, 0, 255), "width": 2})
     viewer.scene.add(moved_abb_print_frames[0])
@@ -262,7 +255,7 @@ START_INDEX = 0
 STOP_INDEX = len(moved_abb_print_frames)
 
 # Split lists with start and stop index
-abb_print_frames = moved_abb_print_frames
+abb_print_frames = moved_abb_print_frames[START_INDEX:STOP_INDEX]
 velocities = velocities[START_INDEX:STOP_INDEX]
 zones = zones[START_INDEX:STOP_INDEX]
 extruder_toggles = extruder_toggles[START_INDEX:STOP_INDEX]
@@ -335,6 +328,7 @@ else:
         abb.send(rrc.SetAnalog(IO_HC_AIR_PRESSURE, 50))  # minimal val for HC air pressure
         print("HC air pressure active")
 
+
         if COOLING_HC_FANS_1_ON:
             abb.send(rrc.SetDigital(IO_C1_FAN1, 1))  # turn air on
             print("Fans 1 active")
@@ -385,17 +379,33 @@ else:
             
             # Optional sleep time in loop
             time.sleep(0.1)
+            if li == 0:
+                abb.send(rrc.SetDigital(IO_C1_FAN1, 0))  # turn air off
+                abb.send(rrc.SetDigital(IO_C2_FAN2, 0))  # turn air off
+                print("Fans 1 deactivated for layer0")
+                print("Fans 2 deactivated for layer0")
+            else:
+                abb.send(rrc.SetDigital(IO_C1_FAN1, 1))  # turn air on
+                abb.send(rrc.SetDigital(IO_C2_FAN2, 1))  # turn air on
+                print("Fans 1 activated for layer >0")
+           
+            if v <= 6.0:
+                abb.send(rrc.SetDigital(IO_C3_AC1, 1))  # turn air on
+                print("HC air pressure cooling ring active")
+            else:
+                abb.send(rrc.SetDigital(IO_C3_AC1, 0))  # turn air off
+                print("HC air pressure cooling ring deactivated")
 
             # ------- trigger_motor 0 ----------------------------------------
             if trig0 != port_1_state:
-                abb.send(rrc.SetDigital(IO_PORT_1, 1 if trig0 else 0))
+                abb.send(rrc.SetDigital(IO_PORT_1, 1 if trig0==True else 0))
                 port_1_state = trig0
                 # ─── MOTOR SPEED: send analog for motor 0
                 # abb.send(rrc.SetAnalog(IO_PORT_1.replace('doR', 'aoR'), motor_speed_analog))
                 
         # ------- trigger_motor 1 ----------------------------------------
             if trig1 != port_2_state:
-                abb.send(rrc.SetDigital(IO_PORT_2, 1 if trig1 else 0))
+                abb.send(rrc.SetDigital(IO_PORT_2, 1 if trig1==True else 0))
                 port_2_state = trig1
                 # ─── MOTOR SPEED: send analog for motor 1
                 # abb.send(rrc.SetAnalog(IO_PORT_2.replace('doR', 'aoR'), motor_speed_analog))

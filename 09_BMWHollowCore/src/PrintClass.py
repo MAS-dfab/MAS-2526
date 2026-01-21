@@ -60,7 +60,7 @@ class PrintPath:
     path : Polyline
         a polyline representing the path
     """
-    def __init__(self, layers, average_robot_speed = 10):
+    def __init__(self, layers, average_robot_speed = 18.0):
         self.layers = layers
         self.printpoints = self.get_printpoints()
         self.path = Polyline([printpoint.point for printpoint in self.printpoints])
@@ -74,33 +74,18 @@ class PrintPath:
         vec = vector * safety_distance
         T = Translation.from_vector(vec)
         TT = Translation.from_vector(Vector(0, 0, 50))
-        tail_pt = PrintPoint(self.printpoints[0].point.transformed(T), toggle = True, layer_idx = 0)
-        safe_pt = PrintPoint(tail_pt.point.transformed(TT), velocity=18.0, toggle=True, layer_idx=0)
+        tail_pt = PrintPoint(self.printpoints[0].point.transformed(T), toggle = True, layer_idx = 0, velocity=7.0)
+        safe_pt = PrintPoint(tail_pt.point.transformed(TT), toggle=True, layer_idx=0, velocity=7.0)
         self.printpoints.insert(0,tail_pt)
         self.printpoints.insert(0, safe_pt)
-
+    
     def end_safety_point(self, vector, safety_distance = 50.0):
         vec = vector * safety_distance
         T = Translation.from_vector(vec)
-        TT = Translation.from_vector(Vector(0, 0, 50))
-        head_pt = PrintPoint(self.printpoints[-1].point.transformed(T), toggle = False, layer_idx = self.layers[-1].layer_idx)
-        safe_pt = PrintPoint(head_pt.point.transformed(TT), velocity=18.0, toggle=False, layer_idx=self.layers[-1].layer_idx)
+        head_pt = PrintPoint(self.printpoints[-1].point.transformed(T), toggle = False, layer_idx = self.layers[-1].layer_idx, velocity=7.0)
         self.printpoints.append(head_pt)
-        self.printpoints.append(safe_pt)
+       
 
-    def add_exit_path(self, lift_z=50.0, exit_speed=10.0):
-        last_pp = self.printpoints[-1]
-        last_pt = last_pp.point
-
-        Tz = Translation.from_vector(Vector(0, 0, lift_z))
-        up_pt = last_pt.transformed(Tz)
-
-        exit_pp = PrintPoint(up_pt, velocity=exit_speed, air_pressure=last_pp.air_pressure, blend=last_pp.blend, wait_time=0.0, toggle=False, layer_idx=last_pp.layer_idx)
-
-        self.printpoints.append(exit_pp)  
-        self.path = Polyline([pp.point for pp in self.printpoints])
-        self.length = self.path.length
-        
     def get_printpoints(self):
         printpoints = []
         for layer in self.layers:
