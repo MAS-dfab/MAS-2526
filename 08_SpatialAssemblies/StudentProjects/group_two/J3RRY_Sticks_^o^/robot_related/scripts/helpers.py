@@ -295,7 +295,7 @@ def calculate_place_trajectories(robot, current_config, placement_frame, lean_in
     # Go to exit frame (safe distance above place frame)
     exit_frame = place_frame.copy()
     # exit_frame.rotate(-math.pi, exit_frame.yaxis, exit_frame.point)
-    exit_frame.translate(APPROACH_DISTANCE * -lean_in_normal * 0.5)
+    exit_frame.translate(APPROACH_DISTANCE * -place_frame.zaxis * 0.5)
 
     exit_trajectory = robot.plan_cartesian_motion(
         [place_frame, exit_frame],
