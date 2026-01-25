@@ -65,11 +65,3 @@ class Stick:
         # Offset frame to be on surface of stick
         new_stick_frame.point += new_stick_frame.zaxis * (self.depth / 2)
         return new_stick_frame
-
-def stick_bridge(stick0, stick1):
-    plane0 = Plane.from_frame(stick0.frame)
-    plane1 = Plane.from_frame(stick1.frame)
-    p0 = intersection_line_plane(stick0.axis, plane1)
-    p1 = intersection_line_plane(stick1.axis, plane0)
-
-    return Stick(Line(p0, p1))
