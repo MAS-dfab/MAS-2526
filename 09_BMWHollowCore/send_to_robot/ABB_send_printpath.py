@@ -33,8 +33,8 @@ from CustomPrintInstructions import *
 # ==============================================================================
 
 # Switches
-ROBOT_ON = False
-PRINT_ON = False 
+ROBOT_ON = True
+PRINT_ON = True§
 
 HC_ON = True
 
@@ -102,8 +102,8 @@ extruder_state = 0  # do not modify this
 # Saftey Distance
 # ==============================================================================
 # distance for 24mm nozzle
-x_offset = 500
-y_offset = 700
+x_offset = 400
+y_offset = 200
 z_offset = 18 + 9 #table + board height
 
 offset_vec = Vector(x_offset, y_offset, z_offset)
@@ -115,7 +115,7 @@ offset_vec = Vector(x_offset, y_offset, z_offset)
 
 DATA_OUTPUT_FOLDER = os.path.join(os.path.dirname(__file__), "data")
 print("Data folder:", DATA_OUTPUT_FOLDER)
-PRINT_FILE_NAME = "sample.json"
+PRINT_FILE_NAME = "geo_14_a.json"
 
 now = datetime.now()
 print("Current time:", now.strftime("%H:%M:%S"))
@@ -255,7 +255,7 @@ START_INDEX = 0
 STOP_INDEX = len(moved_abb_print_frames)
 
 # Split lists with start and stop index
-abb_print_frames = moved_abb_print_frames
+abb_print_frames = moved_abb_print_frames[START_INDEX:STOP_INDEX]
 velocities = velocities[START_INDEX:STOP_INDEX]
 zones = zones[START_INDEX:STOP_INDEX]
 extruder_toggles = extruder_toggles[START_INDEX:STOP_INDEX]
