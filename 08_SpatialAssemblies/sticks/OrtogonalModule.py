@@ -39,7 +39,10 @@ class OStickModule:
                       - Vector(0, 0, self.depth/2)
                       - Vector(0, 2 * self.depth * type["z"], 0))
         
+<<<<<<< HEAD
         
+=======
+>>>>>>> 488bb32a1801b5d8676a854a33509031f79cc8e0
         stick_z = Stick(Line(offsetpt_z, offsetpt_z + Vector(0, 0, self.length)), width = self.width, depth = self.depth)
         if type["z"] != 2:
             self.sticks.append(stick_z)
